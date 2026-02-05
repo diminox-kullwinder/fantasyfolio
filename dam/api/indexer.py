@@ -28,7 +28,7 @@ def api_trigger_index():
     - background: Run in background (default: true)
     """
     config = get_config()
-    data = request.get_json()
+    data = request.get_json(silent=True)
     
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -147,7 +147,7 @@ def api_index_status():
 @indexer_bp.route('/index/clear', methods=['POST'])
 def api_clear_index():
     """Clear index for a content type (destructive!)."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
     content_type = data.get('type') if data else None
     
     if content_type not in ('pdf', '3d', 'all'):

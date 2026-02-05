@@ -23,7 +23,7 @@ def api_get_settings():
 @settings_bp.route('/settings', methods=['POST'])
 def api_set_settings():
     """Set multiple settings at once."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
@@ -50,7 +50,7 @@ def api_get_setting(key: str):
 @settings_bp.route('/settings/<key>', methods=['PUT'])
 def api_set_setting(key: str):
     """Set a single setting."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data or 'value' not in data:
         return jsonify({'error': 'Value required'}), 400
     

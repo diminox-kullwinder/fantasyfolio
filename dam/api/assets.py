@@ -269,7 +269,7 @@ def api_extract_pages(asset_id: int):
     if not asset:
         return jsonify({'error': 'Asset not found'}), 404
     
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
