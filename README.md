@@ -280,9 +280,15 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-- [PyMuPDF](https://pymupdf.readthedocs.io/) for PDF processing
-- [Flask](https://flask.palletsprojects.com/) web framework
-- [SQLite](https://sqlite.org/) with FTS5 for search
-- [Three.js](https://threejs.org/) for 3D model viewing (STLLoader)
-- [numpy-stl](https://github.com/WoLpH/numpy-stl) for STL parsing
-- [Matplotlib](https://matplotlib.org/) for thumbnail rendering
+### Backend
+- [Flask](https://flask.palletsprojects.com/) — Web framework
+- [PyMuPDF](https://pymupdf.readthedocs.io/) — PDF processing and rendering
+- [SQLite](https://sqlite.org/) with FTS5 — Database and full-text search
+- [Click](https://click.palletsprojects.com/) — CLI framework
+- [Gunicorn](https://gunicorn.org/) — Production WSGI server
+
+### 3D Model Processing
+- [Three.js](https://threejs.org/) — In-browser 3D model viewer (with STLLoader and OrbitControls)
+- [numpy-stl](https://github.com/WoLpH/numpy-stl) — STL file parsing
+- [Matplotlib](https://matplotlib.org/) — Server-side thumbnail rendering
+- [NumPy](https://numpy.org/) — Numerical computing for 3D operations
