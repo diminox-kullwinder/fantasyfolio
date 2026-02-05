@@ -276,3 +276,157 @@ def get_all_settings() -> Dict[str, str]:
     """Get all settings as a dictionary."""
     rows = get_db().fetchall("SELECT key, value FROM settings")
     return {row['key']: row['value'] for row in rows}
+
+
+def set_multiple_settings(settings: Dict[str, str]):
+    """Set multiple settings at once."""
+    db = get_db()
+    with db.connection() as conn:
+        for key, value in settings.items():
+            conn.execute(
+                "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+                (key, str(value))
+            )
+        conn.commit()
+
+
+# ==================== Page/Text Operations ====================
+
+def insert_page_text(asset_id: int, page_num: int, text: str):
+    """Insert text content for a page."""
+    db = get_db()
+    with db.connection() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO asset_pages (asset_id, page_num, text_content) VALUES (?, ?, ?)",
+            (asset_id, page_num, text)
+        )
+        conn.commit()
+
+
+def get_pages_for_asset(asset_id: int) -> List[Dict[str, Any]]:
+    """Get all pages for an asset."""
+    return get_db().fetchall(
+        "SELECT page_num, text_content FROM asset_pages WHERE asset_id = ? ORDER BY page_num",
+        (asset_id,)
+    )
+
+
+def search_pages(query: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """Search page content."""
+    db = get_db()
+    with db.connection() as conn:
+        rows = conn.execute("""
+            SELECT p.asset_id, p.page_num, a.filename, a.title,
+                   snippet(pages_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
+            FROM asset_pages p
+            JOIN pages_fts ON p.id = pages_fts.rowid
+            JOIN assets a ON p.asset_id = a.id
+            WHERE pages_fts MATCH ?
+            ORDER BY rank
+            LIMIT ?
+        """, (query, limit)).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_text_extraction_stats() -> Dict[str, Any]:
+    """Get statistics about text extraction."""
+    db = get_db()
+    with db.connection() as conn:
+        total_assets = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
+        with_text = conn.execute(
+            "SELECT COUNT(DISTINCT asset_id) FROM asset_pages WHERE text_content IS NOT NULL AND text_content != ''"
+        ).fetchone()[0]
+        total_pages = conn.execute("SELECT COUNT(*) FROM asset_pages").fetchone()[0]
+        
+        return {
+            'total_assets': total_assets,
+            'assets_with_text': with_text,
+            'assets_without_text': total_assets - with_text,
+            'total_pages_indexed': total_pages
+        }
+
+
+# ==================== Bookmark Operations ====================
+
+def insert_bookmarks(asset_id: int, bookmarks: List[tuple]):
+    """Insert bookmarks for an asset. Each bookmark is (level, title, page_num)."""
+    db = get_db()
+    with db.connection() as conn:
+        for level, title, page_num in bookmarks:
+            conn.execute(
+                "INSERT OR IGNORE INTO asset_bookmarks (asset_id, level, title, page_num) VALUES (?, ?, ?, ?)",
+                (asset_id, level, title, page_num)
+            )
+        conn.commit()
+
+
+def get_bookmarks(asset_id: int) -> List[Dict[str, Any]]:
+    """Get bookmarks for an asset."""
+    return get_db().fetchall(
+        "SELECT level, title, page_num FROM asset_bookmarks WHERE asset_id = ? ORDER BY id",
+        (asset_id,)
+    )
+
+
+def has_bookmarks(asset_id: int) -> bool:
+    """Check if asset has bookmarks."""
+    result = get_db().fetchone(
+        "SELECT 1 FROM asset_bookmarks WHERE asset_id = ? LIMIT 1",
+        (asset_id,)
+    )
+    return result is not None
+
+
+# ==================== Incremental Indexing Support ====================
+
+def get_asset_by_path(file_path: str) -> Optional[Dict[str, Any]]:
+    """Get an asset by its file path."""
+    return get_db().fetchone("SELECT * FROM assets WHERE file_path = ?", (file_path,))
+
+
+def needs_reindex(file_path: str, modified_at: str) -> bool:
+    """Check if a file needs to be re-indexed based on modification time."""
+    existing = get_asset_by_path(file_path)
+    if not existing:
+        return True
+    return existing.get('modified_at') != modified_at
+
+
+def delete_missing_assets(existing_paths: set) -> int:
+    """Delete assets whose files no longer exist. Returns count of deleted."""
+    db = get_db()
+    deleted = 0
+    with db.connection() as conn:
+        rows = conn.execute("SELECT id, file_path FROM assets").fetchall()
+        for row in rows:
+            if row['file_path'] not in existing_paths:
+                conn.execute("DELETE FROM assets WHERE id = ?", (row['id'],))
+                deleted += 1
+        conn.commit()
+    return deleted
+
+
+def get_assets_without_text(limit: int = 100) -> List[Dict[str, Any]]:
+    """Get assets that don't have extracted text yet."""
+    db = get_db()
+    with db.connection() as conn:
+        rows = conn.execute("""
+            SELECT a.* FROM assets a
+            LEFT JOIN asset_pages p ON a.id = p.asset_id
+            WHERE p.id IS NULL
+            LIMIT ?
+        """, (limit,)).fetchall()
+        return [dict(row) for row in rows]
+
+
+# ==================== Publishers and Game Systems ====================
+
+def get_publishers() -> List[Dict[str, Any]]:
+    """Get list of publishers with counts."""
+    return get_db().fetchall("""
+        SELECT publisher, COUNT(*) as count
+        FROM assets
+        WHERE publisher IS NOT NULL AND publisher != ''
+        GROUP BY publisher
+        ORDER BY count DESC
+    """)
