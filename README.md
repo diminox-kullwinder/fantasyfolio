@@ -21,6 +21,16 @@ A self-hosted web application for managing and browsing digital asset libraries,
 - 📦 Support for STL, 3MF, and OBJ formats
 - 💾 Direct model file downloads
 
+### 3D Model Viewer (Three.js)
+- 🎮 **Interactive 3D preview** - View STL models directly in the browser
+- 🔄 **Orbit controls** - Rotate, pan, and zoom with mouse/touch
+- 💡 **Professional lighting** - Ambient and directional lighting for best visualization
+- 📐 **Grid overlay** - Reference grid for scale context
+- 🎨 **Clean rendering** - Anti-aliased WebGL rendering
+- 📱 **Responsive** - Works on desktop and mobile browsers
+
+The viewer uses Three.js (r128) with STLLoader and OrbitControls, loaded from CDN for fast startup.
+
 ### General
 - 🌐 Modern responsive web interface
 - 🚀 Fast SQLite database with FTS5 full-text search
@@ -120,11 +130,24 @@ python -m dam.cli stats
 | `/api/stats` | GET | Overall statistics |
 | `/api/assets` | GET | List PDF assets |
 | `/api/assets/<id>` | GET | Get asset details |
+| `/api/assets/<id>/thumbnail` | GET | Get PDF thumbnail |
+| `/api/assets/<id>/render/<page>` | GET | Render PDF page as image |
 | `/api/models` | GET | List 3D models |
 | `/api/models/<id>` | GET | Get model details |
+| `/api/models/<id>/preview` | GET | Get model preview image |
+| `/api/models/<id>/stl` | GET | **Get STL file for 3D viewer** |
+| `/api/models/<id>/download` | GET | Download model file |
 | `/api/search` | GET | Unified search |
 | `/api/settings` | GET/POST | Application settings |
 | `/api/index` | POST | Trigger indexing |
+
+#### 3D Viewer Integration
+
+The web UI includes an interactive Three.js-based STL viewer. When viewing a model:
+1. Click "3D Preview" to open the viewer modal
+2. The viewer fetches the STL from `/api/models/<id>/stl`
+3. Models inside ZIP archives are extracted on-the-fly
+4. Use mouse to rotate (drag), zoom (scroll), and pan (right-drag)
 
 See [API Documentation](docs/API.md) for full details.
 
