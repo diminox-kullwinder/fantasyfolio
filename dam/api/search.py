@@ -248,7 +248,7 @@ def api_search_advanced():
     - Publisher/game system filtering
     """
     if request.method == 'POST':
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
     else:
         data = {
             'terms': request.args.get('q', '').strip(),
