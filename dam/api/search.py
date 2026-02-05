@@ -171,3 +171,163 @@ def api_search_pages():
         
         rows = conn.execute(sql, params).fetchall()
         return jsonify([dict(row) for row in rows])
+
+
+@search_bp.route('/search/all')
+def api_search_all():
+    """
+    Search across both PDFs and 3D models.
+    Returns combined results grouped by type.
+    """
+    query = request.args.get('q', '').strip()
+    limit = int(request.args.get('limit', 25))
+    
+    if not query:
+        return jsonify({'error': 'Search query required'}), 400
+    
+    results = {
+        'query': query,
+        'assets': [],
+        'models': [],
+        'pages': []
+    }
+    
+    with get_connection() as conn:
+        # Search PDF assets
+        try:
+            asset_rows = conn.execute("""
+                SELECT a.*, snippet(assets_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
+                FROM assets a
+                JOIN assets_fts ON a.id = assets_fts.rowid
+                WHERE assets_fts MATCH ?
+                LIMIT ?
+            """, (query, limit)).fetchall()
+            results['assets'] = [dict(row) for row in asset_rows]
+        except Exception:
+            pass
+        
+        # Search 3D models
+        try:
+            model_rows = conn.execute("""
+                SELECT m.* FROM models m
+                JOIN models_fts ON m.id = models_fts.rowid
+                WHERE models_fts MATCH ?
+                LIMIT ?
+            """, (query, limit)).fetchall()
+            results['models'] = [dict(row) for row in model_rows]
+        except Exception:
+            pass
+        
+        # Search page content
+        try:
+            page_rows = conn.execute("""
+                SELECT p.asset_id, p.page_num, a.filename, a.title,
+                       snippet(pages_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
+                FROM asset_pages p
+                JOIN pages_fts ON p.id = pages_fts.rowid
+                JOIN assets a ON p.asset_id = a.id
+                WHERE pages_fts MATCH ?
+                LIMIT ?
+            """, (query, limit)).fetchall()
+            results['pages'] = [dict(row) for row in page_rows]
+        except Exception:
+            pass
+    
+    return jsonify(results)
+
+
+@search_bp.route('/search/advanced', methods=['GET', 'POST'])
+def api_search_advanced():
+    """
+    Advanced search with multiple criteria.
+    
+    Supports:
+    - Multiple search terms with AND/OR logic
+    - Field-specific search (title, content, filename)
+    - Folder filtering
+    - Publisher/game system filtering
+    """
+    if request.method == 'POST':
+        data = request.get_json() or {}
+    else:
+        data = {
+            'terms': request.args.get('q', '').strip(),
+            'folder': request.args.get('folder'),
+            'publisher': request.args.get('publisher'),
+            'game_system': request.args.get('game_system'),
+            'search_titles': request.args.get('titles', 'true').lower() == 'true',
+            'search_content': request.args.get('content', 'true').lower() == 'true',
+        }
+    
+    terms = data.get('terms', '')
+    folder = data.get('folder')
+    publisher = data.get('publisher')
+    game_system = data.get('game_system')
+    search_titles = data.get('search_titles', True)
+    search_content = data.get('search_content', True)
+    limit = int(data.get('limit', 50))
+    
+    results = {'assets': [], 'pages': []}
+    
+    with get_connection() as conn:
+        # Search assets (titles/metadata)
+        if search_titles and terms:
+            sql = """
+                SELECT a.*, snippet(assets_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
+                FROM assets a
+                JOIN assets_fts ON a.id = assets_fts.rowid
+                WHERE assets_fts MATCH ?
+            """
+            params = [terms]
+            
+            if folder:
+                sql += " AND a.folder_path LIKE ?"
+                params.append(folder + '%')
+            if publisher:
+                sql += " AND a.publisher = ?"
+                params.append(publisher)
+            if game_system:
+                sql += " AND a.game_system = ?"
+                params.append(game_system)
+            
+            sql += " ORDER BY rank LIMIT ?"
+            params.append(limit)
+            
+            try:
+                rows = conn.execute(sql, params).fetchall()
+                results['assets'] = [dict(row) for row in rows]
+            except Exception as e:
+                logger.error(f"Advanced search assets error: {e}")
+        
+        # Search page content
+        if search_content and terms:
+            sql = """
+                SELECT p.asset_id, p.page_num, a.filename, a.title, a.folder_path,
+                       snippet(pages_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
+                FROM asset_pages p
+                JOIN pages_fts ON p.id = pages_fts.rowid
+                JOIN assets a ON p.asset_id = a.id
+                WHERE pages_fts MATCH ?
+            """
+            params = [terms]
+            
+            if folder:
+                sql += " AND a.folder_path LIKE ?"
+                params.append(folder + '%')
+            if publisher:
+                sql += " AND a.publisher = ?"
+                params.append(publisher)
+            if game_system:
+                sql += " AND a.game_system = ?"
+                params.append(game_system)
+            
+            sql += " ORDER BY rank LIMIT ?"
+            params.append(limit)
+            
+            try:
+                rows = conn.execute(sql, params).fetchall()
+                results['pages'] = [dict(row) for row in rows]
+            except Exception as e:
+                logger.error(f"Advanced search pages error: {e}")
+    
+    return jsonify(results)

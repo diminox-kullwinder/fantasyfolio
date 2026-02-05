@@ -190,3 +190,121 @@ def api_game_systems():
             ORDER BY count DESC
         """).fetchall()
         return jsonify([dict(row) for row in rows])
+
+
+# ==================== Legacy Path Compatibility ====================
+# These endpoints maintain compatibility with the original API paths
+# that the frontend template expects
+
+@assets_bp.route('/folder-tree')
+def api_folder_tree():
+    """Get hierarchical folder tree for PDF navigation."""
+    with get_connection() as conn:
+        rows = conn.execute("""
+            SELECT folder_path, COUNT(*) as count
+            FROM assets
+            WHERE folder_path IS NOT NULL AND folder_path != ''
+            GROUP BY folder_path
+            ORDER BY folder_path
+        """).fetchall()
+        
+        # Build tree structure
+        tree = {}
+        for row in rows:
+            path = row['folder_path']
+            count = row['count']
+            parts = path.split('/')
+            current = tree
+            for i, part in enumerate(parts):
+                if part not in current:
+                    current[part] = {'_count': 0, '_children': {}}
+                current[part]['_count'] += count
+                current = current[part]['_children']
+        
+        return jsonify({'tree': tree, 'flat': [dict(row) for row in rows]})
+
+
+@assets_bp.route('/thumbnail/<int:asset_id>')
+def api_thumbnail_legacy(asset_id: int):
+    """Legacy path for thumbnails."""
+    return api_asset_thumbnail(asset_id)
+
+
+@assets_bp.route('/render/<int:asset_id>/<int:page_num>')
+def api_render_legacy(asset_id: int, page_num: int):
+    """Legacy path for page rendering."""
+    return api_render_page(asset_id, page_num)
+
+
+@assets_bp.route('/download/<int:asset_id>')
+def api_download_legacy(asset_id: int):
+    """Legacy path for downloads."""
+    return api_download_asset(asset_id)
+
+
+@assets_bp.route('/pdf/<int:asset_id>')
+def api_serve_pdf(asset_id: int):
+    """Serve the raw PDF file for in-browser viewing."""
+    asset = get_asset_by_id(asset_id)
+    
+    if not asset:
+        return jsonify({'error': 'Asset not found'}), 404
+    
+    file_path = Path(asset['file_path'])
+    if not file_path.exists():
+        return jsonify({'error': 'File not found'}), 404
+    
+    return send_file(
+        file_path,
+        mimetype='application/pdf',
+        download_name=asset['filename']
+    )
+
+
+@assets_bp.route('/extract-pages/<int:asset_id>', methods=['POST'])
+def api_extract_pages(asset_id: int):
+    """Extract a range of pages from a PDF as a new file."""
+    asset = get_asset_by_id(asset_id)
+    
+    if not asset:
+        return jsonify({'error': 'Asset not found'}), 404
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    start_page = data.get('start', 1)
+    end_page = data.get('end')
+    
+    try:
+        import pymupdf
+        doc = pymupdf.open(asset['file_path'])
+        
+        if end_page is None:
+            end_page = len(doc)
+        
+        # Validate range
+        if start_page < 1 or end_page > len(doc) or start_page > end_page:
+            doc.close()
+            return jsonify({'error': 'Invalid page range'}), 400
+        
+        # Create new PDF with selected pages
+        new_doc = pymupdf.open()
+        new_doc.insert_pdf(doc, from_page=start_page-1, to_page=end_page-1)
+        
+        # Save to bytes
+        pdf_bytes = new_doc.tobytes()
+        new_doc.close()
+        doc.close()
+        
+        filename = f"{Path(asset['filename']).stem}_pages_{start_page}-{end_page}.pdf"
+        
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        logger.error(f"Page extraction failed: {e}")
+        return jsonify({'error': str(e)}), 500

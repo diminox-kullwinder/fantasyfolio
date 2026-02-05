@@ -92,6 +92,47 @@ def api_models_collections():
         return jsonify([dict(row) for row in rows])
 
 
+@models_bp.route('/models/folder-tree')
+def api_models_folder_tree():
+    """Get hierarchical folder tree for 3D model navigation."""
+    with get_connection() as conn:
+        rows = conn.execute("""
+            SELECT folder_path, COUNT(*) as count
+            FROM models
+            WHERE folder_path IS NOT NULL AND folder_path != ''
+            GROUP BY folder_path
+            ORDER BY folder_path
+        """).fetchall()
+        
+        # Build tree structure
+        tree = {}
+        for row in rows:
+            path = row['folder_path']
+            count = row['count']
+            parts = path.split('/')
+            current = tree
+            for i, part in enumerate(parts):
+                if part not in current:
+                    current[part] = {'_count': 0, '_children': {}}
+                current[part]['_count'] += count
+                current = current[part]['_children']
+        
+        return jsonify({'tree': tree, 'flat': [dict(row) for row in rows]})
+
+
+@models_bp.route('/models/search')
+def api_models_search():
+    """Search 3D models (legacy endpoint)."""
+    query = request.args.get('q', '').strip()
+    limit = int(request.args.get('limit', 50))
+    
+    if not query:
+        return jsonify([])
+    
+    from dam.core.database import search_models
+    return jsonify(search_models(query, limit=limit))
+
+
 @models_bp.route('/models/<int:model_id>/preview')
 def api_model_preview(model_id: int):
     """Get preview image for a 3D model."""
