@@ -33,33 +33,33 @@ CREATE TABLE IF NOT EXISTS assets (
     has_thumbnail INTEGER DEFAULT 0
 );
 
--- Full-text search table
+-- Full-text search table for asset metadata
+-- Note: Page text is searchable via pages_fts table
 CREATE VIRTUAL TABLE IF NOT EXISTS assets_fts USING fts5(
     title,
     author,
     publisher,
     filename,
-    text_content,
     content='assets',
     content_rowid='id'
 );
 
 -- Triggers to keep FTS in sync
 CREATE TRIGGER IF NOT EXISTS assets_ai AFTER INSERT ON assets BEGIN
-    INSERT INTO assets_fts(rowid, title, author, publisher, filename, text_content)
-    VALUES (new.id, new.title, new.author, new.publisher, new.filename, '');
+    INSERT INTO assets_fts(rowid, title, author, publisher, filename)
+    VALUES (new.id, new.title, new.author, new.publisher, new.filename);
 END;
 
 CREATE TRIGGER IF NOT EXISTS assets_ad AFTER DELETE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename, text_content)
-    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename, '');
+    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename)
+    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename);
 END;
 
 CREATE TRIGGER IF NOT EXISTS assets_au AFTER UPDATE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename, text_content)
-    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename, '');
-    INSERT INTO assets_fts(rowid, title, author, publisher, filename, text_content)
-    VALUES (new.id, new.title, new.author, new.publisher, new.filename, '');
+    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename)
+    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename);
+    INSERT INTO assets_fts(rowid, title, author, publisher, filename)
+    VALUES (new.id, new.title, new.author, new.publisher, new.filename);
 END;
 
 -- Collections/folders virtual organization
