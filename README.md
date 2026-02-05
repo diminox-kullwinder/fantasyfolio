@@ -283,3 +283,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [PyMuPDF](https://pymupdf.readthedocs.io/) for PDF processing
 - [Flask](https://flask.palletsprojects.com/) web framework
 - [SQLite](https://sqlite.org/) with FTS5 for search
+- [Three.js](https://threejs.org/) for 3D model viewing (STLLoader)
+- [numpy-stl](https://github.com/WoLpH/numpy-stl) for STL parsing
+- [Matplotlib](https://matplotlib.org/) for thumbnail rendering
