@@ -1,7 +1,7 @@
 # DAM Refactor Validation Issues
 
 **Generated:** 2026-02-05
-**Last Updated:** 2026-02-05 10:23 PST
+**Last Updated:** 2026-02-05 10:32 PST
 
 ## Issues Found & Resolved
 
@@ -43,13 +43,27 @@
 **Status:** VERIFIED OK
 **Description:** Template copied from original, placeholders created.
 
+### 9. ✅ FTS Schema Bug - assets_fts text_content
+**Status:** FIXED
+**Description:** `assets_fts` referenced `text_content` column that doesn't exist in `assets` table.
+**Fix:** Removed `text_content` from `assets_fts` definition. Page text is searchable via `pages_fts`.
+
 ## Local Verification Tests Passed
 
-1. ✅ `python -m dam.cli init-db` - Database created successfully
-2. ✅ `python -m dam.cli stats` - Stats command works
-3. ✅ `create_app()` - Flask app initializes with all 44 routes registered
-4. ✅ Config paths resolve correctly (BASE_DIR, DATA_DIR, STATIC_DIR, TEMPLATE_DIR)
+1. ✅ All 13 module imports successful
+2. ✅ Config paths resolve correctly (BASE_DIR, DATA_DIR, STATIC_DIR, TEMPLATE_DIR)
+3. ✅ Critical files exist (schema.sql, index.html, placeholders)
+4. ✅ `python -m dam.cli init-db` - Database created successfully
+5. ✅ `python -m dam.cli stats` - Stats command works
+6. ✅ Flask app initializes with all 44 routes registered
+7. ✅ All 21 API endpoint tests pass
+8. ✅ Database schema validates (25 tables, 7 triggers)
+9. ✅ Indexer classes instantiate correctly
 
 ## Ready for Docker Testing
 
 All code issues resolved. Ready for Docker build and deployment test.
+
+## Git Commits
+- `1d7141f` - Fix validation issues: deps, Docker, imports
+- `2ded9eb` - Fix assets_fts schema - remove nonexistent text_content column
