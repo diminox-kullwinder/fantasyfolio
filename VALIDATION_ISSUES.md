@@ -1,7 +1,7 @@
 # DAM Refactor Validation Issues
 
 **Generated:** 2026-02-05
-**Last Updated:** 2026-02-05 10:35 PST
+**Last Updated:** 2026-02-05 10:39 PST
 
 ## Issues Found & Resolved
 
@@ -54,17 +54,24 @@
 **Fix:** Changed `request.get_json()` to `request.get_json(silent=True)` in 5 endpoints.
 **Affected:** `/api/settings`, `/api/index`, `/api/index/clear`, `/api/extract-pages`, `/api/settings/<key>`
 
-## Local Verification Tests Passed
+### 11. ✅ Search Advanced get_json
+**Status:** FIXED
+**Description:** `/api/search/advanced` POST handler also had unsafe `get_json()`.
+**Fix:** Changed to `request.get_json(silent=True) or {}` in search.py line 251.
 
-1. ✅ All 13 module imports successful
-2. ✅ Config paths resolve correctly (BASE_DIR, DATA_DIR, STATIC_DIR, TEMPLATE_DIR)
-3. ✅ Critical files exist (schema.sql, index.html, placeholders)
-4. ✅ `python -m dam.cli init-db` - Database created successfully
-5. ✅ `python -m dam.cli stats` - Stats command works
-6. ✅ Flask app initializes with all 44 routes registered
-7. ✅ All 21 API endpoint tests pass
-8. ✅ Database schema validates (25 tables, 7 triggers)
-9. ✅ Indexer classes instantiate correctly
+## Final Validation Results (3 iterations, 0 issues)
+
+| Check | Count | Status |
+|-------|-------|--------|
+| Module imports | 17 | ✅ |
+| Critical files | 9 | ✅ |
+| Flask routes | 44 | ✅ |
+| Endpoint tests | 30 | ✅ |
+| Database tables | 25 | ✅ |
+| Database triggers | 7 | ✅ |
+| CLI commands | 3 | ✅ |
+| Code quality checks | 3 | ✅ |
+| Docker files | 2 | ✅ |
 
 ## Ready for Docker Testing
 
@@ -75,3 +82,5 @@ All code issues resolved. Ready for Docker build and deployment test.
 - `2ded9eb` - Fix assets_fts schema - remove nonexistent text_content column
 - `25cea94` - Update validation doc with all tests passed
 - `3e11d6d` - Fix POST endpoint error handling
+- `bcfcbf8` - Update validation doc - pass #3 complete
+- `855ef23` - Fix last unsafe get_json() in search.py
