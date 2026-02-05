@@ -1,0 +1,3480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPG Library</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: rgba(255,255,255,0.05);
+      --text-primary: #e4e4e4;
+      --text-secondary: #888;
+      --accent: #4dabf7;
+      --accent-hover: #74c0fc;
+      --border: rgba(255,255,255,0.1);
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      min-height: 100vh;
+      color: var(--text-primary);
+    }
+    
+    /* Layout */
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    /* Header */
+    header {
+      background: rgba(0,0,0,0.3);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    
+    .content-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-card);
+      padding: 4px;
+      border-radius: 8px;
+    }
+    
+    .toggle-btn {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    
+    .toggle-btn:hover {
+      color: var(--text-primary);
+    }
+    
+    .toggle-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .settings-btn {
+      background: transparent;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 8px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    
+    .settings-btn:hover {
+      opacity: 1;
+    }
+    
+    .search-box {
+      flex: 1;
+      max-width: 600px;
+    }
+    
+    .search-box input {
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+    
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .adv-search-toggle {
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      border: 1px solid var(--border);
+      border-left: none;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    
+    .adv-search-toggle:hover,
+    .adv-search-toggle.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .search-box input {
+      border-radius: 8px 0 0 8px;
+    }
+    
+    .search-box {
+      display: flex;
+    }
+    
+    .stats {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    /* Advanced Search Panel */
+    .advanced-search-panel {
+      display: none;
+      background: rgba(0,0,0,0.3);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    
+    .advanced-search-panel.open {
+      display: block;
+    }
+    
+    .adv-search-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .adv-search-close:hover {
+      color: #e74c3c;
+      background: rgba(231,76,60,0.1);
+    }
+    
+    .adv-search-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    
+    .adv-search-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .adv-search-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .adv-search-group label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .adv-search-group select,
+    .adv-search-group input[type="number"] {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+    
+    .adv-search-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .adv-search-terms {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .adv-term-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 6px;
+    }
+    
+    .term-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      min-width: 50px;
+    }
+    
+    .term-operator {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .term-include {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+    
+    .term-input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+    
+    .term-remove {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    
+    .term-remove:hover {
+      color: #e74c3c;
+    }
+    
+    .btn-add-term {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .btn-add-term:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    .btn-apply {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .btn-clear {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .btn-clear:hover {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      background: rgba(0,0,0,0.2);
+      padding: 20px;
+      overflow: auto;
+      width: 300px;
+      min-width: 150px;
+      flex-shrink: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent) rgba(255,255,255,0.1);
+    }
+    
+    .sidebar::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    
+    .sidebar::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px;
+    }
+    
+    .sidebar::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 5px;
+    }
+    
+    .resize-handle {
+      width: 8px;
+      background: rgba(255,255,255,0.1);
+      cursor: col-resize;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .resize-handle:hover,
+    .resize-handle.dragging {
+      background: var(--accent);
+    }
+    
+    .folder-tree {
+      margin-bottom: 24px;
+    }
+    
+    /* Main Content - defined below */
+    
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .folder-list, .publisher-list {
+      list-style: none;
+      margin-bottom: 24px;
+    }
+    
+    .folder-list li, .publisher-list li {
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+    
+    .folder-list li:hover, .publisher-list li:hover {
+      background: var(--bg-card);
+    }
+    
+    .folder-list li.active, .publisher-list li.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    /* Tree structure */
+    .folder-tree {
+      list-style: none;
+      margin-bottom: 24px;
+      font-size: 0.85rem;
+    }
+    
+    .tree-item {
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    
+    .tree-item:hover {
+      background: var(--bg-card);
+    }
+    
+    .tree-item.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .tree-item .toggle {
+      width: 16px;
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    
+    .tree-item.active .toggle {
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .tree-item .folder-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .tree-children {
+      display: none;
+    }
+    
+    .tree-children.expanded {
+      display: block;
+      min-width: max-content;
+    }
+    
+    .count-badge {
+      background: var(--bg-card);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    
+    .active .count-badge {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+    
+    /* Main Content */
+    .main {
+      padding: 24px;
+      overflow: auto;
+      flex: 1;
+    }
+    
+    .view-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .view-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .view-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    .sort-controls {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+    
+    .sort-controls select {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    
+    .clear-btn {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .clear-btn:hover {
+      background: #e74c3c;
+      border-color: #e74c3c;
+      color: white;
+    }
+    
+    /* Grid View */
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+    }
+    
+    .asset-card {
+      background: var(--bg-card);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .asset-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    
+    .asset-thumb {
+      width: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      background: var(--bg-secondary);
+    }
+    
+    .asset-info {
+      padding: 12px;
+    }
+    
+    .asset-title {
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    
+    .asset-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    
+    /* List View */
+    .asset-list {
+      display: none;
+    }
+    
+    .asset-list.active {
+      display: block;
+    }
+    
+    .asset-grid.hidden {
+      display: none;
+    }
+    
+    .asset-row {
+      display: grid;
+      grid-template-columns: 60px 1fr 150px 100px 80px;
+      gap: 16px;
+      padding: 12px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .asset-row:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    
+    .asset-row img {
+      width: 60px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    
+    .asset-row .title {
+      font-weight: 500;
+    }
+    
+    .asset-row .publisher {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+    
+    .asset-row .pages, .asset-row .size {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      text-align: right;
+    }
+    
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    .modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .modal-body {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 24px;
+      padding: 24px;
+    }
+    
+    .modal-thumb {
+      width: 100%;
+      border-radius: 8px;
+    }
+    
+    .modal-details h2 {
+      margin-bottom: 16px;
+      font-size: 1.4rem;
+    }
+    
+    .detail-row {
+      display: flex;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .detail-label {
+      width: 120px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+    
+    .detail-value {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+    
+    .breadcrumbs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .breadcrumb-link {
+      color: var(--accent);
+      text-decoration: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    
+    .breadcrumb-link:hover {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .breadcrumb-sep {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    
+    /* Page Extraction */
+    .page-extract-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .page-extract-section h4 {
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+    
+    .page-extract-row {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .page-input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+    
+    .page-extract-hint {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+    
+    /* Search Matches in Detail Modal */
+    .search-matches-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .search-matches-section h4 {
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    
+    .search-matches-list {
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .search-matches-list .page-match {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(77, 171, 247, 0.1);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      align-items: flex-start;
+      border: 1px solid transparent;
+    }
+    
+    .search-matches-list .page-match:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    .search-matches-list .page-num {
+      background: var(--accent);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    
+    .search-matches-list .page-match:hover .page-num {
+      background: white;
+      color: var(--accent);
+    }
+    
+    .search-matches-list .snippet {
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    
+    .search-matches-list .snippet mark {
+      background: rgba(77, 171, 247, 0.3);
+      color: var(--text-primary);
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    
+    /* Bookmarks/TOC */
+    .bookmarks-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .bookmarks-section h4 {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .bookmarks-section h4:hover {
+      color: var(--accent);
+    }
+    
+    .bookmarks-list {
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      padding: 8px;
+    }
+    
+    .bookmark-item {
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .bookmark-item:hover {
+      background: var(--bg-card);
+    }
+    
+    .bookmark-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .bookmark-page {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      margin-left: 8px;
+    }
+    
+    .bookmark-level-1 { padding-left: 0; }
+    .bookmark-level-2 { padding-left: 16px; }
+    .bookmark-level-3 { padding-left: 32px; }
+    .bookmark-level-4 { padding-left: 48px; }
+    
+    .bookmarks-empty {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      padding: 12px;
+      text-align: center;
+    }
+    
+    /* Content Search Results */
+    .content-results {
+      margin-bottom: 24px;
+      background: var(--bg-card);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+    }
+    
+    .content-grid.hidden {
+      display: none;
+    }
+    
+    .content-list.hidden {
+      display: none;
+    }
+    
+    .content-results h3 {
+      font-size: 1rem;
+      margin-bottom: 16px;
+      color: var(--accent);
+    }
+    
+    .content-results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .content-result-card {
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    
+    .content-result-header {
+      display: flex;
+      gap: 12px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    
+    .content-result-header img {
+      width: 50px;
+      height: 65px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    
+    .content-result-header .title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .content-result-header .path {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    
+    .page-matches {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-left: 62px;
+    }
+    
+    .page-match {
+      display: flex;
+      gap: 10px;
+      padding: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      align-items: flex-start;
+    }
+    
+    .page-match:hover {
+      background: var(--accent);
+    }
+    
+    .page-num {
+      background: var(--accent);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    
+    .page-match:hover .page-num {
+      background: white;
+      color: var(--accent);
+    }
+    
+    .snippet {
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    
+    .snippet mark {
+      background: rgba(77, 171, 247, 0.3);
+      color: var(--text-primary);
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    
+    .more-pages {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      padding: 4px 8px;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+    
+    .empty-state h3 {
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+    
+    /* 3D Model Icons */
+    .model-icon {
+      font-size: 4rem;
+      text-align: center;
+      padding: 20px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 140px;
+    }
+    
+    .model-icon-small {
+      font-size: 1.5rem;
+      width: 40px;
+      text-align: center;
+    }
+    
+    .model-preview-icon {
+      font-size: 6rem;
+      text-align: center;
+      padding: 30px;
+      background: var(--bg-card);
+      border-radius: 8px;
+    }
+    
+    /* 3D Model Preview in Modal */
+    .model-preview-area {
+      position: relative;
+    }
+    
+    .model-thumb-img {
+      width: 100%;
+      max-width: 200px;
+      height: auto;
+      border-radius: 8px;
+      background: var(--bg-card);
+    }
+    
+    .model-thumb-fallback {
+      width: 200px;
+      height: 200px;
+      font-size: 4rem;
+      background: var(--bg-card);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* 3D Viewer */
+    .viewer-3d {
+      display: none;
+      width: 200px;
+      height: 200px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .viewer-controls {
+      display: none;
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      gap: 4px;
+      z-index: 10;
+    }
+    
+    .viewer-controls button {
+      background: rgba(0,0,0,0.8);
+      color: var(--text-primary);
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    .viewer-controls button:hover {
+      background: var(--accent);
+    }
+    
+    /* 3D Grid Thumbnail */
+    .model-grid-thumb {
+      object-fit: contain;
+      background: var(--bg-card);
+    }
+    
+    /* Collection list */
+    .collection-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .collection-list li {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    
+    .collection-list li:hover {
+      background: var(--bg-card);
+    }
+    
+    .collection-list li.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    /* Settings Modal */
+    .settings-overlay, .browser-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 3000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .settings-overlay.active, .browser-overlay.active {
+      display: flex;
+    }
+    
+    .settings-modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .settings-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+    
+    .settings-close, .browser-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .settings-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    
+    .settings-section {
+      margin-bottom: 24px;
+    }
+    
+    .settings-section h3 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    
+    .settings-field {
+      margin-bottom: 16px;
+    }
+    
+    .settings-field label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    
+    .settings-field input, .settings-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+    
+    .settings-field textarea {
+      resize: vertical;
+      font-family: monospace;
+    }
+    
+    .path-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .path-input-row input {
+      flex: 1;
+    }
+    
+    .path-input-row button {
+      padding: 10px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    
+    .path-input-row button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    .index-btn {
+      padding: 10px 14px;
+      background: #2d5a3d;
+      border: 1px solid #3d7a4d;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    
+    .index-btn:hover {
+      background: #3d7a4d;
+    }
+    
+    .index-btn.smb-index {
+      margin-top: 8px;
+      width: 100%;
+    }
+    
+    .index-status {
+      font-size: 0.8rem;
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .index-status.active {
+      display: block;
+      background: rgba(77, 171, 247, 0.2);
+      color: var(--accent);
+    }
+    
+    .index-status.success {
+      display: block;
+      background: rgba(61, 122, 77, 0.2);
+      color: #6fbf8a;
+    }
+    
+    .index-status.error {
+      display: block;
+      background: rgba(200, 80, 80, 0.2);
+      color: #e08080;
+    }
+    
+    .settings-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Directory Browser */
+    .browser-modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 450px;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .browser-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .browser-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    
+    .browser-path {
+      padding: 10px 20px;
+      background: var(--bg-card);
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .browser-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    
+    .browser-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+    
+    .browser-item:hover {
+      background: var(--bg-card);
+    }
+    
+    .browser-item.parent {
+      color: var(--text-secondary);
+    }
+    
+    .browser-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+      .modal-body {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Page Preview Modal */
+    .page-preview-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .page-preview-overlay.active {
+      display: flex;
+    }
+    
+    .page-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 900px;
+      padding: 12px 20px;
+      color: white;
+    }
+    
+    .page-preview-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .page-preview-nav button, .page-preview-zoom button {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: background 0.2s;
+    }
+    
+    .page-preview-nav button:hover:not(:disabled),
+    .page-preview-zoom button:hover:not(:disabled) {
+      background: var(--accent);
+    }
+    
+    .page-preview-nav button:disabled,
+    .page-preview-zoom button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    
+    .page-preview-info {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.8);
+    }
+    
+    .page-preview-zoom {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 24px;
+      padding-left: 24px;
+      border-left: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .page-preview-zoom button {
+      width: 36px;
+      height: 36px;
+      font-size: 1.1rem;
+    }
+    
+    .zoom-level {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.7);
+      min-width: 50px;
+      text-align: center;
+    }
+    
+    .page-preview-title {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 400px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .page-preview-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      padding: 8px;
+      line-height: 1;
+    }
+    
+    .page-preview-close:hover {
+      color: var(--accent);
+    }
+    
+    .page-preview-image-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: auto;
+      max-width: 100%;
+    }
+    
+    .page-preview-image {
+      max-height: calc(100vh - 200px);
+      max-width: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    
+    .page-preview-image.loading {
+      opacity: 0.5;
+    }
+    
+    .page-preview-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: rgba(0,0,0,0.5);
+      width: 100%;
+    }
+    
+    .page-preview-footer label {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.9rem;
+    }
+    
+    .page-range-select {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(30,30,50,0.95);
+      color: white;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    
+    .page-range-select option {
+      background: #1e1e32;
+      color: white;
+      padding: 8px;
+    }
+    
+    .page-range-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .page-preview-download {
+      padding: 10px 24px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .page-preview-download:hover {
+      background: var(--accent-hover);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo" onclick="goHome()" style="cursor:pointer" title="Return to home view">📚 RPG Library</div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search PDFs..." />
+        <button class="adv-search-toggle" onclick="toggleAdvancedSearch()" title="Advanced Search">⚙</button>
+      </div>
+      <div class="content-toggle">
+        <button class="toggle-btn active" id="togglePdf" onclick="setContentType('pdf')">📄 PDFs</button>
+        <button class="toggle-btn" id="toggle3d" onclick="setContentType('3d')">🎲 3D Models</button>
+      </div>
+      <div class="stats" id="stats">Loading...</div>
+      <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
+    </header>
+    
+    <div class="advanced-search-panel" id="advancedSearchPanel">
+      <button class="adv-search-close" onclick="toggleAdvancedSearch()" title="Close">✕</button>
+      <div class="adv-search-row">
+        <div class="adv-search-group">
+          <label>Search in:</label>
+          <select id="advSearchScope">
+            <option value="all">All folders</option>
+            <option value="current" id="advScopeCurrent">Current folder</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="adv-search-terms" id="advSearchTerms">
+        <div class="adv-term-row" data-row="0">
+          <span class="term-label">Find in</span>
+          <select class="term-field">
+            <option value="all">Title & Content</option>
+            <option value="title">Title only</option>
+            <option value="content">Content only</option>
+          </select>
+          <select class="term-include">
+            <option value="include">contains</option>
+            <option value="exclude">does NOT contain</option>
+          </select>
+          <input type="text" class="term-input" placeholder="Enter search term..." />
+        </div>
+      </div>
+      
+      <div class="adv-search-row" style="margin-top:12px">
+        <button class="btn-add-term" onclick="addSearchTerm()">+ Add condition</button>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="btn-apply" onclick="runAdvancedSearch()">Search</button>
+          <button class="btn-clear" onclick="clearAdvancedSearch()">Clear</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="app-body">
+    <aside class="sidebar" id="sidebar">
+      <!-- PDF Navigation -->
+      <div id="pdfNav">
+        <h3>📁 Folders</h3>
+        <div class="folder-tree" id="folderTree"></div>
+        
+        <h3>🏢 Publishers</h3>
+        <ul class="publisher-list" id="publisherList"></ul>
+      </div>
+      
+      <!-- 3D Models Navigation -->
+      <div id="modelsNav" style="display:none;">
+        <h3>📂 Folders</h3>
+        <div class="folder-tree" id="modelFolderTree"></div>
+        
+        <h3>📦 Collections</h3>
+        <ul class="collection-list" id="collectionList"></ul>
+      </div>
+    </aside>
+    <div class="resize-handle" id="resizeHandle"></div>
+    
+    <main class="main">
+      <div class="view-controls">
+        <button class="view-btn active" data-view="grid">Grid</button>
+        <button class="view-btn" data-view="list">List</button>
+        <div class="sort-controls">
+          <select id="sortSelect" onchange="changeSort()">
+            <option value="filename:asc">Name (A-Z)</option>
+            <option value="filename:desc">Name (Z-A)</option>
+            <option value="title:asc">Title (A-Z)</option>
+            <option value="title:desc">Title (Z-A)</option>
+            <option value="file_size:desc">Size (Large first)</option>
+            <option value="file_size:asc">Size (Small first)</option>
+            <option value="page_count:desc">Pages (Most first)</option>
+            <option value="page_count:asc">Pages (Least first)</option>
+            <option value="modified_at:desc">Modified (Newest)</option>
+            <option value="modified_at:asc">Modified (Oldest)</option>
+          </select>
+          <button class="clear-btn" onclick="clearFilters()" title="Clear all filters">✕ Clear</button>
+        </div>
+      </div>
+      
+      <div class="content-results" id="contentResults" style="display:none;"></div>
+      <div class="asset-grid" id="assetGrid"></div>
+      <div class="asset-list" id="assetList"></div>
+    </main>
+  </div>
+  </div>
+  
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Asset Details</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Page Preview Modal -->
+  <div class="page-preview-overlay" id="pagePreview">
+    <div class="page-preview-header">
+      <div class="page-preview-nav">
+        <button onclick="previewPrevPage()" id="prevPageBtn" title="Previous page">◀</button>
+        <span class="page-preview-info">
+          Page <span id="previewPageNum">1</span> of <span id="previewTotalPages">1</span>
+        </span>
+        <button onclick="previewNextPage()" id="nextPageBtn" title="Next page">▶</button>
+        <div class="page-preview-zoom">
+          <button onclick="zoomOut()" title="Zoom out">−</button>
+          <span class="zoom-level" id="zoomLevel">100%</span>
+          <button onclick="zoomIn()" title="Zoom in">+</button>
+          <button onclick="zoomReset()" title="Reset zoom" style="font-size:0.8rem">⟲</button>
+        </div>
+      </div>
+      <div class="page-preview-title" id="previewTitle"></div>
+      <button class="page-preview-close" onclick="closePagePreview()" title="Close">&times;</button>
+    </div>
+    <div class="page-preview-image-container">
+      <img class="page-preview-image" id="previewImage" src="" alt="Page preview" />
+    </div>
+    <div class="page-preview-footer">
+      <label>Download:</label>
+      <select class="page-range-select" id="pageRangeSelect">
+        <option value="0">This page only</option>
+        <option value="1">± 1 page (3 pages)</option>
+        <option value="2">± 2 pages (5 pages)</option>
+        <option value="5">± 5 pages (11 pages)</option>
+        <option value="custom">Custom range...</option>
+      </select>
+      <button class="page-preview-download" onclick="downloadPreviewPages()">
+        ⬇ Download PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="settings-overlay" id="settingsModal">
+    <div class="settings-modal">
+      <div class="settings-header">
+        <h2>⚙️ Settings</h2>
+        <button class="settings-close" onclick="closeSettings()">×</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-section">
+          <h3>📄 PDF/Documents</h3>
+          <div class="settings-field">
+            <label>Root Directory</label>
+            <div class="path-input-row">
+              <input type="text" id="settingPdfRoot" placeholder="/path/to/pdfs" />
+              <button onclick="browseDirectory('pdf_root', 'settingPdfRoot')">Browse</button>
+              <button class="index-btn" onclick="indexNow('pdf')" title="Index PDFs now">🔄 Index</button>
+            </div>
+            <div class="index-status" id="pdfIndexStatus"></div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>🎲 3D Models</h3>
+          <div class="settings-field">
+            <label>Root Directory</label>
+            <div class="path-input-row">
+              <input type="text" id="setting3dRoot" placeholder="/path/to/3d-files" />
+              <button onclick="browseDirectory('3d_root', 'setting3dRoot')">Browse</button>
+              <button class="index-btn" onclick="indexNow('3d')" title="Index 3D files now">🔄 Index</button>
+            </div>
+            <div class="index-status" id="3dIndexStatus"></div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>🌐 Network Paths (SMB)</h3>
+          <div class="settings-field">
+            <label>Additional mount points (one per line)</label>
+            <textarea id="settingSmbPaths" rows="3" placeholder="/Volumes/NAS/Media&#10;/Volumes/Share"></textarea>
+            <button class="index-btn smb-index" onclick="indexNow('smb')" title="Index SMB paths now">🔄 Index SMB Paths</button>
+            <div class="index-status" id="smbIndexStatus"></div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-footer">
+        <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Directory Browser Modal -->
+  <div class="browser-overlay" id="browserModal">
+    <div class="browser-modal">
+      <div class="browser-header">
+        <h3>📁 Select Directory</h3>
+        <button class="browser-close" onclick="closeBrowser()">×</button>
+      </div>
+      <div class="browser-path" id="browserPath">/Volumes</div>
+      <div class="browser-list" id="browserList"></div>
+      <div class="browser-footer">
+        <button class="btn btn-secondary" onclick="closeBrowser()">Cancel</button>
+        <button class="btn btn-primary" onclick="selectBrowserPath()">✓ Select</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentView = 'grid';
+    let currentFolder = null;
+    let currentPublisher = null;
+    let currentSort = 'filename';
+    let currentOrder = 'asc';
+    let contentType = 'pdf';  // 'pdf' or '3d'
+    let currentCollection = null;
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+      loadFolders();
+      loadPublishers();
+      loadAssets();
+      // Pre-load 3D nav for quick switching
+      load3dCollections();
+      load3dFolders();
+      
+      // Search
+      let searchTimeout;
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => search(e.target.value), 300);
+      });
+      
+      // View toggle
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentView = btn.dataset.view;
+          toggleView();
+        });
+      });
+      
+      // Close modal on overlay click
+      document.getElementById('modal').addEventListener('click', (e) => {
+        if (e.target.id === 'modal') closeModal();
+      });
+      
+      // Close page preview on overlay click
+      document.getElementById('pagePreview').addEventListener('click', (e) => {
+        if (e.target.id === 'pagePreview') closePagePreview();
+      });
+    });
+    
+    async function loadStats() {
+      if (contentType === 'pdf') {
+        const res = await fetch('/api/stats');
+        const stats = await res.json();
+        document.getElementById('stats').textContent = 
+          `${stats.total_assets} PDFs · ${stats.total_size_gb} GB`;
+      } else {
+        const res = await fetch('/api/models/stats');
+        const stats = await res.json();
+        document.getElementById('stats').textContent = 
+          `${stats.total_models} Models · ${stats.total_size_mb} MB`;
+      }
+    }
+    
+    function setContentType(type) {
+      contentType = type;
+      
+      // Update toggle buttons
+      document.getElementById('togglePdf').classList.toggle('active', type === 'pdf');
+      document.getElementById('toggle3d').classList.toggle('active', type === '3d');
+      
+      // Update search placeholder
+      document.getElementById('searchInput').placeholder = 
+        type === 'pdf' ? 'Search PDFs...' : 'Search 3D models...';
+      
+      // Toggle nav sections
+      document.getElementById('pdfNav').style.display = type === 'pdf' ? 'block' : 'none';
+      document.getElementById('modelsNav').style.display = type === '3d' ? 'block' : 'none';
+      
+      // Clear current filters
+      currentFolder = null;
+      currentPublisher = null;
+      currentCollection = null;
+      document.getElementById('searchInput').value = '';
+      document.getElementById('contentResults').style.display = 'none';
+      
+      // Reload content
+      loadStats();
+      if (type === 'pdf') {
+        loadFolders();
+        loadAssets();
+      } else {
+        load3dFolders();
+        load3dCollections();
+        load3dModels();
+      }
+    }
+    
+    // 3D Model folder tree data
+    let modelFolderTreeData = [];
+    let expandedModelFolders = new Set();
+    
+    async function load3dCollections() {
+      const res = await fetch('/api/models/collections');
+      const collections = await res.json();
+      
+      const list = document.getElementById('collectionList');
+      list.innerHTML = collections.map(c => `
+        <li onclick="filter3dCollection('${escapeHtml(c.collection)}')" 
+            class="${currentCollection === c.collection ? 'active' : ''}">
+          ${escapeHtml(c.collection)}
+          <span class="count-badge">${c.count}</span>
+        </li>
+      `).join('');
+    }
+    
+    async function load3dFolders() {
+      const res = await fetch('/api/models/folder-tree');
+      modelFolderTreeData = await res.json();
+      render3dFolderTree();
+    }
+    
+    function render3dFolderTree() {
+      const container = document.getElementById('modelFolderTree');
+      const totalCount = modelFolderTreeData.filter(f => f.depth === 0).reduce((a, f) => a + f.count, 0);
+      
+      // Build hierarchical HTML (same structure as PDF folder tree)
+      let html = `
+        <div class="tree-item ${!currentFolder ? 'active' : ''}" onclick="filter3dFolder(null)">
+          <span class="toggle"></span>
+          <span class="folder-name">🎲 All Models</span>
+          <span class="count-badge">${totalCount}</span>
+        </div>
+      `;
+      
+      const renderLevel = (items, parentDepth = -1) => {
+        let result = '';
+        let i = 0;
+        while (i < items.length) {
+          const item = items[i];
+          if (item.depth <= parentDepth) break;
+          if (item.depth === parentDepth + 1) {
+            const hasChildren = item.hasChildren;
+            const isExpanded = expandedModelFolders.has(item.path);
+            const isActive = currentFolder === item.path;
+            const indent = item.depth * 16;
+            
+            let childrenHtml = '';
+            if (hasChildren) {
+              const childItems = [];
+              let j = i + 1;
+              while (j < items.length && items[j].depth > item.depth) {
+                childItems.push(items[j]);
+                j++;
+              }
+              childrenHtml = renderLevel(childItems, item.depth);
+            }
+            
+            const jsPath = item.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            result += `
+              <div style="padding-left: ${indent}px;">
+                <div class="tree-item ${isActive ? 'active' : ''}" 
+                     data-path="${escapeHtml(item.path)}"
+                     onclick="handle3dTreeClick(event, '${jsPath}', ${hasChildren})">
+                  <span class="toggle">${hasChildren ? (isExpanded ? '▼' : '▶') : ''}</span>
+                  <span class="folder-name">${escapeHtml(item.name)}</span>
+                  <span class="count-badge">${item.count}</span>
+                </div>
+                ${hasChildren ? `<div class="tree-children ${isExpanded ? 'expanded' : ''}" data-parent="${escapeHtml(item.path)}">${childrenHtml}</div>` : ''}
+              </div>
+            `;
+          }
+          i++;
+        }
+        return result;
+      };
+      
+      html += renderLevel(modelFolderTreeData);
+      container.innerHTML = html;
+    }
+    
+    function handle3dTreeClick(event, path, hasChildren) {
+      event.stopPropagation();
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      
+      if (hasChildren && clickX < 30) {
+        if (expandedModelFolders.has(path)) {
+          expandedModelFolders.delete(path);
+        } else {
+          expandedModelFolders.add(path);
+        }
+        render3dFolderTree();
+      } else {
+        filter3dFolder(path);
+      }
+    }
+    
+    function filter3dFolder(folder) {
+      currentFolder = folder;
+      currentCollection = null;  // Clear collection filter when filtering by folder
+      load3dCollections();  // Update active states
+      render3dFolderTree();
+      load3dModels();
+    }
+    
+    async function load3dModels() {
+      let url = '/api/models?limit=100';
+      if (currentCollection) {
+        url += `&collection=${encodeURIComponent(currentCollection)}`;
+      }
+      if (currentFolder) {
+        url += `&folder=${encodeURIComponent(currentFolder)}`;
+      }
+      
+      const res = await fetch(url);
+      const models = await res.json();
+      render3dModels(models);
+    }
+    
+    function filter3dCollection(collection) {
+      currentCollection = collection;
+      currentFolder = null;  // Clear folder filter when filtering by collection
+      load3dCollections();
+      render3dFolderTree();
+      load3dModels();
+    }
+    
+    function render3dModels(models) {
+      const grid = document.getElementById('assetGrid');
+      const list = document.getElementById('assetList');
+      
+      if (models.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <h3>No 3D models found</h3>
+            <p>Index your 3D files from Settings</p>
+          </div>
+        `;
+        list.innerHTML = '';
+        return;
+      }
+      
+      // Grid view with preview thumbnails  
+      grid.innerHTML = models.map(m => `
+        <div class="asset-card" onclick="show3dDetail(${m.id})">
+          <img class="asset-thumb model-grid-thumb" src="/api/models/${m.id}/preview" alt="" loading="lazy" />
+          <div class="asset-info">
+            <div class="asset-title" title="${escapeHtml(m.filename)}">${escapeHtml(m.title || m.filename)}</div>
+            <div class="asset-meta">${(m.format || 'stl').toUpperCase()} · ${formatSize(m.file_size)}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      // List view
+      list.innerHTML = models.map(m => `
+        <div class="asset-row" onclick="show3dDetail(${m.id})">
+          <img src="/api/models/${m.id}/preview" alt="" loading="lazy" 
+               onerror="this.outerHTML='<div class=\\'model-icon-small\\'>🎲</div>'" />
+          <div>
+            <div class="title">${escapeHtml(m.title || m.filename)}</div>
+            <div class="publisher">${escapeHtml(m.collection || '')}</div>
+          </div>
+          <div class="publisher">${(m.format || 'stl').toUpperCase()}</div>
+          <div class="pages">${m.has_supports ? '✓ Supported' : ''}</div>
+          <div class="size">${formatSize(m.file_size)}</div>
+        </div>
+      `).join('');
+    }
+    
+    // Current model for 3D viewer
+    let current3dModelId = null;
+    let threeViewer = null;
+    
+    async function show3dDetail(id) {
+      current3dModelId = id;
+      const res = await fetch(`/api/models/${id}`);
+      const model = await res.json();
+      
+      // Use same structure as PDF modal for consistency
+      document.getElementById('modalBody').innerHTML = `
+        <div class="model-preview-area">
+          <img class="model-thumb-img" src="/api/models/${id}/preview" alt="" 
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="model-thumb-fallback" style="display:none;">🎲</div>
+          <div id="viewer3d" class="viewer-3d"></div>
+          <div class="viewer-controls" id="viewerControls">
+            <button onclick="resetViewer()" title="Reset view">⟲</button>
+            <button onclick="toggleWireframe()" title="Toggle wireframe">◇</button>
+            <button onclick="close3dViewer()" title="Close 3D view">✕</button>
+          </div>
+        </div>
+        <div class="modal-details">
+          <h2>${escapeHtml(model.title || model.filename)}</h2>
+          
+          <div class="detail-row">
+            <span class="detail-label">Filename</span>
+            <span class="detail-value">${escapeHtml(model.filename)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Format</span>
+            <span class="detail-value">${(model.format || 'stl').toUpperCase()}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Collection</span>
+            <span class="detail-value">${escapeHtml(model.collection || '—')}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">File Size</span>
+            <span class="detail-value">${formatSize(model.file_size)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Supports</span>
+            <span class="detail-value">${model.has_supports ? '✓ Pre-supported' : 'No'}</span>
+          </div>
+          ${model.archive_path ? `
+          <div class="detail-row">
+            <span class="detail-label">Archive</span>
+            <span class="detail-value" style="font-size:0.8rem">${escapeHtml(model.archive_path.split('/').pop())}</span>
+          </div>
+          ` : ''}
+          
+          <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="open3dViewer(${id})" id="btn3dPreview">
+              🎮 3D Preview
+            </button>
+            <a href="/api/models/${id}/download" class="btn btn-primary">
+              ⬇ Download
+            </a>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('modal').classList.add('active');
+    }
+    
+    // Three.js viewer state
+    let threeJsLoaded = false;
+    
+    // Three.js viewer functions
+    async function open3dViewer(modelId) {
+      const btn = document.getElementById('btn3dPreview');
+      if (btn) btn.textContent = '⏳ Loading...';
+      
+      try {
+        // Check if Three.js is loaded
+        if (!threeJsLoaded) {
+          // Load Three.js and loaders from CDN (using older compatible version)
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+          // OrbitControls and STLLoader for r128
+          await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js');
+          await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/STLLoader.js');
+          threeJsLoaded = true;
+        }
+        
+        // Hide static preview, show 3D viewer
+        const previewImg = document.querySelector('.model-preview-area .model-thumb-img');
+        const fallback = document.querySelector('.model-preview-area .model-thumb-fallback');
+        const viewerDiv = document.getElementById('viewer3d');
+        const controls = document.getElementById('viewerControls');
+        
+        if (previewImg) previewImg.style.display = 'none';
+        if (fallback) fallback.style.display = 'none';
+        if (viewerDiv) viewerDiv.style.display = 'block';
+        if (controls) controls.style.display = 'flex';
+        
+        if (btn) btn.style.display = 'none';
+        
+        // Initialize Three.js scene
+        if (viewerDiv) init3dViewer(viewerDiv, modelId);
+      } catch (e) {
+        console.error('Failed to load Three.js:', e);
+        if (btn) btn.textContent = '❌ Load failed';
+      }
+    }
+    
+    function close3dViewer() {
+      const previewImg = document.querySelector('.model-preview-area .model-thumb-img');
+      const fallback = document.querySelector('.model-preview-area .model-thumb-fallback');
+      const viewerDiv = document.getElementById('viewer3d');
+      const controls = document.getElementById('viewerControls');
+      const btn = document.getElementById('btn3dPreview');
+      
+      if (viewerDiv) {
+        viewerDiv.style.display = 'none';
+        viewerDiv.innerHTML = '';
+      }
+      if (controls) controls.style.display = 'none';
+      
+      if (previewImg) previewImg.style.display = 'block';
+      else if (fallback) fallback.style.display = 'flex';
+      
+      if (btn) {
+        btn.style.display = 'inline-block';
+        btn.textContent = '🎮 3D Preview';
+      }
+      
+      threeViewer = null;
+    }
+    
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        // Check if already loaded
+        if (document.querySelector(`script[src="${src}"]`)) {
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+    
+    function init3dViewer(container, modelId) {
+      // Clear any previous viewer
+      container.innerHTML = '';
+      
+      const width = container.clientWidth || 200;
+      const height = container.clientHeight || 200;
+      
+      // Check Three.js loaded properly
+      if (typeof THREE === 'undefined') {
+        console.error('THREE not loaded');
+        container.innerHTML = '<div style="color:red;padding:20px;">Three.js failed to load</div>';
+        return;
+      }
+      
+      if (typeof THREE.STLLoader === 'undefined') {
+        console.error('STLLoader not loaded');
+        container.innerHTML = '<div style="color:red;padding:20px;">STL Loader failed to load</div>';
+        return;
+      }
+      
+      // Scene
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1a1a2e);
+      
+      // Camera
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+      camera.position.set(0, 50, 100);
+      
+      // Renderer
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      container.appendChild(renderer.domElement);
+      
+      // Controls
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0x404040, 2);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      directionalLight.position.set(50, 100, 50);
+      scene.add(directionalLight);
+      
+      const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+      backLight.position.set(-50, 50, -50);
+      scene.add(backLight);
+      
+      // Grid
+      const gridHelper = new THREE.GridHelper(100, 10, 0x4dabf7, 0x333366);
+      scene.add(gridHelper);
+      
+      // Show loading indicator
+      const loadingDiv = document.createElement('div');
+      loadingDiv.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#4dabf7;';
+      loadingDiv.textContent = '⏳ Loading...';
+      container.appendChild(loadingDiv);
+      
+      // Load STL
+      const loader = new THREE.STLLoader();
+      loader.load(
+        `/api/models/${modelId}/stl`,
+        (geometry) => {
+          loadingDiv.remove();
+        const material = new THREE.MeshPhongMaterial({ 
+          color: 0x4dabf7,
+          specular: 0x111111,
+          shininess: 30,
+          flatShading: false
+        });
+        
+        const mesh = new THREE.Mesh(geometry, material);
+        
+        // Center and scale
+        geometry.computeBoundingBox();
+        const bbox = geometry.boundingBox;
+        const center = new THREE.Vector3();
+        bbox.getCenter(center);
+        geometry.translate(-center.x, -center.y, -center.z);
+        
+        // Auto-scale to fit view
+        const size = new THREE.Vector3();
+        bbox.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 50 / maxDim;
+        mesh.scale.set(scale, scale, scale);
+        
+        // Position on grid
+        geometry.computeBoundingBox();
+        const newBbox = geometry.boundingBox;
+        mesh.position.y = -newBbox.min.y * scale;
+        
+        scene.add(mesh);
+        
+        // Store for controls
+        threeViewer = { scene, camera, renderer, controls, mesh, material };
+        
+        // Fit camera
+        camera.position.set(maxDim * scale, maxDim * scale, maxDim * scale * 1.5);
+        controls.target.set(0, 25, 0);
+        controls.update();
+      },
+      // Progress callback
+      (xhr) => {
+        if (xhr.lengthComputable) {
+          const pct = Math.round(xhr.loaded / xhr.total * 100);
+          loadingDiv.textContent = `⏳ Loading ${pct}%`;
+        }
+      },
+      // Error callback
+      (error) => {
+        console.error('STL load error:', error);
+        loadingDiv.textContent = '❌ Failed to load model';
+        loadingDiv.style.color = '#ff6b6b';
+      }
+      );
+      
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+      
+      // Handle resize
+      const resizeObserver = new ResizeObserver(() => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      });
+      resizeObserver.observe(container);
+    }
+    
+    function resetViewer() {
+      if (threeViewer) {
+        const { camera, controls, mesh } = threeViewer;
+        camera.position.set(50, 50, 75);
+        controls.target.set(0, 25, 0);
+        controls.update();
+      }
+    }
+    
+    function toggleWireframe() {
+      if (threeViewer && threeViewer.material) {
+        threeViewer.material.wireframe = !threeViewer.material.wireframe;
+      }
+    }
+    
+    let expandedFolders = new Set();
+    let folderTreeData = [];
+    
+    async function loadFolders() {
+      const res = await fetch('/api/folder-tree');
+      folderTreeData = await res.json();
+      renderFolderTree();
+    }
+    
+    function renderFolderTree() {
+      const container = document.getElementById('folderTree');
+      const totalCount = folderTreeData.filter(f => f.depth === 0).reduce((a, f) => a + f.count, 0);
+      
+      // Build hierarchical HTML
+      let html = `
+        <div class="tree-item ${!currentFolder ? 'active' : ''}" onclick="filterFolder(null)">
+          <span class="toggle"></span>
+          <span class="folder-name">📚 All Files</span>
+          <span class="count-badge">${totalCount}</span>
+        </div>
+      `;
+      
+      // Group items by parent path for tree rendering
+      const renderLevel = (items, parentDepth = -1) => {
+        let result = '';
+        let i = 0;
+        while (i < items.length) {
+          const item = items[i];
+          if (item.depth <= parentDepth) break;
+          if (item.depth === parentDepth + 1) {
+            const hasChildren = item.hasChildren;
+            const isExpanded = expandedFolders.has(item.path);
+            const isActive = currentFolder === item.path;
+            const indent = item.depth * 16;
+            
+            // Find children
+            let childrenHtml = '';
+            if (hasChildren) {
+              const childItems = [];
+              let j = i + 1;
+              while (j < items.length && items[j].depth > item.depth) {
+                childItems.push(items[j]);
+                j++;
+              }
+              childrenHtml = renderLevel(childItems, item.depth);
+            }
+            
+            const jsPath = item.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            result += `
+              <div style="padding-left: ${indent}px;">
+                <div class="tree-item ${isActive ? 'active' : ''}" 
+                     data-path="${escapeHtml(item.path)}"
+                     onclick="handleTreeClick(event, '${jsPath}', ${hasChildren})">
+                  <span class="toggle">${hasChildren ? (isExpanded ? '▼' : '▶') : ''}</span>
+                  <span class="folder-name">${escapeHtml(item.name)}</span>
+                  <span class="count-badge">${item.count}</span>
+                </div>
+                ${hasChildren ? `<div class="tree-children ${isExpanded ? 'expanded' : ''}" data-parent="${escapeHtml(item.path)}">${childrenHtml}</div>` : ''}
+              </div>
+            `;
+          }
+          i++;
+        }
+        return result;
+      };
+      
+      html += renderLevel(folderTreeData);
+      container.innerHTML = html;
+    }
+    
+    function handleTreeClick(event, path, hasChildren) {
+      event.stopPropagation();
+      
+      // If clicking toggle area or has children, toggle expand
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      
+      if (hasChildren && clickX < 30) {
+        // Toggle expansion
+        if (expandedFolders.has(path)) {
+          expandedFolders.delete(path);
+        } else {
+          expandedFolders.add(path);
+        }
+        renderFolderTree();
+      } else {
+        // Filter by this folder
+        filterFolder(path);
+      }
+    }
+    
+    async function loadPublishers() {
+      const res = await fetch('/api/publishers');
+      const publishers = await res.json();
+      const list = document.getElementById('publisherList');
+      
+      list.innerHTML = publishers.slice(0, 15).map(p => `
+        <li class="${currentPublisher === p.publisher ? 'active' : ''}"
+            onclick="filterPublisher('${p.publisher}')">
+          ${p.publisher || 'Unknown'}
+          <span class="count-badge">${p.count}</span>
+        </li>
+      `).join('');
+    }
+    
+    async function loadAssets() {
+      let url = `/api/assets?limit=100&sort=${currentSort}&order=${currentOrder}`;
+      if (currentFolder) url += `&folder=${encodeURIComponent(currentFolder)}`;
+      if (currentPublisher) url += `&publisher=${encodeURIComponent(currentPublisher)}`;
+      
+      const res = await fetch(url);
+      const assets = await res.json();
+      renderAssets(assets);
+      toggleView();
+    }
+    
+    function changeSort() {
+      const val = document.getElementById('sortSelect').value;
+      const [sort, order] = val.split(':');
+      currentSort = sort;
+      currentOrder = order;
+      
+      if (lastSearchQuery) {
+        search(lastSearchQuery);
+      } else {
+        loadAssets();
+      }
+    }
+    
+    function clearFilters() {
+      currentFolder = null;
+      currentPublisher = null;
+      currentSort = 'filename';
+      currentOrder = 'asc';
+      document.getElementById('searchInput').value = '';
+      document.getElementById('sortSelect').value = 'filename:asc';
+      document.getElementById('contentResults').style.display = 'none';
+      lastSearchQuery = '';
+      loadFolders();
+      loadPublishers();
+      loadAssets();
+    }
+    
+    function goHome() {
+      clearFilters();
+      clearAdvancedSearch();
+    }
+    
+    let searchTermCount = 1;
+    
+    function toggleAdvancedSearch() {
+      const panel = document.getElementById('advancedSearchPanel');
+      const btn = document.querySelector('.adv-search-toggle');
+      panel.classList.toggle('open');
+      btn.classList.toggle('active');
+      
+      // Update scope option when opening
+      if (panel.classList.contains('open')) {
+        updateScopeOption();
+      }
+    }
+    
+    function updateScopeOption() {
+      const scopeOption = document.getElementById('advScopeCurrent');
+      if (currentFolder) {
+        const folderName = currentFolder.split('/').pop();
+        scopeOption.textContent = `Current: ${folderName}`;
+        scopeOption.disabled = false;
+      } else {
+        scopeOption.textContent = 'Current folder (select a folder first)';
+        scopeOption.disabled = true;
+        document.getElementById('advSearchScope').value = 'all';
+      }
+    }
+    
+    function addSearchTerm() {
+      const container = document.getElementById('advSearchTerms');
+      const rowNum = searchTermCount++;
+      
+      const row = document.createElement('div');
+      row.className = 'adv-term-row';
+      row.dataset.row = rowNum;
+      row.innerHTML = `
+        <select class="term-operator">
+          <option value="AND">AND</option>
+          <option value="OR">OR</option>
+        </select>
+        <span class="term-label">in</span>
+        <select class="term-field">
+          <option value="all">Title & Content</option>
+          <option value="title">Title only</option>
+          <option value="content">Content only</option>
+        </select>
+        <select class="term-include">
+          <option value="include">contains</option>
+          <option value="exclude">does NOT contain</option>
+        </select>
+        <input type="text" class="term-input" placeholder="Enter search term..." />
+        <button class="term-remove" onclick="removeSearchTerm(${rowNum})">✕</button>
+      `;
+      container.appendChild(row);
+    }
+    
+    function removeSearchTerm(rowNum) {
+      const row = document.querySelector(`.adv-term-row[data-row="${rowNum}"]`);
+      if (row) row.remove();
+    }
+    
+    function clearAdvancedSearch() {
+      document.getElementById('advSearchScope').value = 'all';
+      
+      // Reset to single search term
+      const container = document.getElementById('advSearchTerms');
+      container.innerHTML = `
+        <div class="adv-term-row" data-row="0">
+          <span class="term-label">Find in</span>
+          <select class="term-field">
+            <option value="all">Title & Content</option>
+            <option value="title">Title only</option>
+            <option value="content">Content only</option>
+          </select>
+          <select class="term-include">
+            <option value="include">contains</option>
+            <option value="exclude">does NOT contain</option>
+          </select>
+          <input type="text" class="term-input" placeholder="Enter search term..." />
+        </div>
+      `;
+      searchTermCount = 1;
+    }
+    
+    function buildAdvancedQuery() {
+      const rows = document.querySelectorAll('.adv-term-row');
+      const terms = [];
+      
+      rows.forEach((row, i) => {
+        const input = row.querySelector('.term-input');
+        const include = row.querySelector('.term-include');
+        const operator = row.querySelector('.term-operator');
+        const field = row.querySelector('.term-field');
+        
+        const term = input.value.trim();
+        if (!term) return;
+        
+        const isExclude = include.value === 'exclude';
+        const op = operator ? operator.value : 'AND';
+        const searchField = field ? field.value : 'all';
+        
+        terms.push({
+          term: term,
+          exclude: isExclude,
+          operator: op,
+          field: searchField
+        });
+      });
+      
+      return terms;
+    }
+    
+    async function runAdvancedSearch() {
+      const terms = buildAdvancedQuery();
+      if (terms.length === 0) return;
+      
+      const scope = document.getElementById('advSearchScope').value;
+      const folder = (scope === 'current' && currentFolder) ? currentFolder : null;
+      
+      // Build search request
+      const searchParams = new URLSearchParams();
+      searchParams.set('terms', JSON.stringify(terms));
+      if (folder) searchParams.set('folder', folder);
+      
+      const res = await fetch(`/api/search/advanced?${searchParams}`);
+      const results = await res.json();
+      
+      // Update search input to show query summary
+      const queryDisplay = terms.map(t => {
+        let s = '';
+        if (t.operator && terms.indexOf(t) > 0) s += t.operator + ' ';
+        if (t.exclude) s += 'NOT ';
+        s += `"${t.term}"`;
+        if (t.field !== 'all') s += ` (${t.field})`;
+        return s;
+      }).join(' ');
+      document.getElementById('searchInput').value = queryDisplay;
+      lastSearchQuery = queryDisplay;
+      
+      // Render results
+      renderAssets(results.metadata || []);
+      renderContentResults(results.content || [], queryDisplay);
+      toggleView();
+    }
+    
+    function getAdvancedFilters() {
+      return {
+        scope: document.getElementById('advSearchScope')?.value || 'all',
+        field: 'all',  // Title + Content by default
+        publisher: null,
+        gameSystem: null
+      };
+    }
+    
+    let lastSearchQuery = '';
+    
+    async function search(query) {
+      if (!query) {
+        lastSearchQuery = '';
+        searchMatchesByAsset = {};
+        document.getElementById('contentResults').style.display = 'none';
+        
+        // Load appropriate content type
+        if (contentType === '3d') {
+          load3dModels();
+        } else {
+          loadAssets();
+        }
+        return;
+      }
+      
+      lastSearchQuery = query;
+      
+      // Different search for 3D models vs PDFs
+      if (contentType === '3d') {
+        const res = await fetch(`/api/models/search?q=${encodeURIComponent(query)}`);
+        const models = await res.json();
+        document.getElementById('contentResults').style.display = 'none';
+        render3dModels(models);
+        toggleView();
+        return;
+      }
+      
+      // PDF search with advanced filters
+      const adv = getAdvancedFilters();
+      let searchUrl = `/api/search/all?q=${encodeURIComponent(query)}`;
+      
+      // Scope search to current folder if selected
+      if (adv.scope === 'current' && currentFolder) {
+        searchUrl += `&folder=${encodeURIComponent(currentFolder)}`;
+      }
+      if (adv.field !== 'all') {
+        searchUrl += `&field=${adv.field}`;
+      }
+      if (adv.publisher) {
+        searchUrl += `&publisher=${encodeURIComponent(adv.publisher)}`;
+      }
+      if (adv.gameSystem) {
+        searchUrl += `&system=${encodeURIComponent(adv.gameSystem)}`;
+      }
+      
+      const res = await fetch(searchUrl);
+      const results = await res.json();
+      
+      // Sort metadata results client-side
+      let sortedMetadata = sortResults(results.metadata);
+      
+      // Render metadata matches (or show message if empty)
+      if (sortedMetadata.length === 0 && results.content.length > 0) {
+        // Only content matches, no title/filename matches
+        document.getElementById('assetGrid').innerHTML = '';
+        document.getElementById('assetList').innerHTML = '';
+      } else {
+        renderAssets(sortedMetadata);
+      }
+      
+      // Render content matches with page numbers (sorted)
+      renderContentResults(results.content, query);
+      
+      // Ensure view toggle is applied
+      toggleView();
+    }
+    
+    function sortResults(assets) {
+      if (!assets || assets.length === 0) return assets;
+      
+      const sorted = [...assets];
+      sorted.sort((a, b) => {
+        let valA = a[currentSort];
+        let valB = b[currentSort];
+        
+        // Handle nulls
+        if (valA == null) valA = '';
+        if (valB == null) valB = '';
+        
+        // String comparison for text fields
+        if (typeof valA === 'string') {
+          valA = valA.toLowerCase();
+          valB = (valB || '').toLowerCase();
+        }
+        
+        let result = 0;
+        if (valA < valB) result = -1;
+        if (valA > valB) result = 1;
+        
+        return currentOrder === 'desc' ? -result : result;
+      });
+      
+      return sorted;
+    }
+    
+    function renderContentResults(results, query) {
+      const container = document.getElementById('contentResults');
+      
+      if (!results || results.length === 0) {
+        container.style.display = 'none';
+        searchMatchesByAsset = {};  // Clear search matches
+        return;
+      }
+      
+      // Group by asset
+      const byAsset = {};
+      results.forEach(r => {
+        if (!byAsset[r.asset_id]) {
+          byAsset[r.asset_id] = {
+            asset_id: r.asset_id,
+            title: r.title,
+            filename: r.filename,
+            folder_path: r.folder_path,
+            publisher: r.publisher,
+            pages: []
+          };
+        }
+        byAsset[r.asset_id].pages.push({
+          page_num: r.page_num,
+          snippet: r.snippet
+        });
+      });
+      
+      // Store matches for detail modal access
+      searchMatchesByAsset = {};
+      Object.values(byAsset).forEach(a => {
+        searchMatchesByAsset[a.asset_id] = a.pages;
+      });
+      
+      // Sort the grouped assets
+      let assets = Object.values(byAsset);
+      assets.sort((a, b) => {
+        let valA = a[currentSort] || a.filename;
+        let valB = b[currentSort] || b.filename;
+        if (typeof valA === 'string') {
+          valA = valA.toLowerCase();
+          valB = (valB || '').toLowerCase();
+        }
+        let result = valA < valB ? -1 : (valA > valB ? 1 : 0);
+        return currentOrder === 'desc' ? -result : result;
+      });
+      
+      // Grid view for content results
+      const gridHtml = assets.map(a => `
+        <div class="asset-card" onclick="showDetail(${a.asset_id})">
+          <img class="asset-thumb" src="/api/thumbnail/${a.asset_id}" alt="" loading="lazy" />
+          <div class="asset-info">
+            <div class="asset-title" title="${escapeHtml(a.title || a.filename)}">${escapeHtml(a.title || a.filename)}</div>
+            <div class="asset-meta">${a.pages.length} page matches</div>
+          </div>
+        </div>
+      `).join('');
+      
+      // List view for content results
+      const listHtml = assets.map(a => `
+        <div class="content-result-card">
+          <div class="content-result-header">
+            <img src="/api/thumbnail/${a.asset_id}" alt="" onclick="showDetail(${a.asset_id})" />
+            <div>
+              <div class="title" onclick="showDetail(${a.asset_id})" style="cursor:pointer">${escapeHtml(a.title || a.filename)}</div>
+              <div class="path breadcrumbs">${renderBreadcrumbs(a.folder_path)}</div>
+            </div>
+          </div>
+          <div class="page-matches">
+            ${a.pages.slice(0, 5).map(p => `
+              <div class="page-match" onclick="openToPage(${a.asset_id}, ${p.page_num})">
+                <span class="page-num">p.${p.page_num}</span>
+                <span class="snippet">${p.snippet}</span>
+              </div>
+            `).join('')}
+            ${a.pages.length > 5 ? `<div class="more-pages">+${a.pages.length - 5} more pages</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+      
+      container.innerHTML = `
+        <h3>📄 Content Matches (${results.length} pages in ${assets.length} PDFs)</h3>
+        <div class="content-grid ${currentView === 'grid' ? '' : 'hidden'}">${gridHtml}</div>
+        <div class="content-list ${currentView === 'list' ? '' : 'hidden'}">${listHtml}</div>
+      `;
+      container.style.display = 'block';
+    }
+    
+    function renderAssets(assets) {
+      const grid = document.getElementById('assetGrid');
+      const list = document.getElementById('assetList');
+      
+      if (assets.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <h3>No PDFs found</h3>
+            <p>Run the indexer to scan your PDF collection</p>
+          </div>
+        `;
+        list.innerHTML = '';
+        return;
+      }
+      
+      // Grid view
+      grid.innerHTML = assets.map(a => `
+        <div class="asset-card" onclick="showDetail(${a.id})">
+          <img class="asset-thumb" src="/api/thumbnail/${a.id}" alt="" loading="lazy" />
+          <div class="asset-info">
+            <div class="asset-title" title="${escapeHtml(a.title || a.filename)}">${escapeHtml(a.title || a.filename)}</div>
+            <div class="asset-meta">${a.page_count || '?'} pages</div>
+          </div>
+        </div>
+      `).join('');
+      
+      // List view
+      list.innerHTML = assets.map(a => `
+        <div class="asset-row" onclick="showDetail(${a.id})">
+          <img src="/api/thumbnail/${a.id}" alt="" loading="lazy" />
+          <div>
+            <div class="title">${escapeHtml(a.title || a.filename)}</div>
+            <div class="publisher">${escapeHtml(a.publisher || '')}</div>
+          </div>
+          <div class="publisher">${escapeHtml(a.game_system || '')}</div>
+          <div class="pages">${a.page_count || '?'} pages</div>
+          <div class="size">${formatSize(a.file_size)}</div>
+        </div>
+      `).join('');
+    }
+    
+    function filterFolder(folder) {
+      // Clear search state
+      lastSearchQuery = '';
+      searchMatchesByAsset = {};
+      document.getElementById('searchInput').value = '';
+      document.getElementById('contentResults').style.display = 'none';
+      
+      currentFolder = folder;
+      currentPublisher = null;
+      loadFolders();
+      loadPublishers();
+      loadAssets();
+      updateScopeOption();
+    }
+    
+    function filterPublisher(publisher) {
+      // Clear search state
+      lastSearchQuery = '';
+      searchMatchesByAsset = {};
+      document.getElementById('searchInput').value = '';
+      document.getElementById('contentResults').style.display = 'none';
+      
+      currentPublisher = publisher;
+      loadPublishers();
+      loadAssets();
+    }
+    
+    // Store search matches by asset ID for display in detail modal
+    let searchMatchesByAsset = {};
+    
+    async function showDetail(id) {
+      bookmarksLoaded = false;  // Reset for new asset
+      const res = await fetch(`/api/assets/${id}`);
+      const asset = await res.json();
+      
+      // Check if we have search matches for this asset
+      const matches = searchMatchesByAsset[id] || [];
+      let searchMatchesHtml = '';
+      
+      if (matches.length > 0) {
+        searchMatchesHtml = `
+          <div class="search-matches-section">
+            <h4>🔍 Search Matches (${matches.length} pages)</h4>
+            <div class="search-matches-list">
+              ${matches.map(m => `
+                <div class="page-match" onclick="closeModal(); openToPage(${id}, ${m.page_num})">
+                  <span class="page-num">p.${m.page_num}</span>
+                  <span class="snippet">${m.snippet}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      document.getElementById('modalBody').innerHTML = `
+        <div>
+          <img class="modal-thumb" src="/api/thumbnail/${id}" alt="" />
+        </div>
+        <div class="modal-details">
+          <h2>${escapeHtml(asset.title || asset.filename)}</h2>
+          
+          <div class="detail-row">
+            <span class="detail-label">Filename</span>
+            <span class="detail-value">${escapeHtml(asset.filename)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Author</span>
+            <span class="detail-value">${escapeHtml(asset.author || '—')}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Publisher</span>
+            <span class="detail-value">${escapeHtml(asset.publisher || '—')}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Game System</span>
+            <span class="detail-value">${escapeHtml(asset.game_system || '—')}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Pages</span>
+            <span class="detail-value">${asset.page_count || '—'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">File Size</span>
+            <span class="detail-value">${formatSize(asset.file_size)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Path</span>
+            <span class="detail-value breadcrumbs">${renderBreadcrumbs(asset.folder_path)}</span>
+          </div>
+          
+          ${searchMatchesHtml}
+          
+          <div class="modal-actions">
+            <button class="btn btn-primary" onclick="closeModal(); openToPage(${id}, 1)">
+              📖 Preview
+            </button>
+            <a href="/api/download/${id}" class="btn btn-secondary" download>
+              ⬇ Download
+            </a>
+          </div>
+          
+          <div class="page-extract-section">
+            <h4>📄 Extract Pages</h4>
+            <div class="page-extract-row">
+              <input type="text" id="extractPages" placeholder="e.g., 1, 3, 5-10" class="page-input" />
+              <button class="btn btn-secondary" onclick="extractPages(${id}, ${asset.page_count})">
+                Extract & Download
+              </button>
+            </div>
+            <div class="page-extract-hint">
+              Enter page numbers (1-${asset.page_count || '?'}). Use commas for individual pages, dashes for ranges.
+            </div>
+          </div>
+          
+          <div class="bookmarks-section" id="bookmarksSection">
+            <h4 onclick="toggleBookmarks(${id})" style="cursor:pointer">
+              📑 Table of Contents <span id="bookmarksToggle">▶</span>
+            </h4>
+            <div class="bookmarks-list" id="bookmarksList" style="display:none"></div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('modal').classList.add('active');
+    }
+    
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      if (modal) modal.classList.remove('active');
+    }
+    
+    // Page Preview Modal State
+    let previewAssetId = null;
+    let previewCurrentPage = 1;
+    let previewTotalPages = 1;
+    let previewAssetTitle = '';
+    let previewZoom = 100;  // Zoom percentage
+    
+    function updateZoomUI() {
+      document.getElementById('zoomLevel').textContent = previewZoom + '%';
+      const img = document.getElementById('previewImage');
+      img.style.transform = `scale(${previewZoom / 100})`;
+      img.style.transformOrigin = 'center center';
+    }
+    
+    function zoomIn() {
+      if (previewZoom < 300) {
+        previewZoom = Math.min(300, previewZoom + 25);
+        updateZoomUI();
+      }
+    }
+    
+    function zoomOut() {
+      if (previewZoom > 25) {
+        previewZoom = Math.max(25, previewZoom - 25);
+        updateZoomUI();
+      }
+    }
+    
+    function zoomReset() {
+      previewZoom = 100;
+      updateZoomUI();
+    }
+    
+    async function openToPage(assetId, pageNum) {
+      // Open page preview modal instead of full PDF
+      previewAssetId = assetId;
+      previewCurrentPage = pageNum;
+      
+      // Reset zoom
+      previewZoom = 100;
+      updateZoomUI();
+      
+      // Get asset info for total pages and title
+      const res = await fetch(`/api/assets/${assetId}`);
+      const asset = await res.json();
+      previewTotalPages = asset.page_count || 1;
+      previewAssetTitle = asset.title || asset.filename;
+      
+      // Update UI
+      document.getElementById('previewTitle').textContent = previewAssetTitle;
+      document.getElementById('previewPageNum').textContent = pageNum;
+      document.getElementById('previewTotalPages').textContent = previewTotalPages;
+      
+      // Update nav buttons
+      updatePreviewNavButtons();
+      
+      // Load the page image
+      loadPreviewPage(assetId, pageNum);
+      
+      // Show modal
+      document.getElementById('pagePreview').classList.add('active');
+      
+      // Handle escape key
+      document.addEventListener('keydown', handlePreviewKeydown);
+    }
+    
+    function loadPreviewPage(assetId, pageNum) {
+      const img = document.getElementById('previewImage');
+      img.classList.add('loading');
+      img.src = `/api/render/${assetId}/${pageNum}?zoom=2`;
+      img.onload = () => img.classList.remove('loading');
+    }
+    
+    function updatePreviewNavButtons() {
+      document.getElementById('prevPageBtn').disabled = previewCurrentPage <= 1;
+      document.getElementById('nextPageBtn').disabled = previewCurrentPage >= previewTotalPages;
+    }
+    
+    function previewPrevPage() {
+      if (previewCurrentPage > 1) {
+        previewCurrentPage--;
+        document.getElementById('previewPageNum').textContent = previewCurrentPage;
+        loadPreviewPage(previewAssetId, previewCurrentPage);
+        updatePreviewNavButtons();
+      }
+    }
+    
+    function previewNextPage() {
+      if (previewCurrentPage < previewTotalPages) {
+        previewCurrentPage++;
+        document.getElementById('previewPageNum').textContent = previewCurrentPage;
+        loadPreviewPage(previewAssetId, previewCurrentPage);
+        updatePreviewNavButtons();
+      }
+    }
+    
+    function handlePreviewKeydown(e) {
+      if (!document.getElementById('pagePreview').classList.contains('active')) return;
+      
+      if (e.key === 'Escape') {
+        closePagePreview();
+      } else if (e.key === 'ArrowLeft') {
+        previewPrevPage();
+      } else if (e.key === 'ArrowRight') {
+        previewNextPage();
+      } else if (e.key === '+' || e.key === '=') {
+        zoomIn();
+      } else if (e.key === '-' || e.key === '_') {
+        zoomOut();
+      } else if (e.key === '0') {
+        zoomReset();
+      }
+    }
+    
+    function closePagePreview() {
+      document.getElementById('pagePreview').classList.remove('active');
+      document.removeEventListener('keydown', handlePreviewKeydown);
+    }
+    
+    function downloadPreviewPages() {
+      const rangeSelect = document.getElementById('pageRangeSelect');
+      const range = rangeSelect.value;
+      
+      if (range === 'custom') {
+        const customRange = prompt(
+          `Enter page range (1-${previewTotalPages}):\nExamples: "5-10" or "1,3,5-8"`,
+          `${previewCurrentPage}`
+        );
+        if (customRange) {
+          window.location.href = `/api/extract-pages/${previewAssetId}?pages=${encodeURIComponent(customRange)}`;
+        }
+        return;
+      }
+      
+      const offset = parseInt(range);
+      const startPage = Math.max(1, previewCurrentPage - offset);
+      const endPage = Math.min(previewTotalPages, previewCurrentPage + offset);
+      
+      let pages;
+      if (startPage === endPage) {
+        pages = `${startPage}`;
+      } else {
+        pages = `${startPage}-${endPage}`;
+      }
+      
+      window.location.href = `/api/extract-pages/${previewAssetId}?pages=${encodeURIComponent(pages)}`;
+    }
+    
+    function extractPages(assetId, maxPages) {
+      const pagesInput = document.getElementById('extractPages');
+      const pages = pagesInput.value.trim();
+      
+      if (!pages) {
+        alert('Please enter page numbers to extract');
+        return;
+      }
+      
+      // Validate format
+      if (!/^[\d,\s-]+$/.test(pages)) {
+        alert('Invalid format. Use numbers, commas, and dashes only.\nExample: 1, 3, 5-10');
+        return;
+      }
+      
+      // Download extracted pages
+      window.location.href = `/api/extract-pages/${assetId}?pages=${encodeURIComponent(pages)}`;
+    }
+    
+    let bookmarksLoaded = false;
+    
+    async function toggleBookmarks(assetId) {
+      const list = document.getElementById('bookmarksList');
+      const toggle = document.getElementById('bookmarksToggle');
+      
+      if (list.style.display === 'none') {
+        list.style.display = 'block';
+        toggle.textContent = '▼';
+        
+        if (!bookmarksLoaded) {
+          list.innerHTML = '<div class="bookmarks-empty">Loading...</div>';
+          
+          const res = await fetch(`/api/assets/${assetId}/bookmarks`);
+          const bookmarks = await res.json();
+          
+          if (bookmarks.length === 0) {
+            list.innerHTML = '<div class="bookmarks-empty">No table of contents available</div>';
+          } else {
+            list.innerHTML = bookmarks.map(b => `
+              <div class="bookmark-item bookmark-level-${Math.min(b.level, 4)}" 
+                   onclick="openToPage(${assetId}, ${b.page_num})">
+                <span class="bookmark-title" title="${escapeHtml(b.title)}">${escapeHtml(b.title)}</span>
+                <span class="bookmark-page">p.${b.page_num}</span>
+              </div>
+            `).join('');
+          }
+          bookmarksLoaded = true;
+        }
+      } else {
+        list.style.display = 'none';
+        toggle.textContent = '▶';
+      }
+    }
+    
+    function toggleView() {
+      const grid = document.getElementById('assetGrid');
+      const list = document.getElementById('assetList');
+      const contentGrid = document.querySelector('.content-grid');
+      const contentList = document.querySelector('.content-list');
+      
+      if (currentView === 'grid') {
+        grid.classList.remove('hidden');
+        list.classList.remove('active');
+        if (contentGrid) contentGrid.classList.remove('hidden');
+        if (contentList) contentList.classList.add('hidden');
+      } else {
+        grid.classList.add('hidden');
+        list.classList.add('active');
+        if (contentGrid) contentGrid.classList.add('hidden');
+        if (contentList) contentList.classList.remove('hidden');
+      }
+    }
+    
+    function formatSize(bytes) {
+      if (!bytes) return '—';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    function renderBreadcrumbs(folderPath) {
+      if (!folderPath) return '—';
+      const parts = folderPath.split('/');
+      const crumbs = parts.map((part, i) => {
+        const fullPath = parts.slice(0, i + 1).join('/');
+        // Use data attribute to avoid HTML escaping issues with & and quotes
+        return `<a href="#" class="breadcrumb-link" data-folder="${escapeHtml(fullPath)}" onclick="event.preventDefault(); event.stopPropagation(); navigateToFolder(this.dataset.folder)">${escapeHtml(part)}</a>`;
+      });
+      return crumbs.join(' <span class="breadcrumb-sep">›</span> ');
+    }
+    
+    function navigateToFolder(path) {
+      closeModal();
+      // Clear search so folder filter takes effect
+      document.getElementById('searchInput').value = '';
+      document.getElementById('contentResults').style.display = 'none';
+      lastSearchQuery = '';
+      filterFolder(path);
+    }
+    
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+    
+    // ==================== SETTINGS ====================
+    
+    let browserTargetSetting = null;
+    let browserTargetInput = null;
+    
+    async function openSettings() {
+      // Load current settings
+      try {
+        const res = await fetch('/api/settings');
+        const settings = await res.json();
+        
+        document.getElementById('settingPdfRoot').value = settings.pdf_root || '';
+        document.getElementById('setting3dRoot').value = settings['3d_root'] || '';
+        document.getElementById('settingSmbPaths').value = 
+          settings.smb_paths ? JSON.parse(settings.smb_paths).join('\n') : '';
+      } catch (e) {
+        console.error('Failed to load settings:', e);
+      }
+      
+      document.getElementById('settingsModal').classList.add('active');
+    }
+    
+    function closeSettings() {
+      document.getElementById('settingsModal').classList.remove('active');
+    }
+    
+    async function saveSettings() {
+      const smbPaths = document.getElementById('settingSmbPaths').value
+        .split('\n')
+        .map(p => p.trim())
+        .filter(p => p);
+      
+      const settings = {
+        pdf_root: document.getElementById('settingPdfRoot').value,
+        '3d_root': document.getElementById('setting3dRoot').value,
+        smb_paths: JSON.stringify(smbPaths)
+      };
+      
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings)
+        });
+        
+        if (res.ok) {
+          closeSettings();
+          alert('Settings saved! You may need to re-index content for changes to take effect.');
+        } else {
+          alert('Failed to save settings');
+        }
+      } catch (e) {
+        alert('Error saving settings: ' + e.message);
+      }
+    }
+    
+    async function browseDirectory(settingKey, inputId) {
+      browserTargetSetting = settingKey;
+      browserTargetInput = inputId;
+      await loadBrowserDirectory('/Volumes');
+      document.getElementById('browserModal').classList.add('active');
+    }
+    
+    async function loadBrowserDirectory(path) {
+      try {
+        const res = await fetch(`/api/browse-directory?path=${encodeURIComponent(path)}`);
+        const data = await res.json();
+        
+        document.getElementById('browserPath').textContent = data.current;
+        
+        let html = '';
+        if (data.parent) {
+          html += `<div class="browser-item parent" onclick="loadBrowserDirectory('${data.parent}')">
+            📁 ..
+          </div>`;
+        }
+        
+        html += data.entries.map(e => `
+          <div class="browser-item" onclick="loadBrowserDirectory('${e.path}')">
+            📁 ${e.name}
+          </div>
+        `).join('');
+        
+        document.getElementById('browserList').innerHTML = html || '<div style="padding:20px;color:#888">No subdirectories</div>';
+      } catch (e) {
+        console.error('Failed to browse:', e);
+      }
+    }
+    
+    function closeBrowser() {
+      document.getElementById('browserModal').classList.remove('active');
+    }
+    
+    function selectBrowserPath() {
+      const path = document.getElementById('browserPath').textContent;
+      if (browserTargetInput) {
+        document.getElementById(browserTargetInput).value = path;
+      }
+      closeBrowser();
+    }
+    
+    async function indexNow(type) {
+      const statusId = type + 'IndexStatus';
+      const statusEl = document.getElementById(statusId);
+      
+      let path;
+      if (type === 'pdf') {
+        path = document.getElementById('settingPdfRoot').value;
+      } else if (type === '3d') {
+        path = document.getElementById('setting3dRoot').value;
+      } else if (type === 'smb') {
+        const paths = document.getElementById('settingSmbPaths').value
+          .split('\n').map(p => p.trim()).filter(p => p);
+        if (paths.length === 0) {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = '❌ No SMB paths configured';
+          return;
+        }
+        path = paths.join(',');
+      }
+      
+      if (!path) {
+        statusEl.className = 'index-status error';
+        statusEl.textContent = '❌ No path configured';
+        return;
+      }
+      
+      statusEl.className = 'index-status active';
+      statusEl.textContent = '⏳ Indexing started... This may take a while.';
+      
+      try {
+        const res = await fetch('/api/index', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, path })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          statusEl.className = 'index-status success';
+          statusEl.textContent = `✅ ${data.message}`;
+          // Refresh stats
+          loadStats();
+        } else {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = `❌ ${data.error}`;
+        }
+      } catch (e) {
+        statusEl.className = 'index-status error';
+        statusEl.textContent = `❌ Error: ${e.message}`;
+      }
+    }
+    
+    // Resize handle functionality
+    (function() {
+      const handle = document.getElementById('resizeHandle');
+      const sidebar = document.getElementById('sidebar');
+      let isDragging = false;
+      
+      handle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const newWidth = e.clientX;
+        if (newWidth >= 150 && newWidth <= window.innerWidth * 0.7) {
+          sidebar.style.width = newWidth + 'px';
+        }
+      });
+      
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          handle.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

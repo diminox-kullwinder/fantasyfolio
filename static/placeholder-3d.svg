@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect fill="#2a2a3e" width="200" height="200" rx="8"/>
+  <text x="100" y="110" text-anchor="middle" fill="#4dabf7" font-family="system-ui" font-size="64">🎲</text>
+  <text x="100" y="150" text-anchor="middle" fill="#555" font-family="system-ui" font-size="14">3D Model</text>
+</svg>

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  dam:
+    build: .
+    container_name: dam
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - DAM_ENV=production
+      - DAM_SECRET_KEY=${DAM_SECRET_KEY:-change-me-in-production}
+      - DAM_LOG_LEVEL=INFO
+    volumes:
+      # Persistent data
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./thumbnails:/app/thumbnails
+      
+      # Mount your content libraries (read-only recommended)
+      - ${PDF_LIBRARY:-/mnt/pdfs}:/content/pdfs:ro
+      - ${MODELS_LIBRARY:-/mnt/models}:/content/models:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Nginx reverse proxy
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: dam-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./certs:/etc/nginx/certs:ro
+  #   depends_on:
+  #     - dam
