@@ -11,6 +11,11 @@ click>=8.0.0
 # PDF Processing
 pymupdf>=1.24.0
 
+# 3D Model Thumbnail Rendering
+numpy-stl>=3.0.0
+matplotlib>=3.8.0
+numpy>=1.24.0
+
 # Database (SQLite is built-in)
 # No additional packages needed
 

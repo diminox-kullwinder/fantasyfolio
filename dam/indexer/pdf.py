@@ -175,6 +175,8 @@ class PDFIndexer:
     
     def _generate_thumbnail(self, doc, asset_id: int):
         """Generate thumbnail for first page."""
+        import pymupdf
+        
         thumb_path = self.config.THUMBNAIL_DIR / "pdf" / f"{asset_id}.png"
         thumb_path.parent.mkdir(parents=True, exist_ok=True)
         

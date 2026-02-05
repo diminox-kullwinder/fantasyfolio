@@ -20,9 +20,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies (libmupdf for PDF, fonts for matplotlib)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmupdf-dev \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python packages from builder
@@ -45,11 +46,12 @@ ENV DAM_ENV=production
 ENV DAM_HOST=0.0.0.0
 ENV DAM_PORT=8888
 ENV PYTHONUNBUFFERED=1
+ENV MPLCONFIGDIR=/tmp/matplotlib
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8888/health')" || exit 1
 
-# Run
+# Run with gunicorn factory pattern
 EXPOSE 8888
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8888", "dam.app:create_app()"]
+CMD ["gunicorn", "--factory", "-w", "4", "-b", "0.0.0.0:8888", "dam.app:create_app"]
