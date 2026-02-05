@@ -60,6 +60,7 @@ def api_search_assets():
     limit = int(request.args.get('limit', 50))
     offset = int(request.args.get('offset', 0))
     
+    assets = []
     with get_connection() as conn:
         if query:
             # Full-text search with filters
@@ -88,7 +89,14 @@ def api_search_assets():
         params.extend([limit, offset])
         
         rows = conn.execute(sql, params).fetchall()
-        return jsonify([dict(row) for row in rows])
+        assets = [dict(row) for row in rows]
+    
+    # Return structured response to match template expectations
+    return jsonify({
+        'assets': assets,
+        'pages': [],
+        'query': query
+    })
 
 
 @search_bp.route('/search/models')
@@ -101,6 +109,7 @@ def api_search_models():
     format_filter = request.args.get('format')
     limit = int(request.args.get('limit', 50))
     
+    models = []
     with get_connection() as conn:
         if query:
             sql = """
@@ -130,7 +139,13 @@ def api_search_models():
         params.append(limit)
         
         rows = conn.execute(sql, params).fetchall()
-        return jsonify([dict(row) for row in rows])
+        models = [dict(row) for row in rows]
+    
+    # Return structured response to match template expectations
+    return jsonify({
+        'models': models,
+        'query': query
+    })
 
 
 @search_bp.route('/search/pages')
