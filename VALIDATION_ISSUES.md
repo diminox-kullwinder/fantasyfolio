@@ -1,7 +1,7 @@
 # DAM Refactor Validation Issues
 
 **Generated:** 2026-02-05
-**Last Updated:** 2026-02-05 10:32 PST
+**Last Updated:** 2026-02-05 10:35 PST
 
 ## Issues Found & Resolved
 
@@ -48,6 +48,12 @@
 **Description:** `assets_fts` referenced `text_content` column that doesn't exist in `assets` table.
 **Fix:** Removed `text_content` from `assets_fts` definition. Page text is searchable via `pages_fts`.
 
+### 10. ✅ POST Endpoint Error Handling
+**Status:** FIXED
+**Description:** POST endpoints crashed with 500 when no JSON body provided (should return 400).
+**Fix:** Changed `request.get_json()` to `request.get_json(silent=True)` in 5 endpoints.
+**Affected:** `/api/settings`, `/api/index`, `/api/index/clear`, `/api/extract-pages`, `/api/settings/<key>`
+
 ## Local Verification Tests Passed
 
 1. ✅ All 13 module imports successful
@@ -67,3 +73,5 @@ All code issues resolved. Ready for Docker build and deployment test.
 ## Git Commits
 - `1d7141f` - Fix validation issues: deps, Docker, imports
 - `2ded9eb` - Fix assets_fts schema - remove nonexistent text_content column
+- `25cea94` - Update validation doc with all tests passed
+- `3e11d6d` - Fix POST endpoint error handling
