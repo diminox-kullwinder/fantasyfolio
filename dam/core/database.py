@@ -45,14 +45,26 @@ class Database:
         
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         
-        with open(schema_path, 'r') as f:
-            schema = f.read()
+        # Check if database already exists
+        db_exists = self.db_path.exists()
+        if db_exists:
+            db_size = self.db_path.stat().st_size
+            logger.info(f"Using existing database: {self.db_path} ({db_size / (1024*1024):.1f} MB)")
+            
+            # Safety check: if database is suspiciously small, warn loudly
+            if db_size < 100_000_000:  # Less than 100MB
+                logger.warning(f"⚠️  Database is only {db_size / (1024*1024):.1f}MB. "
+                             f"Expected ~1.2GB for LIVE database. "
+                             f"Check DAM_DATABASE_PATH in .env.local")
+        else:
+            with open(schema_path, 'r') as f:
+                schema = f.read()
+            
+            with self.connection() as conn:
+                conn.executescript(schema)
+                conn.commit()
         
-        with self.connection() as conn:
-            conn.executescript(schema)
-            conn.commit()
-        
-        logger.info(f"Database initialized at {self.db_path}")
+        logger.info(f"Database ready at {self.db_path}")
     
     def execute(self, query: str, params: tuple = ()) -> sqlite3.Cursor:
         """Execute a query and return cursor."""

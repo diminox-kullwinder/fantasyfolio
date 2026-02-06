@@ -319,6 +319,9 @@ def api_upload_mkdir():
 @settings_bp.route('/upload', methods=['POST'])
 def api_upload_files():
     """Handle file uploads and index immediately."""
+    import zipfile
+    from pathlib import Path
+    from datetime import datetime
     from dam.core.database import insert_asset, insert_model
     
     if 'files' not in request.files:
@@ -395,6 +398,30 @@ def api_upload_files():
                 for chunk in iter(lambda: f.read(8192), b''):
                     hasher.update(chunk)
             file_hash = hasher.hexdigest()
+            
+            # Special handling for ZIP files in 3D context - extract and index contents
+            if content_type == '3d' and ext == '.zip':
+                try:
+                    zip_path = Path(file_path)
+                    models_found = _scan_and_index_zip(zip_path, root, file_path)
+                    
+                    if models_found > 0:
+                        uploaded.append({
+                            'filename': os.path.basename(file_path),
+                            'path': file_path,
+                            'size': file_size,
+                            'folder_path': folder_path,
+                            'models_extracted': models_found
+                        })
+                        logger.info(f"ZIP upload: extracted {models_found} models from {safe_filename}")
+                        continue  # Skip inserting the ZIP itself as a model
+                    else:
+                        logger.warning(f"ZIP upload: no models found in {safe_filename}")
+                        # Fall through to insert ZIP as placeholder if desired
+                except Exception as e:
+                    logger.error(f"ZIP extraction error for {file_path}: {e}")
+                    errors.append(f'{file.filename}: Error extracting ZIP - {str(e)}')
+                    continue
             
             # Insert into database immediately
             if content_type == 'pdf':
@@ -478,3 +505,118 @@ def api_upload_files():
         'errors': errors,
         'message': f'Uploaded {len(uploaded)} file(s)' + (f', {len(errors)} error(s)' if errors else '')
     })
+
+
+# ==================== ZIP EXTRACTION HELPER ====================
+
+def _scan_and_index_zip(zip_path: Path, root: str, archive_file_path: str) -> int:
+    """
+    Scan a ZIP archive for 3D model files and insert them into the database.
+    Returns the number of models indexed.
+    """
+    import zipfile
+    from dam.core.database import insert_model
+    
+    MODEL_EXTENSIONS = {'.stl', '.3mf', '.obj'}
+    PREVIEW_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+    SKIP_PATTERNS = [r'__MACOSX', r'\.DS_Store', r'Thumbs\.db', r'^\.']
+    
+    models_indexed = 0
+    
+    try:
+        # Calculate folder_path for this archive
+        try:
+            folder_path = str(zip_path.parent.relative_to(root))
+            if folder_path == '.':
+                folder_path = ''
+        except ValueError:
+            folder_path = ''
+        
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            # First pass: find preview images for mapping
+            previews = {}
+            for name in zf.namelist():
+                # Skip entries matching skip patterns
+                skip = False
+                for pattern in SKIP_PATTERNS:
+                    if pattern.lower() in name.lower():
+                        skip = True
+                        break
+                if skip:
+                    continue
+                
+                ext = os.path.splitext(name)[1].lower()
+                if ext in PREVIEW_EXTENSIONS:
+                    base = os.path.splitext(os.path.basename(name))[0].lower()
+                    previews[base] = name
+            
+            # Second pass: find and index 3D model files
+            for name in zf.namelist():
+                # Skip entries matching skip patterns
+                skip = False
+                for pattern in SKIP_PATTERNS:
+                    if pattern.lower() in name.lower():
+                        skip = True
+                        break
+                if skip:
+                    continue
+                
+                ext = os.path.splitext(name)[1].lower()
+                if ext not in MODEL_EXTENSIONS:
+                    continue
+                
+                info = zf.getinfo(name)
+                filename = os.path.basename(name)
+                
+                # Try to find a preview image for this model
+                preview = None
+                base = os.path.splitext(filename)[0].lower()
+                if base in previews:
+                    preview = previews[base]
+                
+                # Clean title: remove file extension and replace underscores
+                title = os.path.splitext(filename)[0].replace('_', ' ')
+                
+                # Extract collection name from ZIP filename
+                collection = os.path.splitext(zip_path.name)[0]
+                
+                # Create unique file_path for database
+                file_path = f"{archive_file_path}:{name}"
+                
+                # Build model record
+                model = {
+                    'file_path': file_path,
+                    'filename': filename,
+                    'title': title,
+                    'format': ext[1:],  # Remove the dot
+                    'file_size': info.file_size,
+                    'file_hash': None,  # Could compute from ZIP member but skipping for now
+                    'archive_path': str(archive_file_path),
+                    'archive_member': name,
+                    'folder_path': folder_path,
+                    'collection': collection,
+                    'creator': 'uploaded',
+                    'vertex_count': None,
+                    'face_count': None,
+                    'has_supports': 1 if 'support' in name.lower() else 0,
+                    'preview_image': preview,
+                    'has_thumbnail': 1 if preview else 0,
+                    'created_at': datetime(*info.date_time).isoformat(),
+                    'modified_at': datetime(*info.date_time).isoformat()
+                }
+                
+                try:
+                    insert_model(model)
+                    models_indexed += 1
+                    logger.debug(f"Indexed model from ZIP: {filename} (archive: {collection})")
+                except Exception as e:
+                    logger.error(f"Error indexing model {filename} from ZIP: {e}")
+    
+    except zipfile.BadZipFile as e:
+        logger.error(f"Invalid ZIP file: {zip_path}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error scanning ZIP file {zip_path}: {e}")
+        raise
+    
+    return models_indexed

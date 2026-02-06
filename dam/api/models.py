@@ -104,12 +104,28 @@ def api_models_folder_tree():
             ORDER BY folder_path
         """).fetchall()
         
-        # Build tree structure
+        # Build tree structure and collect all paths (including parents)
         tree = {}
+        all_paths = {}  # {path: count}
+        parents_with_children = set()  # Track which paths have children
+        
         for row in rows:
             path = row['folder_path']
             count = row['count']
+            
+            # Add this path
+            all_paths[path] = count
+            
+            # Add all parent paths with aggregated counts
             parts = path.split('/')
+            for i in range(1, len(parts)):
+                parent_path = '/'.join(parts[:i])
+                if parent_path not in all_paths:
+                    all_paths[parent_path] = 0
+                all_paths[parent_path] += count
+                parents_with_children.add(parent_path)  # This parent has children
+            
+            # Build tree structure
             current = tree
             for i, part in enumerate(parts):
                 if part not in current:
@@ -117,7 +133,21 @@ def api_models_folder_tree():
                 current[part]['_count'] += count
                 current = current[part]['_children']
         
-        return jsonify({'tree': tree, 'flat': [dict(row) for row in rows]})
+        # Convert to flat array with rendering properties (O(n) not O(n²))
+        flat = []
+        for path in sorted(all_paths.keys()):
+            depth = path.count('/')
+            name = path.split('/')[-1]
+            flat.append({
+                'folder_path': path,
+                'path': path,
+                'count': all_paths[path],
+                'depth': depth,
+                'name': name,
+                'hasChildren': path in parents_with_children
+            })
+        
+        return jsonify({'tree': tree, 'flat': flat})
 
 
 @models_bp.route('/models/search')
@@ -167,25 +197,35 @@ def api_model_preview(model_id: int):
     if model.get('preview_image') and os.path.exists(model['preview_image']):
         return send_file(model['preview_image'])
     
-    # Try to render STL thumbnail
-    if model.get('format') == 'stl':
-        try:
-            from dam.indexer.thumbnails import render_stl_thumbnail
-            
-            # Get STL data
-            if model.get('archive_path') and model.get('archive_member'):
-                with zipfile.ZipFile(model['archive_path'], 'r') as zf:
-                    stl_data = zf.read(model['archive_member'])
-            elif os.path.exists(model['file_path']):
-                with open(model['file_path'], 'rb') as f:
-                    stl_data = f.read()
-            else:
-                raise FileNotFoundError("Model file not found")
-            
-            png_data = render_stl_thumbnail(stl_data, str(cached_thumb))
-            return send_file(io.BytesIO(png_data), mimetype='image/png')
-        except Exception as e:
-            logger.error(f"Thumbnail render error for model {model_id}: {e}")
+    # Try to render 3D thumbnail in background (non-blocking)
+    # Supports STL, OBJ, and 3MF formats
+    model_format = model.get('format', '').lower()
+    if model_format in ('stl', 'obj', '3mf'):
+        import threading
+        
+        def render_in_background():
+            try:
+                from dam.indexer.thumbnails import render_3d_thumbnail
+                
+                # Get model data
+                if model.get('archive_path') and model.get('archive_member'):
+                    with zipfile.ZipFile(model['archive_path'], 'r') as zf:
+                        model_data = zf.read(model['archive_member'])
+                elif os.path.exists(model.get('file_path', '')):
+                    with open(model['file_path'], 'rb') as f:
+                        model_data = f.read()
+                else:
+                    logger.warning(f"Model file not found for {model_id}")
+                    return
+                
+                render_3d_thumbnail(model_data, model_format, str(cached_thumb))
+                logger.info(f"Background render complete for model {model_id} ({model_format})")
+            except Exception as e:
+                logger.error(f"Background thumbnail render error for model {model_id}: {e}")
+        
+        # Start background render, return placeholder immediately
+        thread = threading.Thread(target=render_in_background, daemon=True)
+        thread.start()
     
     # Return placeholder
     placeholder = config.STATIC_DIR / 'placeholder-3d.svg'

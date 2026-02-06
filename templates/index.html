@@ -2229,7 +2229,13 @@
     
     async function load3dFolders() {
       const res = await fetch('/api/models/folder-tree');
-      modelFolderTreeData = await res.json();
+      const data = await res.json();
+      const flat = data.flat || [];
+      
+      // Sort by path (natural tree order for renderLevel traversal)
+      // This ensures parent-child hierarchy is preserved
+      modelFolderTreeData = flat.sort((a, b) => a.path.localeCompare(b.path));
+      
       render3dFolderTree();
     }
     
@@ -2259,7 +2265,8 @@
             const indent = item.depth * 16;
             
             let childrenHtml = '';
-            if (hasChildren) {
+            if (hasChildren && isExpanded) {
+              // Only render children when expanded (lazy loading for performance)
               const childItems = [];
               let j = i + 1;
               while (j < items.length && items[j].depth > item.depth) {
@@ -2279,7 +2286,7 @@
                   <span class="folder-name">${escapeHtml(item.name)}</span>
                   <span class="count-badge">${item.count}</span>
                 </div>
-                ${hasChildren ? `<div class="tree-children ${isExpanded ? 'expanded' : ''}" data-parent="${escapeHtml(item.path)}">${childrenHtml}</div>` : ''}
+                ${(hasChildren && isExpanded) ? `<div class="tree-children expanded" data-parent="${escapeHtml(item.path)}">${childrenHtml}</div>` : ''}
               </div>
             `;
           }
@@ -2354,10 +2361,11 @@
         return;
       }
       
-      // Grid view with preview thumbnails  
+      // Grid view with preview thumbnails (cache-bust every 10s for pending renders)
+      const cacheBust = Math.floor(Date.now() / 10000);
       grid.innerHTML = models.map(m => `
         <div class="asset-card" onclick="show3dDetail(${m.id})">
-          <img class="asset-thumb model-grid-thumb" src="/api/models/${m.id}/preview" alt="" loading="lazy" />
+          <img class="asset-thumb model-grid-thumb" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" />
           <div class="asset-info">
             <div class="asset-title" title="${escapeHtml(m.filename)}">${escapeHtml(m.title || m.filename)}</div>
             <div class="asset-meta">${(m.format || 'stl').toUpperCase()} · ${formatSize(m.file_size)}</div>
@@ -2368,7 +2376,7 @@
       // List view
       list.innerHTML = models.map(m => `
         <div class="asset-row" onclick="show3dDetail(${m.id})">
-          <img src="/api/models/${m.id}/preview" alt="" loading="lazy" 
+          <img src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
                onerror="this.outerHTML='<div class=\\'model-icon-small\\'>🎲</div>'" />
           <div>
             <div class="title">${escapeHtml(m.title || m.filename)}</div>
@@ -2685,7 +2693,13 @@
     
     async function loadFolders() {
       const res = await fetch('/api/folder-tree');
-      folderTreeData = await res.json();
+      const data = await res.json();
+      const flat = data.flat || [];
+      
+      // Sort by path (natural tree order for renderLevel traversal)
+      // This ensures parent-child hierarchy is preserved in depth-first order
+      folderTreeData = flat.sort((a, b) => a.path.localeCompare(b.path));
+      
       renderFolderTree();
     }
     
@@ -2717,7 +2731,8 @@
             
             // Find children
             let childrenHtml = '';
-            if (hasChildren) {
+            if (hasChildren && isExpanded) {
+              // Only render children when expanded (lazy loading for performance)
               const childItems = [];
               let j = i + 1;
               while (j < items.length && items[j].depth > item.depth) {
@@ -2737,7 +2752,7 @@
                   <span class="folder-name">${escapeHtml(item.name)}</span>
                   <span class="count-badge">${item.count}</span>
                 </div>
-                ${hasChildren ? `<div class="tree-children ${isExpanded ? 'expanded' : ''}" data-parent="${escapeHtml(item.path)}">${childrenHtml}</div>` : ''}
+                ${(hasChildren && isExpanded) ? `<div class="tree-children expanded" data-parent="${escapeHtml(item.path)}">${childrenHtml}</div>` : ''}
               </div>
             `;
           }

@@ -208,12 +208,28 @@ def api_folder_tree():
             ORDER BY folder_path
         """).fetchall()
         
-        # Build tree structure
+        # Build tree structure and collect all paths (including parents)
         tree = {}
+        all_paths = {}  # {path: count}
+        parents_with_children = set()  # Track which paths have children
+        
         for row in rows:
             path = row['folder_path']
             count = row['count']
+            
+            # Add this path
+            all_paths[path] = count
+            
+            # Add all parent paths with aggregated counts
             parts = path.split('/')
+            for i in range(1, len(parts)):
+                parent_path = '/'.join(parts[:i])
+                if parent_path not in all_paths:
+                    all_paths[parent_path] = 0
+                all_paths[parent_path] += count
+                parents_with_children.add(parent_path)  # This parent has children
+            
+            # Build tree structure
             current = tree
             for i, part in enumerate(parts):
                 if part not in current:
@@ -221,7 +237,21 @@ def api_folder_tree():
                 current[part]['_count'] += count
                 current = current[part]['_children']
         
-        return jsonify({'tree': tree, 'flat': [dict(row) for row in rows]})
+        # Convert to flat array with rendering properties (O(n) not O(n²))
+        flat = []
+        for path in sorted(all_paths.keys()):
+            depth = path.count('/')
+            name = path.split('/')[-1]
+            flat.append({
+                'folder_path': path,
+                'path': path,
+                'count': all_paths[path],
+                'depth': depth,
+                'name': name,
+                'hasChildren': path in parents_with_children
+            })
+        
+        return jsonify({'tree': tree, 'flat': flat})
 
 
 @assets_bp.route('/thumbnail/<int:asset_id>')

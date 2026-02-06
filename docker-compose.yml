@@ -18,8 +18,8 @@ services:
       - ./thumbnails:/app/thumbnails
       
       # Mount your content libraries (read-write for uploads)
-      - ${PDF_LIBRARY:-/mnt/pdfs}:/content/pdfs
-      - ${MODELS_LIBRARY:-/mnt/models}:/content/models
+      - ${PDF_LIBRARY:-/Volumes/d-mini/DROBO/D/PDF/Gathered}:/content/pdfs
+      - ${MODELS_LIBRARY:-/Volumes/d-mini/3D}:/content/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/health')"]
       interval: 30s
