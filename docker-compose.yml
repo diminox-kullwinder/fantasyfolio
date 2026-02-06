@@ -17,9 +17,9 @@ services:
       - ./logs:/app/logs
       - ./thumbnails:/app/thumbnails
       
-      # Mount your content libraries (read-only recommended)
-      - ${PDF_LIBRARY:-/mnt/pdfs}:/content/pdfs:ro
-      - ${MODELS_LIBRARY:-/mnt/models}:/content/models:ro
+      # Mount your content libraries (read-write for uploads)
+      - ${PDF_LIBRARY:-/mnt/pdfs}:/content/pdfs
+      - ${MODELS_LIBRARY:-/mnt/models}:/content/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/health')"]
       interval: 30s
