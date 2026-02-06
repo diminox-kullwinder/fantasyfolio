@@ -1,11 +1,15 @@
 """
 Settings API Blueprint.
 
-Handles application settings and configuration.
+Handles application settings, configuration, backups, and uploads.
 """
 
 import os
 import logging
+import shutil
+import hashlib
+from datetime import datetime
+from pathlib import Path
 from flask import Blueprint, jsonify, request
 
 from dam.core.database import get_setting, set_setting, get_all_settings, get_connection
@@ -91,3 +95,370 @@ def api_browse_directory():
     except Exception as e:
         logger.error(f"Directory browse error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# ==================== BACKUP ENDPOINTS ====================
+
+@settings_bp.route('/backup', methods=['POST'])
+def api_create_backup():
+    """Create a backup of the database."""
+    from dam.config import get_config
+    
+    config = get_config()
+    db_path = config.DATABASE_FILE
+    backup_dir = config.DATA_DIR / 'backups'
+    backup_dir.mkdir(exist_ok=True)
+    
+    if not db_path.exists():
+        return jsonify({'error': 'Database not found'}), 404
+    
+    # Create timestamped backup
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_name = f"dam_backup_{timestamp}.db"
+    backup_path = backup_dir / backup_name
+    
+    try:
+        shutil.copy2(db_path, backup_path)
+        
+        # Get backup size
+        size_mb = backup_path.stat().st_size / (1024 * 1024)
+        
+        # Clean up old backups (keep last 5)
+        backups = sorted(backup_dir.glob("dam_backup_*.db"), reverse=True)
+        for old_backup in backups[5:]:
+            old_backup.unlink()
+        
+        return jsonify({
+            'success': True,
+            'backup_file': backup_name,
+            'size_mb': round(size_mb, 2),
+            'message': f'Backup created: {backup_name}'
+        })
+    except Exception as e:
+        logger.error(f"Backup creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/backups', methods=['GET'])
+def api_list_backups():
+    """List available database backups."""
+    from dam.config import get_config
+    
+    config = get_config()
+    backup_dir = config.DATA_DIR / 'backups'
+    
+    if not backup_dir.exists():
+        return jsonify({'backups': []})
+    
+    backups = []
+    for f in sorted(backup_dir.glob("dam_backup_*.db"), reverse=True):
+        backups.append({
+            'filename': f.name,
+            'size_mb': round(f.stat().st_size / (1024 * 1024), 2),
+            'created': datetime.fromtimestamp(f.stat().st_mtime).isoformat()
+        })
+    
+    return jsonify({'backups': backups})
+
+
+@settings_bp.route('/backup/restore', methods=['POST'])
+def api_restore_backup():
+    """Restore database from a backup."""
+    from dam.config import get_config
+    
+    config = get_config()
+    data = request.get_json(silent=True) or {}
+    backup_name = data.get('filename')
+    
+    if not backup_name:
+        return jsonify({'error': 'Backup filename required'}), 400
+    
+    backup_dir = config.DATA_DIR / 'backups'
+    backup_path = backup_dir / backup_name
+    db_path = config.DATABASE_FILE
+    
+    if not backup_path.exists():
+        return jsonify({'error': 'Backup not found'}), 404
+    
+    # Safety check - ensure it's a valid backup file
+    if not backup_name.startswith('dam_backup_') or not backup_name.endswith('.db'):
+        return jsonify({'error': 'Invalid backup filename'}), 400
+    
+    try:
+        # Create a backup of current db before restoring
+        if db_path.exists():
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            pre_restore = backup_dir / f"dam_pre_restore_{timestamp}.db"
+            shutil.copy2(db_path, pre_restore)
+        
+        # Restore the backup
+        shutil.copy2(backup_path, db_path)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Database restored from {backup_name}. Refresh the page.'
+        })
+    except Exception as e:
+        logger.error(f"Backup restore error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== UPLOAD ENDPOINTS ====================
+
+@settings_bp.route('/upload/browse', methods=['GET'])
+def api_upload_browse():
+    """Browse directories for upload destination."""
+    content_type = request.args.get('type', 'pdf')  # 'pdf' or '3d'
+    path = request.args.get('path')
+    
+    # Get the root path for this content type
+    settings = get_all_settings()
+    if content_type == '3d':
+        root = settings.get('3d_root', '/content/models')
+    else:
+        root = settings.get('pdf_root', '/content/pdfs')
+    
+    # If no path specified, start at the root
+    if not path:
+        path = root
+    
+    # Security: ensure path is within the root
+    try:
+        resolved_path = os.path.realpath(path)
+        resolved_root = os.path.realpath(root)
+        if not resolved_path.startswith(resolved_root) and resolved_path != resolved_root:
+            if path != root:
+                return jsonify({'error': 'Path outside content root'}), 403
+    except Exception:
+        pass
+    
+    if not os.path.isdir(path):
+        return jsonify({'error': 'Not a directory'}), 400
+    
+    try:
+        entries = []
+        for entry in os.scandir(path):
+            if entry.is_dir() and not entry.name.startswith('.'):
+                entries.append({
+                    'name': entry.name,
+                    'path': entry.path,
+                    'type': 'directory'
+                })
+        
+        entries.sort(key=lambda x: x['name'].lower())
+        
+        # Get parent path (but don't go above root)
+        parent_path = str(Path(path).parent)
+        if not parent_path.startswith(root) and parent_path != root:
+            parent_path = None
+        elif path == root:
+            parent_path = None
+        
+        return jsonify({
+            'current': path,
+            'root': root,
+            'parent': parent_path,
+            'entries': entries,
+            'can_upload': True
+        })
+    except PermissionError:
+        return jsonify({'error': 'Permission denied'}), 403
+    except Exception as e:
+        logger.error(f"Upload browse error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/upload/mkdir', methods=['POST'])
+def api_upload_mkdir():
+    """Create a new directory for uploads."""
+    data = request.get_json(silent=True) or {}
+    parent_path = data.get('parent')
+    folder_name = data.get('name')
+    content_type = data.get('type', 'pdf')
+    
+    if not parent_path or not folder_name:
+        return jsonify({'error': 'Parent path and folder name required'}), 400
+    
+    # Sanitize folder name
+    folder_name = folder_name.strip().replace('/', '_').replace('\\', '_')
+    if not folder_name or folder_name.startswith('.'):
+        return jsonify({'error': 'Invalid folder name'}), 400
+    
+    # Get root for security check
+    settings = get_all_settings()
+    root = settings.get('3d_root' if content_type == '3d' else 'pdf_root', '/content/pdfs')
+    
+    # Security: ensure parent is within root
+    try:
+        resolved_parent = os.path.realpath(parent_path)
+        resolved_root = os.path.realpath(root)
+        if not resolved_parent.startswith(resolved_root):
+            return jsonify({'error': 'Path outside content root'}), 403
+    except Exception:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    new_path = os.path.join(parent_path, folder_name)
+    
+    if os.path.exists(new_path):
+        return jsonify({'error': 'Folder already exists'}), 400
+    
+    try:
+        os.makedirs(new_path, exist_ok=True)
+        return jsonify({
+            'success': True,
+            'path': new_path,
+            'message': f'Created folder: {folder_name}'
+        })
+    except PermissionError:
+        return jsonify({'error': 'Permission denied'}), 403
+    except Exception as e:
+        logger.error(f"Mkdir error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/upload', methods=['POST'])
+def api_upload_files():
+    """Handle file uploads and index immediately."""
+    from dam.core.database import insert_asset, insert_model
+    
+    if 'files' not in request.files:
+        return jsonify({'error': 'No files provided'}), 400
+    
+    files = request.files.getlist('files')
+    destination = request.form.get('destination')
+    content_type = request.form.get('type', 'pdf')
+    
+    if not destination:
+        return jsonify({'error': 'Destination directory required'}), 400
+    
+    if not os.path.isdir(destination):
+        return jsonify({'error': 'Destination directory does not exist'}), 400
+    
+    # Get root for folder_path calculation
+    settings = get_all_settings()
+    root = settings.get('3d_root' if content_type == '3d' else 'pdf_root', '/content/pdfs')
+    
+    # Security: ensure destination is within root
+    try:
+        resolved_dest = os.path.realpath(destination)
+        resolved_root = os.path.realpath(root)
+        if not resolved_dest.startswith(resolved_root):
+            return jsonify({'error': 'Destination outside content root'}), 403
+    except Exception:
+        return jsonify({'error': 'Invalid destination'}), 400
+    
+    # Validate file types
+    if content_type == '3d':
+        allowed_extensions = {'.stl', '.obj', '.3mf', '.zip', '.rar', '.7z'}
+    else:
+        allowed_extensions = {'.pdf'}
+    
+    uploaded = []
+    errors = []
+    
+    for file in files:
+        if not file.filename:
+            continue
+        
+        # Check extension
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in allowed_extensions:
+            errors.append(f'{file.filename}: Invalid file type')
+            continue
+        
+        # Sanitize filename
+        safe_filename = file.filename.replace('/', '_').replace('\\', '_')
+        file_path = os.path.join(destination, safe_filename)
+        
+        # Handle duplicates
+        if os.path.exists(file_path):
+            base, ext_part = os.path.splitext(safe_filename)
+            counter = 1
+            while os.path.exists(file_path):
+                file_path = os.path.join(destination, f'{base}_{counter}{ext_part}')
+                counter += 1
+        
+        try:
+            file.save(file_path)
+            file_size = os.path.getsize(file_path)
+            
+            # Calculate folder_path relative to root
+            rel_path = os.path.relpath(os.path.dirname(file_path), root)
+            if rel_path == '.':
+                folder_path = ''
+            else:
+                folder_path = rel_path
+            
+            # Compute file hash
+            hasher = hashlib.md5()
+            with open(file_path, 'rb') as f:
+                for chunk in iter(lambda: f.read(8192), b''):
+                    hasher.update(chunk)
+            file_hash = hasher.hexdigest()
+            
+            # Insert into database immediately
+            if content_type == 'pdf':
+                # Try to extract basic PDF metadata
+                page_count = None
+                title = None
+                author = None
+                try:
+                    import fitz  # PyMuPDF
+                    doc = fitz.open(file_path)
+                    page_count = doc.page_count
+                    meta = doc.metadata
+                    title = meta.get('title') or None
+                    author = meta.get('author') or None
+                    doc.close()
+                except Exception:
+                    pass
+                
+                # Insert PDF asset
+                asset = {
+                    'file_path': file_path,
+                    'filename': os.path.basename(file_path),
+                    'title': title or os.path.splitext(os.path.basename(file_path))[0],
+                    'author': author,
+                    'publisher': folder_path.split('/')[0] if folder_path else None,
+                    'page_count': page_count,
+                    'file_size': file_size,
+                    'file_hash': file_hash,
+                    'folder_path': folder_path,
+                    'created_at': datetime.now().isoformat(),
+                    'modified_at': datetime.now().isoformat()
+                }
+                insert_asset(asset)
+                    
+            else:
+                # Insert 3D model
+                model = {
+                    'file_path': file_path,
+                    'filename': os.path.basename(file_path),
+                    'title': os.path.splitext(os.path.basename(file_path))[0].replace('_', ' '),
+                    'format': ext[1:] if ext else 'unknown',
+                    'file_size': file_size,
+                    'file_hash': file_hash,
+                    'folder_path': folder_path,
+                    'collection': folder_path.split('/')[0] if folder_path else 'uploads',
+                    'creator': 'uploaded',
+                    'created_at': datetime.now().isoformat(),
+                    'modified_at': datetime.now().isoformat()
+                }
+                insert_model(model)
+            
+            uploaded.append({
+                'filename': os.path.basename(file_path),
+                'path': file_path,
+                'size': file_size,
+                'folder_path': folder_path
+            })
+        except Exception as e:
+            logger.error(f"Upload error for {file.filename}: {e}")
+            errors.append(f'{file.filename}: {str(e)}')
+    
+    return jsonify({
+        'success': len(uploaded) > 0,
+        'uploaded': uploaded,
+        'errors': errors,
+        'message': f'Uploaded {len(uploaded)} file(s)' + (f', {len(errors)} error(s)' if errors else '')
+    })

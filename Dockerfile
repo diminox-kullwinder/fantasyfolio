@@ -37,6 +37,7 @@ COPY dam/ dam/
 COPY data/schema.sql data/
 COPY static/ static/
 COPY templates/ templates/
+COPY wsgi.py .
 
 # Create directories
 RUN mkdir -p data logs thumbnails/pdf thumbnails/3d
@@ -52,6 +53,6 @@ ENV MPLCONFIGDIR=/tmp/matplotlib
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8888/health')" || exit 1
 
-# Run with gunicorn factory pattern
+# Run application
 EXPOSE 8888
-CMD ["gunicorn", "--factory", "-w", "4", "-b", "0.0.0.0:8888", "dam.app:create_app"]
+CMD ["python", "-m", "dam.cli", "run"]

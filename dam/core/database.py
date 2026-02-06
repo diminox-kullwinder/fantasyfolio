@@ -116,8 +116,13 @@ def get_stats() -> Dict[str, Any]:
 
 
 def search_assets(query: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-    """Search assets using full-text search."""
+    """Search assets using full-text search with prefix matching."""
     db = get_db()
+    # Add wildcard for prefix matching (e.g., "drag" matches "dragon")
+    # Split into terms and add * to each for prefix matching
+    terms = query.strip().split()
+    fts_query = ' '.join(f'{term}*' for term in terms if term)
+    
     with db.connection() as conn:
         rows = conn.execute("""
             SELECT a.*, highlight(assets_fts, 0, '<mark>', '</mark>') as highlight
@@ -126,7 +131,7 @@ def search_assets(query: str, limit: int = 50, offset: int = 0) -> List[Dict[str
             WHERE assets_fts MATCH ?
             ORDER BY rank
             LIMIT ? OFFSET ?
-        """, (query, limit, offset)).fetchall()
+        """, (fts_query, limit, offset)).fetchall()
         return [dict(row) for row in rows]
 
 
@@ -215,15 +220,19 @@ def get_models_stats() -> Dict[str, Any]:
 
 
 def search_models(query: str, limit: int = 50) -> List[Dict[str, Any]]:
-    """Search 3D models using full-text search."""
+    """Search 3D models using full-text search with prefix matching."""
     db = get_db()
+    # Add wildcard for prefix matching (e.g., "robo" matches "robot")
+    terms = query.strip().split()
+    fts_query = ' '.join(f'{term}*' for term in terms if term)
+    
     with db.connection() as conn:
         rows = conn.execute("""
             SELECT m.* FROM models m
             JOIN models_fts ON m.id = models_fts.rowid
             WHERE models_fts MATCH ?
             LIMIT ?
-        """, (query, limit)).fetchall()
+        """, (fts_query, limit)).fetchall()
         return [dict(row) for row in rows]
 
 

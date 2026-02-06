@@ -1166,6 +1166,262 @@
       color: white;
     }
     
+    /* Upload Modal */
+    .upload-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 3000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .upload-overlay.active {
+      display: flex;
+    }
+    
+    .upload-modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .upload-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .upload-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .upload-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .upload-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    
+    .upload-section {
+      margin-bottom: 20px;
+    }
+    
+    .upload-section h3 {
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    
+    .upload-path-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .upload-path-display .path {
+      flex: 1;
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: var(--accent);
+      word-break: break-all;
+    }
+    
+    .upload-folder-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .upload-folder-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .upload-folder-item:last-child {
+      border-bottom: none;
+    }
+    
+    .upload-folder-item:hover {
+      background: var(--bg-card);
+    }
+    
+    .upload-folder-item.parent {
+      color: var(--text-secondary);
+    }
+    
+    .upload-new-folder {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .upload-new-folder input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+    
+    .upload-new-folder button {
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    
+    .upload-dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .upload-dropzone:hover,
+    .upload-dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(77, 171, 247, 0.1);
+    }
+    
+    .upload-dropzone-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+    
+    .upload-dropzone-text {
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .upload-dropzone-hint {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .upload-file-list {
+      margin-top: 16px;
+    }
+    
+    .upload-file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    
+    .upload-file-item .name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .upload-file-item .size {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+    
+    .upload-file-item .remove {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0 4px;
+    }
+    
+    .upload-file-item .remove:hover {
+      color: #e74c3c;
+    }
+    
+    .upload-progress {
+      margin-top: 12px;
+      display: none;
+    }
+    
+    .upload-progress.active {
+      display: block;
+    }
+    
+    .upload-progress-bar {
+      height: 8px;
+      background: var(--bg-card);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .upload-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .upload-progress-text {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      text-align: center;
+    }
+    
+    .upload-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .upload-footer .file-count {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    
+    .upload-footer .buttons {
+      display: flex;
+      gap: 12px;
+    }
+    
     /* Settings Modal */
     .settings-overlay, .browser-overlay {
       display: none;
@@ -1605,6 +1861,7 @@
         <button class="toggle-btn" id="toggle3d" onclick="setContentType('3d')">🎲 3D Models</button>
       </div>
       <div class="stats" id="stats">Loading...</div>
+      <button class="settings-btn" onclick="openUpload()" title="Upload files" id="uploadBtn">⬆️</button>
       <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
     </header>
     
@@ -2500,6 +2757,8 @@
       
       if (lastSearchQuery) {
         search(lastSearchQuery);
+      } else if (contentType === '3d') {
+        load3dModels();
       } else {
         loadAssets();
       }
@@ -2508,15 +2767,24 @@
     function clearFilters() {
       currentFolder = null;
       currentPublisher = null;
+      currentCollection = null;
       currentSort = 'filename';
       currentOrder = 'asc';
       document.getElementById('searchInput').value = '';
       document.getElementById('sortSelect').value = 'filename:asc';
       document.getElementById('contentResults').style.display = 'none';
       lastSearchQuery = '';
-      loadFolders();
-      loadPublishers();
-      loadAssets();
+      
+      // Load content based on current view type
+      if (contentType === '3d') {
+        load3dFolders();
+        load3dCollections();
+        load3dModels();
+      } else {
+        loadFolders();
+        loadPublishers();
+        loadAssets();
+      }
     }
     
     function goHome() {
@@ -2662,9 +2930,9 @@
       document.getElementById('searchInput').value = queryDisplay;
       lastSearchQuery = queryDisplay;
       
-      // Render results
-      renderAssets(results.metadata || []);
-      renderContentResults(results.content || [], queryDisplay);
+      // Render results (API uses 'assets'/'pages', fallback to 'metadata'/'content')
+      renderAssets(results.assets || results.metadata || []);
+      renderContentResults(results.pages || results.content || [], queryDisplay);
       toggleView();
     }
     
@@ -2727,11 +2995,15 @@
       const res = await fetch(searchUrl);
       const results = await res.json();
       
+      // API returns 'assets' and 'pages', map to expected keys
+      const assets = results.assets || results.metadata || [];
+      const pages = results.pages || results.content || [];
+      
       // Sort metadata results client-side
-      let sortedMetadata = sortResults(results.metadata);
+      let sortedMetadata = sortResults(assets);
       
       // Render metadata matches (or show message if empty)
-      if (sortedMetadata.length === 0 && results.content.length > 0) {
+      if (sortedMetadata.length === 0 && pages.length > 0) {
         // Only content matches, no title/filename matches
         document.getElementById('assetGrid').innerHTML = '';
         document.getElementById('assetList').innerHTML = '';
@@ -2740,7 +3012,7 @@
       }
       
       // Render content matches with page numbers (sorted)
-      renderContentResults(results.content, query);
+      renderContentResults(pages, query);
       
       // Ensure view toggle is applied
       toggleView();
@@ -3444,6 +3716,416 @@
       }
     }
     
+    // ==================== BACKUP FUNCTIONALITY ====================
+    
+    async function createBackup() {
+      const statusEl = document.getElementById('backupStatus');
+      statusEl.className = 'index-status active';
+      statusEl.textContent = '⏳ Creating backup...';
+      
+      try {
+        const res = await fetch('/api/backup', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success) {
+          statusEl.className = 'index-status success';
+          statusEl.textContent = `✅ ${data.message} (${data.size_mb} MB)`;
+        } else {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = `❌ ${data.error}`;
+        }
+      } catch (e) {
+        statusEl.className = 'index-status error';
+        statusEl.textContent = `❌ Error: ${e.message}`;
+      }
+    }
+    
+    async function showBackups() {
+      const listEl = document.getElementById('backupList');
+      const statusEl = document.getElementById('backupStatus');
+      
+      if (listEl.style.display === 'block') {
+        listEl.style.display = 'none';
+        return;
+      }
+      
+      statusEl.className = 'index-status active';
+      statusEl.textContent = '⏳ Loading backups...';
+      
+      try {
+        const res = await fetch('/api/backups');
+        const data = await res.json();
+        
+        statusEl.className = '';
+        statusEl.textContent = '';
+        
+        if (data.backups.length === 0) {
+          listEl.innerHTML = '<div style="color:var(--text-secondary);padding:8px;">No backups found</div>';
+        } else {
+          listEl.innerHTML = `
+            <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:8px;">
+              Available backups (click to restore):
+            </div>
+            ${data.backups.map(b => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:var(--bg-card); border-radius:6px; margin-bottom:4px; cursor:pointer;"
+                   onclick="restoreBackup('${b.filename}')"
+                   title="Click to restore this backup">
+                <span>📦 ${b.filename}</span>
+                <span style="color:var(--text-secondary); font-size:0.85rem;">${b.size_mb} MB</span>
+              </div>
+            `).join('')}
+          `;
+        }
+        listEl.style.display = 'block';
+      } catch (e) {
+        statusEl.className = 'index-status error';
+        statusEl.textContent = `❌ Error: ${e.message}`;
+      }
+    }
+    
+    async function restoreBackup(filename) {
+      if (!confirm(`Restore database from ${filename}?\n\nThis will replace your current database. A backup of the current state will be created first.`)) {
+        return;
+      }
+      
+      const statusEl = document.getElementById('backupStatus');
+      statusEl.className = 'index-status active';
+      statusEl.textContent = '⏳ Restoring backup...';
+      
+      try {
+        const res = await fetch('/api/backup/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          statusEl.className = 'index-status success';
+          statusEl.textContent = `✅ ${data.message}`;
+          // Refresh page after 2 seconds
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = `❌ ${data.error}`;
+        }
+      } catch (e) {
+        statusEl.className = 'index-status error';
+        statusEl.textContent = `❌ Error: ${e.message}`;
+      }
+    }
+    
+    // ==================== UPLOAD FUNCTIONALITY ====================
+    
+    let uploadFiles = [];
+    let uploadCurrentPath = '';
+    let uploadContentType = 'pdf';
+    
+    function openUpload() {
+      uploadContentType = contentType;  // Use current content type from main UI
+      uploadFiles = [];
+      
+      // Update UI for content type
+      const icon = document.getElementById('uploadIcon');
+      const label = document.getElementById('uploadTypeLabel');
+      const hint = document.getElementById('uploadHint');
+      
+      if (uploadContentType === '3d') {
+        icon.textContent = '🎲';
+        label.textContent = '3D Models';
+        hint.textContent = 'Accepted: .stl, .obj, .3mf, .zip, .rar, .7z';
+        document.getElementById('uploadFileInput').accept = '.stl,.obj,.3mf,.zip,.rar,.7z';
+      } else {
+        icon.textContent = '📄';
+        label.textContent = 'PDFs';
+        hint.textContent = 'Accepted: .pdf';
+        document.getElementById('uploadFileInput').accept = '.pdf';
+      }
+      
+      // Reset file list
+      document.getElementById('uploadFileList').innerHTML = '';
+      document.getElementById('uploadFileCount').textContent = 'No files selected';
+      document.getElementById('uploadSubmitBtn').disabled = true;
+      document.getElementById('uploadProgress').classList.remove('active');
+      document.getElementById('newFolderName').value = '';
+      
+      // Load initial folder
+      loadUploadFolders();
+      
+      document.getElementById('uploadModal').classList.add('active');
+    }
+    
+    function closeUpload() {
+      document.getElementById('uploadModal').classList.remove('active');
+      uploadFiles = [];
+    }
+    
+    async function loadUploadFolders(path = null) {
+      try {
+        let url = `/api/upload/browse?type=${uploadContentType}`;
+        if (path) url += `&path=${encodeURIComponent(path)}`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+        
+        uploadCurrentPath = data.current;
+        document.getElementById('uploadCurrentPath').textContent = data.current;
+        
+        let html = '';
+        
+        // Parent folder link (if not at root)
+        if (data.parent) {
+          html += `
+            <div class="upload-folder-item parent" onclick="loadUploadFolders('${escapeHtml(data.parent)}')">
+              📁 ..
+            </div>
+          `;
+        }
+        
+        // Subfolders
+        data.entries.forEach(entry => {
+          html += `
+            <div class="upload-folder-item" onclick="loadUploadFolders('${escapeHtml(entry.path)}')">
+              📁 ${escapeHtml(entry.name)}
+            </div>
+          `;
+        });
+        
+        if (!data.parent && data.entries.length === 0) {
+          html = '<div style="padding:20px;color:var(--text-secondary);text-align:center">No subfolders</div>';
+        }
+        
+        document.getElementById('uploadFolderList').innerHTML = html;
+      } catch (e) {
+        console.error('Failed to load folders:', e);
+        document.getElementById('uploadFolderList').innerHTML = 
+          '<div style="padding:20px;color:#e74c3c;text-align:center">Failed to load folders</div>';
+      }
+    }
+    
+    async function createUploadFolder() {
+      const nameInput = document.getElementById('newFolderName');
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        alert('Please enter a folder name');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/upload/mkdir', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            parent: uploadCurrentPath,
+            name: name,
+            type: uploadContentType
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+        
+        nameInput.value = '';
+        // Navigate to the new folder
+        loadUploadFolders(data.path);
+      } catch (e) {
+        alert('Failed to create folder: ' + e.message);
+      }
+    }
+    
+    function handleFileSelect(event) {
+      const files = Array.from(event.target.files);
+      addUploadFiles(files);
+    }
+    
+    function addUploadFiles(files) {
+      // Filter by content type
+      const allowedExts = uploadContentType === '3d' 
+        ? ['.stl', '.obj', '.3mf', '.zip', '.rar', '.7z']
+        : ['.pdf'];
+      
+      files.forEach(file => {
+        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        if (allowedExts.includes(ext)) {
+          // Check if already added
+          if (!uploadFiles.some(f => f.name === file.name && f.size === file.size)) {
+            uploadFiles.push(file);
+          }
+        }
+      });
+      
+      renderUploadFiles();
+    }
+    
+    function removeUploadFile(index) {
+      uploadFiles.splice(index, 1);
+      renderUploadFiles();
+    }
+    
+    function renderUploadFiles() {
+      const list = document.getElementById('uploadFileList');
+      const count = document.getElementById('uploadFileCount');
+      const btn = document.getElementById('uploadSubmitBtn');
+      
+      if (uploadFiles.length === 0) {
+        list.innerHTML = '';
+        count.textContent = 'No files selected';
+        btn.disabled = true;
+        return;
+      }
+      
+      const totalSize = uploadFiles.reduce((sum, f) => sum + f.size, 0);
+      count.textContent = `${uploadFiles.length} file(s) · ${formatSize(totalSize)}`;
+      btn.disabled = false;
+      
+      list.innerHTML = uploadFiles.map((file, i) => `
+        <div class="upload-file-item">
+          <span class="name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+          <span class="size">${formatSize(file.size)}</span>
+          <button class="remove" onclick="removeUploadFile(${i})" title="Remove">✕</button>
+        </div>
+      `).join('');
+    }
+    
+    async function submitUpload() {
+      if (uploadFiles.length === 0) return;
+      
+      const btn = document.getElementById('uploadSubmitBtn');
+      const progress = document.getElementById('uploadProgress');
+      const progressFill = document.getElementById('uploadProgressFill');
+      const progressText = document.getElementById('uploadProgressText');
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Uploading...';
+      progress.classList.add('active');
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Starting upload...';
+      
+      const formData = new FormData();
+      formData.append('destination', uploadCurrentPath);
+      formData.append('type', uploadContentType);
+      uploadFiles.forEach(file => formData.append('files', file));
+      
+      try {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = `Uploading... ${pct}%`;
+          }
+        });
+        
+        xhr.addEventListener('load', () => {
+          if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            progressFill.style.width = '100%';
+            progressText.textContent = data.message;
+            
+            // Show success for 2 seconds, then close and refresh
+            setTimeout(() => {
+              closeUpload();
+              // Clear any filters that might have been set
+              currentFolder = null;
+              currentPublisher = null;
+              currentCollection = null;
+              // Refresh everything properly
+              if (uploadContentType === '3d') {
+                load3dFolders();
+                load3dCollections();
+                load3dModels();
+              } else {
+                loadFolders();
+                loadPublishers();
+                loadAssets();
+              }
+              loadStats();
+            }, 2000);
+          } else {
+            const data = JSON.parse(xhr.responseText);
+            progressText.textContent = 'Error: ' + (data.error || 'Upload failed');
+            progressFill.style.background = '#e74c3c';
+            btn.disabled = false;
+            btn.textContent = '⬆️ Upload';
+          }
+        });
+        
+        xhr.addEventListener('error', () => {
+          progressText.textContent = 'Error: Upload failed';
+          progressFill.style.background = '#e74c3c';
+          btn.disabled = false;
+          btn.textContent = '⬆️ Upload';
+        });
+        
+        xhr.open('POST', '/api/upload');
+        xhr.send(formData);
+      } catch (e) {
+        progressText.textContent = 'Error: ' + e.message;
+        btn.disabled = false;
+        btn.textContent = '⬆️ Upload';
+      }
+    }
+    
+    async function triggerReindex(path) {
+      // Optionally trigger indexing for the uploaded folder
+      try {
+        await fetch('/api/index', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: uploadContentType,
+            path: path
+          })
+        });
+        console.log('Reindex triggered for:', path);
+      } catch (e) {
+        console.log('Reindex request failed (may not be implemented):', e);
+      }
+    }
+    
+    // Drag and drop support for upload dropzone
+    (function() {
+      const dropzone = document.getElementById('uploadDropzone');
+      if (!dropzone) return;
+      
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+        dropzone.addEventListener(event, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
+      
+      ['dragenter', 'dragover'].forEach(event => {
+        dropzone.addEventListener(event, () => {
+          dropzone.classList.add('dragover');
+        });
+      });
+      
+      ['dragleave', 'drop'].forEach(event => {
+        dropzone.addEventListener(event, () => {
+          dropzone.classList.remove('dragover');
+        });
+      });
+      
+      dropzone.addEventListener('drop', (e) => {
+        const files = Array.from(e.dataTransfer.files);
+        addUploadFiles(files);
+      });
+    })();
+    
+    // ==================== END UPLOAD ====================
+
     // Resize handle functionality
     (function() {
       const handle = document.getElementById('resizeHandle');
@@ -3476,5 +4158,7 @@
       });
     })();
   </script>
+
+
 </body>
 </html>

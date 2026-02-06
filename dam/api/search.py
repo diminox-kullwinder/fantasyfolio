@@ -13,6 +13,16 @@ logger = logging.getLogger(__name__)
 search_bp = Blueprint('search', __name__)
 
 
+def fts_query(query: str) -> str:
+    """Convert search query to FTS5 format with prefix matching.
+    
+    Adds wildcard (*) to each term for prefix matching.
+    E.g., 'robo drag' becomes 'robo* drag*'
+    """
+    terms = query.strip().split()
+    return ' '.join(f'{term}*' for term in terms if term)
+
+
 @search_bp.route('/search')
 def api_search():
     """
@@ -63,14 +73,14 @@ def api_search_assets():
     assets = []
     with get_connection() as conn:
         if query:
-            # Full-text search with filters
+            # Full-text search with filters (use fts_query for prefix matching)
             sql = """
                 SELECT a.*, snippet(assets_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
                 FROM assets a
                 JOIN assets_fts ON a.id = assets_fts.rowid
                 WHERE assets_fts MATCH ?
             """
-            params = [query]
+            params = [fts_query(query)]
         else:
             sql = "SELECT * FROM assets WHERE 1=1"
             params = []
@@ -117,7 +127,7 @@ def api_search_models():
                 JOIN models_fts ON m.id = models_fts.rowid
                 WHERE models_fts MATCH ?
             """
-            params = [query]
+            params = [fts_query(query)]
         else:
             sql = "SELECT * FROM models WHERE 1=1"
             params = []
@@ -175,7 +185,7 @@ def api_search_pages():
             JOIN assets a ON p.asset_id = a.id
             WHERE pages_fts MATCH ?
         """
-        params = [query]
+        params = [fts_query(query)]
         
         if asset_id:
             sql += " AND p.asset_id = ?"
@@ -207,6 +217,8 @@ def api_search_all():
         'pages': []
     }
     
+    fts_q = fts_query(query)
+    
     with get_connection() as conn:
         # Search PDF assets
         try:
@@ -216,7 +228,7 @@ def api_search_all():
                 JOIN assets_fts ON a.id = assets_fts.rowid
                 WHERE assets_fts MATCH ?
                 LIMIT ?
-            """, (query, limit)).fetchall()
+            """, (fts_q, limit)).fetchall()
             results['assets'] = [dict(row) for row in asset_rows]
         except Exception:
             pass
@@ -228,7 +240,7 @@ def api_search_all():
                 JOIN models_fts ON m.id = models_fts.rowid
                 WHERE models_fts MATCH ?
                 LIMIT ?
-            """, (query, limit)).fetchall()
+            """, (fts_q, limit)).fetchall()
             results['models'] = [dict(row) for row in model_rows]
         except Exception:
             pass
@@ -243,7 +255,7 @@ def api_search_all():
                 JOIN assets a ON p.asset_id = a.id
                 WHERE pages_fts MATCH ?
                 LIMIT ?
-            """, (query, limit)).fetchall()
+            """, (fts_q, limit)).fetchall()
             results['pages'] = [dict(row) for row in page_rows]
         except Exception:
             pass
@@ -283,6 +295,7 @@ def api_search_advanced():
     limit = int(data.get('limit', 50))
     
     results = {'assets': [], 'pages': []}
+    fts_terms = fts_query(terms) if terms else ''
     
     with get_connection() as conn:
         # Search assets (titles/metadata)
@@ -293,7 +306,7 @@ def api_search_advanced():
                 JOIN assets_fts ON a.id = assets_fts.rowid
                 WHERE assets_fts MATCH ?
             """
-            params = [terms]
+            params = [fts_terms]
             
             if folder:
                 sql += " AND a.folder_path LIKE ?"
@@ -324,7 +337,7 @@ def api_search_advanced():
                 JOIN assets a ON p.asset_id = a.id
                 WHERE pages_fts MATCH ?
             """
-            params = [terms]
+            params = [fts_terms]
             
             if folder:
                 sql += " AND a.folder_path LIKE ?"
