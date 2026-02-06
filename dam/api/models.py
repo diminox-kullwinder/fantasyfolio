@@ -177,19 +177,29 @@ def api_model_preview(model_id: int):
     if cached_thumb.exists():
         return send_file(cached_thumb, mimetype='image/png')
     
-    # Try to get preview from archive
+    # Try to get preview from archive (but skip if it's likely just a texture file)
     if model.get('archive_path') and model.get('preview_image'):
         try:
-            with zipfile.ZipFile(model['archive_path'], 'r') as zf:
-                img_data = zf.read(model['preview_image'])
-                ext = Path(model['preview_image']).suffix.lower()
-                mime = {
-                    '.jpg': 'image/jpeg',
-                    '.jpeg': 'image/jpeg',
-                    '.png': 'image/png',
-                    '.webp': 'image/webp',
-                }.get(ext, 'image/jpeg')
-                return send_file(io.BytesIO(img_data), mimetype=mime)
+            preview_name = model['preview_image'].lower()
+            # Skip texture files - they're not real previews
+            is_texture = any(x in preview_name for x in ['material', 'texture', 'diffuse', 'albedo', 'normal', 'roughness'])
+            
+            if not is_texture:
+                with zipfile.ZipFile(model['archive_path'], 'r') as zf:
+                    info = zf.getinfo(model['preview_image'])
+                    # Skip if file is too large (>2MB is probably a texture, not a preview)
+                    if info.file_size < 2 * 1024 * 1024:
+                        img_data = zf.read(model['preview_image'])
+                        ext = Path(model['preview_image']).suffix.lower()
+                        mime = {
+                            '.jpg': 'image/jpeg',
+                            '.jpeg': 'image/jpeg',
+                            '.png': 'image/png',
+                            '.webp': 'image/webp',
+                        }.get(ext, 'image/jpeg')
+                        return send_file(io.BytesIO(img_data), mimetype=mime)
+                    else:
+                        logger.debug(f"Preview too large ({info.file_size} bytes), will render 3D thumbnail")
         except Exception as e:
             logger.debug(f"Failed to get preview from archive: {e}")
     

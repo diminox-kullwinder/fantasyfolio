@@ -509,10 +509,16 @@
       padding: 8px 12px;
       border-radius: 6px;
       border: 1px solid var(--border);
-      background: var(--bg-card);
-      color: var(--text-primary);
+      background: #fff;
+      color: #222;
       font-size: 0.85rem;
       cursor: pointer;
+      color-scheme: light;
+    }
+    
+    .sort-controls select option {
+      background: #fff;
+      color: #222;
     }
     
     .clear-btn {
@@ -1847,7 +1853,7 @@
       background: var(--accent-hover);
     }
   </style>
-</head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"></head>
 <body>
   <div class="app">
     <header>
@@ -1929,6 +1935,12 @@
         <button class="view-btn active" data-view="grid">Grid</button>
         <button class="view-btn" data-view="list">List</button>
         <div class="sort-controls">
+          <select id="formatFilter" onchange="changeFormatFilter()" style="display:none;">
+            <option value="">All Formats</option>
+            <option value="stl">STL</option>
+            <option value="obj">OBJ</option>
+            <option value="3mf">3MF</option>
+          </select>
           <select id="sortSelect" onchange="changeSort()">
             <option value="filename:asc">Name (A-Z)</option>
             <option value="filename:desc">Name (Z-A)</option>
@@ -2122,6 +2134,7 @@
     let currentOrder = 'asc';
     let contentType = 'pdf';  // 'pdf' or '3d'
     let currentCollection = null;
+    let currentFormat = null;  // STL, OBJ, 3MF filter for 3D models
     
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -2153,6 +2166,17 @@
       // Close modal on overlay click
       document.getElementById('modal').addEventListener('click', (e) => {
         if (e.target.id === 'modal') closeModal();
+      });
+      
+      // Delegated click handler for folder navigation links in modals
+      document.getElementById('modalBody').addEventListener('click', (e) => {
+        const link = e.target.closest('.folder-nav-link');
+        if (link) {
+          e.preventDefault();
+          const folder = link.dataset.folder;
+          console.log('Folder link clicked:', folder);
+          navigateToFolder(folder);
+        }
       });
       
       // Close page preview on overlay click
@@ -2190,11 +2214,16 @@
       document.getElementById('pdfNav').style.display = type === 'pdf' ? 'block' : 'none';
       document.getElementById('modelsNav').style.display = type === '3d' ? 'block' : 'none';
       
+      // Show/hide format filter (only for 3D models)
+      document.getElementById('formatFilter').style.display = type === '3d' ? 'inline-block' : 'none';
+      
       // Clear current filters
       currentFolder = null;
       currentPublisher = null;
       currentCollection = null;
+      currentFormat = null;
       document.getElementById('searchInput').value = '';
+      document.getElementById('formatFilter').value = '';
       document.getElementById('contentResults').style.display = 'none';
       
       // Reload content
@@ -2319,6 +2348,16 @@
     function filter3dFolder(folder) {
       currentFolder = folder;
       currentCollection = null;  // Clear collection filter when filtering by folder
+      
+      // Auto-expand all parent folders to show path to current folder
+      if (folder) {
+        const parts = folder.split('/');
+        for (let i = 1; i <= parts.length; i++) {
+          const parentPath = parts.slice(0, i).join('/');
+          expandedModelFolders.add(parentPath);
+        }
+      }
+      
       load3dCollections();  // Update active states
       render3dFolderTree();
       load3dModels();
@@ -2332,10 +2371,18 @@
       if (currentFolder) {
         url += `&folder=${encodeURIComponent(currentFolder)}`;
       }
+      if (currentFormat) {
+        url += `&format=${encodeURIComponent(currentFormat)}`;
+      }
       
       const res = await fetch(url);
       const models = await res.json();
       render3dModels(models);
+    }
+    
+    function changeFormatFilter() {
+      currentFormat = document.getElementById('formatFilter').value || null;
+      load3dModels();
     }
     
     function filter3dCollection(collection) {
@@ -2364,11 +2411,12 @@
       // Grid view with preview thumbnails (cache-bust every 10s for pending renders)
       const cacheBust = Math.floor(Date.now() / 10000);
       grid.innerHTML = models.map(m => `
-        <div class="asset-card" onclick="show3dDetail(${m.id})">
-          <img class="asset-thumb model-grid-thumb" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" />
+        <div class="asset-card" onclick="show3dDetail(${m.id})" title="ID: ${m.id}">
+          <img class="asset-thumb model-grid-thumb" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
+               onerror="console.error('Thumb failed for model ${m.id}:', this.src); this.src='/static/placeholder-3d.svg';" />
           <div class="asset-info">
             <div class="asset-title" title="${escapeHtml(m.filename)}">${escapeHtml(m.title || m.filename)}</div>
-            <div class="asset-meta">${(m.format || 'stl').toUpperCase()} · ${formatSize(m.file_size)}</div>
+            <div class="asset-meta">${(m.format || 'stl').toUpperCase()} · ${formatSize(m.file_size)} · #${m.id}</div>
           </div>
         </div>
       `).join('');
@@ -2434,10 +2482,16 @@
             <span class="detail-label">Supports</span>
             <span class="detail-value">${model.has_supports ? '✓ Pre-supported' : 'No'}</span>
           </div>
+          ${model.folder_path ? `
+          <div class="detail-row">
+            <span class="detail-label">Location</span>
+            <span class="detail-value breadcrumbs">📁 ${renderBreadcrumbs(model.folder_path)}</span>
+          </div>
+          ` : ''}
           ${model.archive_path ? `
           <div class="detail-row">
             <span class="detail-label">Archive</span>
-            <span class="detail-value" style="font-size:0.8rem">${escapeHtml(model.archive_path.split('/').pop())}</span>
+            <span class="detail-value" style="font-size:0.8rem">📦 ${escapeHtml(model.archive_path.split('/').pop())}</span>
           </div>
           ` : ''}
           
@@ -2473,9 +2527,10 @@
         
         // Check if Three.js is loaded
         if (!threeJsLoaded) {
-          // Load Three.js and controls from CDN
+          // Load Three.js, controls, and fflate (needed for 3MF) from CDN
           await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
           await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js');
+          await loadScript('https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.js');
           threeJsLoaded = true;
         }
         
@@ -2487,6 +2542,7 @@
           await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/OBJLoader.js');
           loadedLoaders.obj = true;
         } else if (format === '3mf' && !loadedLoaders['3mf']) {
+          // fflate already loaded with Three.js base
           await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/3MFLoader.js');
           loadedLoaders['3mf'] = true;
         }
@@ -2695,8 +2751,8 @@
       },
       // Error callback
       (error) => {
-        console.error('STL load error:', error);
-        loadingDiv.textContent = '❌ Failed to load model';
+        console.error(`3D model load error (${format}):`, error);
+        loadingDiv.textContent = `❌ Failed to load ${format.toUpperCase()} model`;
         loadingDiv.style.color = '#ff6b6b';
       }
       );
@@ -2877,10 +2933,12 @@
       currentFolder = null;
       currentPublisher = null;
       currentCollection = null;
+      currentFormat = null;
       currentSort = 'filename';
       currentOrder = 'asc';
       document.getElementById('searchInput').value = '';
       document.getElementById('sortSelect').value = 'filename:asc';
+      document.getElementById('formatFilter').value = '';
       document.getElementById('contentResults').style.display = 'none';
       lastSearchQuery = '';
       
@@ -3293,9 +3351,26 @@
       
       currentFolder = folder;
       currentPublisher = null;
+      currentCollection = null;
+      
+      // Auto-expand all parent folders to show path to current folder
+      if (folder) {
+        const parts = folder.split('/');
+        for (let i = 1; i <= parts.length; i++) {
+          const parentPath = parts.slice(0, i).join('/');
+          expandedFolders.add(parentPath);
+        }
+      }
+      
       loadFolders();
       loadPublishers();
-      loadAssets();
+      
+      // Load assets based on current mode
+      if (contentType === '3d') {
+        load3dModels();
+      } else {
+        loadAssets();
+      }
       updateScopeOption();
     }
     
@@ -3656,12 +3731,21 @@
     }
     
     function navigateToFolder(path) {
+      console.log('navigateToFolder called with:', path, 'contentType:', contentType);
       closeModal();
       // Clear search so folder filter takes effect
       document.getElementById('searchInput').value = '';
       document.getElementById('contentResults').style.display = 'none';
       lastSearchQuery = '';
-      filterFolder(path);
+      
+      // Use the right filter based on current mode
+      if (contentType === '3d') {
+        console.log('Calling filter3dFolder');
+        filter3dFolder(path);
+      } else {
+        console.log('Calling filterFolder');
+        filterFolder(path);
+      }
     }
     
     function escapeHtml(str) {
