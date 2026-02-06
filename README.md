@@ -19,6 +19,7 @@ A self-hosted web application for managing and browsing digital asset libraries,
 - 🖼️ Preview images from Patreon packs
 - 🔎 Search by collection, creator, or filename
 - 📦 Support for STL, 3MF, and OBJ formats
+- 🎛️ Filter by file format (STL/OBJ/3MF dropdown)
 - 💾 Direct model file downloads
 
 ### 3D Model Viewer (Three.js)
@@ -132,7 +133,7 @@ python -m dam.cli stats
 | `/api/assets/<id>` | GET | Get asset details |
 | `/api/assets/<id>/thumbnail` | GET | Get PDF thumbnail |
 | `/api/assets/<id>/render/<page>` | GET | Render PDF page as image |
-| `/api/models` | GET | List 3D models |
+| `/api/models` | GET | List 3D models (supports `?format=stl\|obj\|3mf`) |
 | `/api/models/<id>` | GET | Get model details |
 | `/api/models/<id>/preview` | GET | Get model preview image |
 | `/api/models/<id>/stl` | GET | **Get STL file for 3D viewer** |
