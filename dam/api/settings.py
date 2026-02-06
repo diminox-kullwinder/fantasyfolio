@@ -413,7 +413,7 @@ def api_upload_files():
                 except Exception:
                     pass
                 
-                # Insert PDF asset
+                # Insert PDF asset (provide all required fields)
                 asset = {
                     'file_path': file_path,
                     'filename': os.path.basename(file_path),
@@ -424,13 +424,22 @@ def api_upload_files():
                     'file_size': file_size,
                     'file_hash': file_hash,
                     'folder_path': folder_path,
+                    'game_system': None,
+                    'category': None,
+                    'tags': None,
+                    'thumbnail_path': None,
+                    'has_thumbnail': 0,
+                    'pdf_creator': None,
+                    'pdf_producer': None,
+                    'pdf_creation_date': None,
+                    'pdf_mod_date': None,
                     'created_at': datetime.now().isoformat(),
                     'modified_at': datetime.now().isoformat()
                 }
                 insert_asset(asset)
                     
             else:
-                # Insert 3D model
+                # Insert 3D model (provide all required fields)
                 model = {
                     'file_path': file_path,
                     'filename': os.path.basename(file_path),
@@ -441,6 +450,13 @@ def api_upload_files():
                     'folder_path': folder_path,
                     'collection': folder_path.split('/')[0] if folder_path else 'uploads',
                     'creator': 'uploaded',
+                    'archive_path': None,  # Only set for files extracted from archives
+                    'archive_member': None,  # Only set for files extracted from archives
+                    'vertex_count': None,
+                    'face_count': None,
+                    'has_supports': 0,
+                    'preview_image': None,
+                    'has_thumbnail': 0,
                     'created_at': datetime.now().isoformat(),
                     'modified_at': datetime.now().isoformat()
                 }
