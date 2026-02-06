@@ -16,21 +16,43 @@ A self-hosted web application for managing and browsing digital asset libraries,
 
 ### 3D Model Management
 - 🎲 Index 3D models including files inside ZIP archives
-- 🖼️ Preview images from Patreon packs
+- 🖼️ Preview images extracted from Patreon packs (when available)
 - 🔎 Search by collection, creator, or filename
 - 📦 Support for STL, 3MF, and OBJ formats
 - 🎛️ Filter by file format (STL/OBJ/3MF dropdown)
 - 💾 Direct model file downloads
 
+### 3D Thumbnail Rendering
+Automatic thumbnail generation for 3D models with a two-tier approach:
+
+**Primary: stl-thumb (OpenGL)**
+- Uses [stl-thumb](https://github.com/unlimitedbacon/stl-thumb) CLI for high-quality OpenGL renders
+- Supports STL, OBJ, and 3MF formats
+- Produces professional-looking isometric thumbnails
+- Install: `cargo install stl-thumb` or download from releases
+
+**Fallback: PIL Software Rendering**
+- Pure Python fallback when stl-thumb is unavailable
+- Custom parsers for STL, OBJ, and 3MF files
+- Isometric projection with depth-sorted triangles
+- Shaded blue material with lighting
+
+**Thumbnail Generation Flow:**
+1. Check for cached thumbnail (`thumbnails/3d/<id>.png`)
+2. Look for preview image in archive (skips texture files automatically)
+3. Queue background render via stl-thumb or PIL fallback
+4. Return SVG placeholder while rendering completes
+5. Client polls with cache-busting to pick up finished renders
+
 ### 3D Model Viewer (Three.js)
-- 🎮 **Interactive 3D preview** - View STL models directly in the browser
+- 🎮 **Interactive 3D preview** - View STL, OBJ, and 3MF models directly in the browser
 - 🔄 **Orbit controls** - Rotate, pan, and zoom with mouse/touch
 - 💡 **Professional lighting** - Ambient and directional lighting for best visualization
 - 📐 **Grid overlay** - Reference grid for scale context
 - 🎨 **Clean rendering** - Anti-aliased WebGL rendering
 - 📱 **Responsive** - Works on desktop and mobile browsers
 
-The viewer uses Three.js (r128) with STLLoader and OrbitControls, loaded from CDN for fast startup.
+The viewer uses Three.js (r128) with STLLoader, OBJLoader, and 3MFLoader, loaded from CDN for fast startup.
 
 ### General
 - 🌐 Modern responsive web interface
@@ -289,7 +311,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [Gunicorn](https://gunicorn.org/) — Production WSGI server
 
 ### 3D Model Processing
-- [Three.js](https://threejs.org/) — In-browser 3D model viewer (with STLLoader and OrbitControls)
-- [numpy-stl](https://github.com/WoLpH/numpy-stl) — STL file parsing
-- [Matplotlib](https://matplotlib.org/) — Server-side thumbnail rendering
-- [NumPy](https://numpy.org/) — Numerical computing for 3D operations
+- [stl-thumb](https://github.com/unlimitedbacon/stl-thumb) — High-quality OpenGL thumbnail rendering (STL/OBJ/3MF)
+- [Three.js](https://threejs.org/) — In-browser 3D model viewer (STLLoader, OBJLoader, 3MFLoader, OrbitControls)
+- [numpy-stl](https://github.com/WoLpH/numpy-stl) — STL file parsing for fallback renderer
+- [Pillow (PIL)](https://pillow.readthedocs.io/) — Software rendering fallback for thumbnails
+- [NumPy](https://numpy.org/) — Numerical computing for 3D geometry operations
