@@ -237,28 +237,42 @@ def api_model_preview(model_id: int):
 
 @models_bp.route('/models/<int:model_id>/stl')
 def api_model_stl(model_id: int):
-    """Serve STL file for 3D viewer (handles ZIP extraction)."""
+    """Serve STL file for 3D viewer (handles ZIP extraction). Legacy endpoint."""
+    return api_model_file(model_id)
+
+
+@models_bp.route('/models/<int:model_id>/file')
+def api_model_file(model_id: int):
+    """Serve model file for 3D viewer (handles ZIP extraction). Supports STL, OBJ, 3MF."""
     model = get_model_by_id(model_id)
     
     if not model:
         return jsonify({'error': 'Model not found'}), 404
     
+    # Determine MIME type based on format
+    format_mime = {
+        'stl': 'application/octet-stream',
+        'obj': 'text/plain',
+        '3mf': 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml',
+    }
+    mime_type = format_mime.get(model.get('format', '').lower(), 'application/octet-stream')
+    
     try:
         if model.get('archive_path') and model.get('archive_member'):
             # Extract from ZIP
             with zipfile.ZipFile(model['archive_path'], 'r') as zf:
-                stl_data = zf.read(model['archive_member'])
+                file_data = zf.read(model['archive_member'])
             return send_file(
-                io.BytesIO(stl_data),
-                mimetype='application/octet-stream',
+                io.BytesIO(file_data),
+                mimetype=mime_type,
                 download_name=model['filename']
             )
-        elif os.path.exists(model['file_path']):
-            return send_file(model['file_path'])
+        elif model.get('file_path') and os.path.exists(model['file_path']):
+            return send_file(model['file_path'], mimetype=mime_type)
         else:
             return jsonify({'error': 'File not found'}), 404
     except Exception as e:
-        logger.error(f"STL serve error for model {model_id}: {e}")
+        logger.error(f"File serve error for model {model_id}: {e}")
         return jsonify({'error': 'Failed to serve file'}), 500
 
 

@@ -2459,19 +2459,36 @@
     let threeJsLoaded = false;
     
     // Three.js viewer functions
+    let loadedLoaders = { stl: false, obj: false, '3mf': false };
+    
     async function open3dViewer(modelId) {
       const btn = document.getElementById('btn3dPreview');
       if (btn) btn.textContent = '⏳ Loading...';
       
       try {
+        // Get model info to determine format
+        const res = await fetch(`/api/models/${modelId}`);
+        const model = await res.json();
+        const format = (model.format || 'stl').toLowerCase();
+        
         // Check if Three.js is loaded
         if (!threeJsLoaded) {
-          // Load Three.js and loaders from CDN (using older compatible version)
+          // Load Three.js and controls from CDN
           await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
-          // OrbitControls and STLLoader for r128
           await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js');
-          await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/STLLoader.js');
           threeJsLoaded = true;
+        }
+        
+        // Load format-specific loader
+        if (format === 'stl' && !loadedLoaders.stl) {
+          await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/STLLoader.js');
+          loadedLoaders.stl = true;
+        } else if (format === 'obj' && !loadedLoaders.obj) {
+          await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/OBJLoader.js');
+          loadedLoaders.obj = true;
+        } else if (format === '3mf' && !loadedLoaders['3mf']) {
+          await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/3MFLoader.js');
+          loadedLoaders['3mf'] = true;
         }
         
         // Hide static preview, show 3D viewer
@@ -2487,8 +2504,8 @@
         
         if (btn) btn.style.display = 'none';
         
-        // Initialize Three.js scene
-        if (viewerDiv) init3dViewer(viewerDiv, modelId);
+        // Initialize Three.js scene with format info
+        if (viewerDiv) init3dViewer(viewerDiv, modelId, format);
       } catch (e) {
         console.error('Failed to load Three.js:', e);
         if (btn) btn.textContent = '❌ Load failed';
@@ -2534,7 +2551,7 @@
       });
     }
     
-    function init3dViewer(container, modelId) {
+    function init3dViewer(container, modelId, format = 'stl') {
       // Clear any previous viewer
       container.innerHTML = '';
       
@@ -2548,9 +2565,16 @@
         return;
       }
       
-      if (typeof THREE.STLLoader === 'undefined') {
-        console.error('STLLoader not loaded');
-        container.innerHTML = '<div style="color:red;padding:20px;">STL Loader failed to load</div>';
+      // Check format-specific loader
+      const loaderCheck = {
+        'stl': () => typeof THREE.STLLoader !== 'undefined',
+        'obj': () => typeof THREE.OBJLoader !== 'undefined',
+        '3mf': () => typeof THREE.ThreeMFLoader !== 'undefined'
+      };
+      
+      if (!loaderCheck[format] || !loaderCheck[format]()) {
+        console.error(`${format.toUpperCase()} Loader not loaded`);
+        container.innerHTML = `<div style="color:red;padding:20px;">${format.toUpperCase()} Loader failed to load</div>`;
         return;
       }
       
@@ -2595,49 +2619,72 @@
       loadingDiv.textContent = '⏳ Loading...';
       container.appendChild(loadingDiv);
       
-      // Load STL
-      const loader = new THREE.STLLoader();
+      // Create format-specific loader
+      let loader;
+      if (format === 'stl') {
+        loader = new THREE.STLLoader();
+      } else if (format === 'obj') {
+        loader = new THREE.OBJLoader();
+      } else if (format === '3mf') {
+        loader = new THREE.ThreeMFLoader();
+      }
+      
+      // Material for the model
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0x4dabf7,
+        specular: 0x111111,
+        shininess: 30,
+        flatShading: false
+      });
+      
+      // Load model file
       loader.load(
-        `/api/models/${modelId}/stl`,
-        (geometry) => {
+        `/api/models/${modelId}/file`,
+        (result) => {
           loadingDiv.remove();
-        const material = new THREE.MeshPhongMaterial({ 
-          color: 0x4dabf7,
-          specular: 0x111111,
-          shininess: 30,
-          flatShading: false
-        });
-        
-        const mesh = new THREE.Mesh(geometry, material);
-        
-        // Center and scale
-        geometry.computeBoundingBox();
-        const bbox = geometry.boundingBox;
-        const center = new THREE.Vector3();
-        bbox.getCenter(center);
-        geometry.translate(-center.x, -center.y, -center.z);
-        
-        // Auto-scale to fit view
-        const size = new THREE.Vector3();
-        bbox.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 50 / maxDim;
-        mesh.scale.set(scale, scale, scale);
-        
-        // Position on grid
-        geometry.computeBoundingBox();
-        const newBbox = geometry.boundingBox;
-        mesh.position.y = -newBbox.min.y * scale;
-        
-        scene.add(mesh);
-        
-        // Store for controls
-        threeViewer = { scene, camera, renderer, controls, mesh, material };
-        
-        // Fit camera
-        camera.position.set(maxDim * scale, maxDim * scale, maxDim * scale * 1.5);
-        controls.target.set(0, 25, 0);
-        controls.update();
+          
+          let mesh;
+          
+          if (format === 'stl') {
+            // STLLoader returns geometry
+            mesh = new THREE.Mesh(result, material);
+          } else if (format === 'obj' || format === '3mf') {
+            // OBJLoader and 3MFLoader return Object3D/Group
+            mesh = result;
+            // Apply material to all meshes in the group
+            mesh.traverse((child) => {
+              if (child.isMesh) {
+                child.material = material;
+              }
+            });
+          }
+          
+          // Compute bounding box for any format
+          const bbox = new THREE.Box3().setFromObject(mesh);
+          const center = new THREE.Vector3();
+          bbox.getCenter(center);
+          mesh.position.sub(center);
+          
+          // Auto-scale to fit view
+          const size = new THREE.Vector3();
+          bbox.getSize(size);
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const scale = 50 / maxDim;
+          mesh.scale.set(scale, scale, scale);
+          
+          // Position on grid
+          const newBbox = new THREE.Box3().setFromObject(mesh);
+          mesh.position.y = -newBbox.min.y;
+          
+          scene.add(mesh);
+          
+          // Store for controls
+          threeViewer = { scene, camera, renderer, controls, mesh, material };
+          
+          // Fit camera
+          camera.position.set(maxDim * scale, maxDim * scale, maxDim * scale * 1.5);
+          controls.target.set(0, 25, 0);
+          controls.update();
       },
       // Progress callback
       (xhr) => {
