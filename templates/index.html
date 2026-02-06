@@ -2051,6 +2051,53 @@
     </div>
   </div>
 
+  <!-- Upload Modal -->
+  <div class="upload-overlay" id="uploadModal">
+    <div class="upload-modal">
+      <div class="upload-header">
+        <h2><span id="uploadIcon">📄</span> Upload <span id="uploadTypeLabel">PDFs</span></h2>
+        <button class="upload-close" onclick="closeUpload()">×</button>
+      </div>
+      <div class="upload-body">
+        <div class="upload-section">
+          <h3>📁 Select Destination Folder</h3>
+          <div class="upload-path-display">
+            <span class="path" id="uploadCurrentPath">Loading...</span>
+          </div>
+          <div class="upload-folder-list" id="uploadFolderList"></div>
+          <div class="upload-new-folder">
+            <input type="text" id="newFolderName" placeholder="New folder name..." />
+            <button onclick="createUploadFolder()">📁 Create</button>
+          </div>
+        </div>
+        
+        <div class="upload-section">
+          <h3>📎 Select Files</h3>
+          <div class="upload-dropzone" id="uploadDropzone" onclick="document.getElementById('uploadFileInput').click()">
+            <div class="upload-dropzone-icon">📁</div>
+            <div class="upload-dropzone-text">Drop files here or click to browse</div>
+            <div class="upload-dropzone-hint" id="uploadHint">Accepted: .pdf</div>
+          </div>
+          <input type="file" id="uploadFileInput" multiple style="display:none" onchange="handleFileSelect(event)" />
+          <div class="upload-file-list" id="uploadFileList"></div>
+          <div class="upload-progress" id="uploadProgress">
+            <div class="upload-progress-bar">
+              <div class="upload-progress-fill" id="uploadProgressFill"></div>
+            </div>
+            <div class="upload-progress-text" id="uploadProgressText">Uploading...</div>
+          </div>
+        </div>
+      </div>
+      <div class="upload-footer">
+        <div class="file-count" id="uploadFileCount">No files selected</div>
+        <div class="buttons">
+          <button class="btn btn-secondary" onclick="closeUpload()">Cancel</button>
+          <button class="btn btn-primary" id="uploadSubmitBtn" onclick="submitUpload()" disabled>⬆️ Upload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Directory Browser Modal -->
   <div class="browser-overlay" id="browserModal">
     <div class="browser-modal">
