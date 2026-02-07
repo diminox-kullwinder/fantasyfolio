@@ -314,3 +314,88 @@ def api_model_download(model_id: int):
     except Exception as e:
         logger.error(f"Download error for model {model_id}: {e}")
         return jsonify({'error': 'Download failed'}), 500
+
+
+@models_bp.route('/models/thumbnail-stats')
+def api_thumbnail_stats():
+    """Get thumbnail cache statistics."""
+    config = get_config()
+    thumbnail_dir = Path(config.THUMBNAIL_DIR) / "3d"
+    
+    with get_connection() as conn:
+        # Count total models
+        total = conn.execute("SELECT COUNT(*) as cnt FROM models").fetchone()['cnt']
+        
+        # Count cached thumbnails
+        if thumbnail_dir.exists():
+            cached = len(list(thumbnail_dir.glob("*.png")))
+        else:
+            cached = 0
+    
+    return jsonify({
+        'total': total,
+        'cached': cached,
+        'missing': total - cached,
+        'percent': round((cached / total * 100) if total > 0 else 0, 1)
+    })
+
+
+@models_bp.route('/models/render-thumbnails', methods=['POST'])
+def api_render_thumbnails():
+    """Queue all missing 3D model thumbnails for rendering."""
+    import threading
+    from dam.indexer.thumbnails import render_3d_thumbnail
+    
+    config = get_config()
+    thumbnail_dir = Path(config.THUMBNAIL_DIR) / "3d"
+    thumbnail_dir.mkdir(parents=True, exist_ok=True)
+    
+    with get_connection() as conn:
+        models = conn.execute("SELECT id, format, file_path, archive_path, archive_member FROM models ORDER BY id").fetchall()
+    
+    # Separate cached vs missing
+    models_to_render = []
+    cached_count = 0
+    
+    for model in models:
+        cached_thumb = thumbnail_dir / f"{model['id']}.png"
+        if cached_thumb.exists():
+            cached_count += 1
+        else:
+            models_to_render.append(model)
+    
+    # Start background rendering
+    def render_batch():
+        for i, model in enumerate(models_to_render):
+            try:
+                model_format = (model['format'] or 'stl').lower()
+                if model_format not in ('stl', 'obj', '3mf'):
+                    continue
+                
+                # Get model data
+                if model['archive_path'] and model['archive_member']:
+                    with zipfile.ZipFile(model['archive_path'], 'r') as zf:
+                        model_data = zf.read(model['archive_member'])
+                elif os.path.exists(model['file_path']):
+                    with open(model['file_path'], 'rb') as f:
+                        model_data = f.read()
+                else:
+                    logger.warning(f"Model file not found for {model['id']}")
+                    continue
+                
+                # Render thumbnail
+                render_3d_thumbnail(model_data, model_format, str(thumbnail_dir / f"{model['id']}.png"))
+                logger.info(f"Background render {i+1}/{len(models_to_render)}: model {model['id']} ({model_format})")
+            except Exception as e:
+                logger.error(f"Background thumbnail render error for model {model['id']}: {e}")
+    
+    # Start in background thread
+    thread = threading.Thread(target=render_batch, daemon=True)
+    thread.start()
+    
+    return jsonify({
+        'message': f'Rendering {len(models_to_render)} thumbnails in background',
+        'models_queued': len(models_to_render),
+        'already_cached': cached_count,
+        'total_models': len(models)
+    }), 200

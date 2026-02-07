@@ -2047,6 +2047,19 @@
         </div>
         
         <div class="settings-section">
+          <h3>🖼️ 3D Model Maintenance</h3>
+          <div class="settings-field">
+            <label>Thumbnail Generation</label>
+            <p style="font-size: 0.9rem; color: #888; margin-bottom: 12px;">Render missing or low-quality thumbnails for faster browsing</p>
+            <div class="path-input-row">
+              <button class="index-btn" onclick="renderAllThumbnails()" title="Render thumbnails for all 3D models" id="renderThumbBtn">🎬 Render Thumbnails</button>
+              <button class="index-btn" onclick="renderThumbStats()" title="Check thumbnail status">📊 Check Status</button>
+            </div>
+            <div class="index-status" id="renderThumbStatus"></div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
           <h3>🌐 Network Paths (SMB)</h3>
           <div class="settings-field">
             <label>Additional mount points (one per line)</label>
@@ -3899,6 +3912,64 @@
           statusEl.textContent = `✅ ${data.message}`;
           // Refresh stats
           loadStats();
+        } else {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = `❌ ${data.error}`;
+        }
+      } catch (e) {
+        statusEl.className = 'index-status error';
+        statusEl.textContent = `❌ Error: ${e.message}`;
+      }
+    }
+    
+    // ==================== 3D THUMBNAIL RENDERING ====================
+    
+    async function renderAllThumbnails() {
+      const statusEl = document.getElementById('renderThumbStatus');
+      const btn = document.getElementById('renderThumbBtn');
+      
+      btn.disabled = true;
+      statusEl.className = 'index-status active';
+      statusEl.textContent = '⏳ Rendering thumbnails... This may take several minutes.';
+      
+      try {
+        const res = await fetch('/api/models/render-thumbnails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          statusEl.className = 'index-status success';
+          statusEl.textContent = `✅ ${data.message} (${data.models_queued} queued, ${data.already_cached} cached)`;
+          loadStats();
+        } else {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = `❌ ${data.error}`;
+        }
+      } catch (e) {
+        statusEl.className = 'index-status error';
+        statusEl.textContent = `❌ Error: ${e.message}`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    
+    async function renderThumbStats() {
+      const statusEl = document.getElementById('renderThumbStatus');
+      
+      statusEl.className = 'index-status active';
+      statusEl.textContent = '⏳ Checking thumbnail status...';
+      
+      try {
+        const res = await fetch('/api/models/thumbnail-stats');
+        const data = await res.json();
+        
+        if (res.ok) {
+          const percent = Math.round((data.cached / data.total) * 100);
+          statusEl.className = 'index-status info';
+          statusEl.textContent = `📊 ${data.cached} / ${data.total} cached (${percent}%)`;
         } else {
           statusEl.className = 'index-status error';
           statusEl.textContent = `❌ ${data.error}`;
