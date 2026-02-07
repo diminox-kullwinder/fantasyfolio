@@ -3963,10 +3963,8 @@
     }
     
     async function renderThumbStats(btn) {
-      alert('Function called!');
       const statusEl = document.getElementById('renderThumbStatus');
       if (btn) btn.disabled = true;
-      console.log('renderThumbStats called, statusEl:', statusEl);
       
       statusEl.className = 'index-status active';
       statusEl.textContent = '⏳ Checking thumbnail status...';
@@ -3981,17 +3979,13 @@
         
         if (res.ok) {
           const percent = data.percent.toFixed(1);
-          console.log('Success! Setting status:', data);
           statusEl.className = 'index-status info';
           statusEl.textContent = `📊 ${data.cached.toLocaleString()} / ${data.total.toLocaleString()} cached (${percent}%) — ${data.missing.toLocaleString()} remaining`;
-          console.log('Status set, className:', statusEl.className, 'text:', statusEl.textContent);
         } else {
-          console.log('API error:', data);
           statusEl.className = 'index-status error';
           statusEl.textContent = `❌ ${data.error}`;
         }
       } catch (e) {
-        console.log('Fetch error:', e);
         statusEl.className = 'index-status error';
         if (e.name === 'AbortError') {
           statusEl.textContent = '⏳ Server busy, still checking... (try again in a moment)';
@@ -4000,7 +3994,6 @@
         }
       } finally {
         if (btn) btn.disabled = false;
-        console.log('Final statusEl state:', statusEl.className, statusEl.textContent);
       }
     }
     
