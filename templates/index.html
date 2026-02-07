@@ -2059,7 +2059,7 @@
             <p style="font-size: 0.9rem; color: #888; margin-bottom: 12px;">Render missing or low-quality thumbnails for faster browsing</p>
             <div class="path-input-row">
               <button class="index-btn" onclick="renderAllThumbnails()" title="Render thumbnails for all 3D models" id="renderThumbBtn">🎬 Render Thumbnails</button>
-              <button class="index-btn" onclick="renderThumbStats()" title="Check thumbnail status">📊 Check Status</button>
+              <button class="index-btn" onclick="renderThumbStats(this)" title="Check thumbnail status">📊 Check Status</button>
             </div>
             <div class="index-status" id="renderThumbStatus"></div>
           </div>
@@ -3962,10 +3962,10 @@
       }
     }
     
-    async function renderThumbStats() {
+    async function renderThumbStats(btn) {
       const statusEl = document.getElementById('renderThumbStatus');
-      const btn = event?.target;
       if (btn) btn.disabled = true;
+      console.log('renderThumbStats called, statusEl:', statusEl);
       
       statusEl.className = 'index-status active';
       statusEl.textContent = '⏳ Checking thumbnail status...';
@@ -3980,13 +3980,17 @@
         
         if (res.ok) {
           const percent = data.percent.toFixed(1);
+          console.log('Success! Setting status:', data);
           statusEl.className = 'index-status info';
           statusEl.textContent = `📊 ${data.cached.toLocaleString()} / ${data.total.toLocaleString()} cached (${percent}%) — ${data.missing.toLocaleString()} remaining`;
+          console.log('Status set, className:', statusEl.className, 'text:', statusEl.textContent);
         } else {
+          console.log('API error:', data);
           statusEl.className = 'index-status error';
           statusEl.textContent = `❌ ${data.error}`;
         }
       } catch (e) {
+        console.log('Fetch error:', e);
         statusEl.className = 'index-status error';
         if (e.name === 'AbortError') {
           statusEl.textContent = '⏳ Server busy, still checking... (try again in a moment)';
@@ -3995,6 +3999,7 @@
         }
       } finally {
         if (btn) btn.disabled = false;
+        console.log('Final statusEl state:', statusEl.className, statusEl.textContent);
       }
     }
     
