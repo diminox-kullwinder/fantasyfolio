@@ -63,6 +63,7 @@ class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
     LOG_LEVEL = "DEBUG"
+    TEMPLATES_AUTO_RELOAD = True
 
 
 class StagingConfig(Config):
