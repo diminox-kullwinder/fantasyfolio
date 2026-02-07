@@ -3964,25 +3964,37 @@
     
     async function renderThumbStats() {
       const statusEl = document.getElementById('renderThumbStatus');
+      const btn = event?.target;
+      if (btn) btn.disabled = true;
       
       statusEl.className = 'index-status active';
       statusEl.textContent = '⏳ Checking thumbnail status...';
       
       try {
-        const res = await fetch('/api/models/thumbnail-stats');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        
+        const res = await fetch('/api/models/thumbnail-stats', { signal: controller.signal });
+        clearTimeout(timeout);
         const data = await res.json();
         
         if (res.ok) {
-          const percent = Math.round((data.cached / data.total) * 100);
+          const percent = data.percent.toFixed(1);
           statusEl.className = 'index-status info';
-          statusEl.textContent = `📊 ${data.cached} / ${data.total} cached (${percent}%)`;
+          statusEl.textContent = `📊 ${data.cached.toLocaleString()} / ${data.total.toLocaleString()} cached (${percent}%) — ${data.missing.toLocaleString()} remaining`;
         } else {
           statusEl.className = 'index-status error';
           statusEl.textContent = `❌ ${data.error}`;
         }
       } catch (e) {
         statusEl.className = 'index-status error';
-        statusEl.textContent = `❌ Error: ${e.message}`;
+        if (e.name === 'AbortError') {
+          statusEl.textContent = '⏳ Server busy, still checking... (try again in a moment)';
+        } else {
+          statusEl.textContent = `❌ Error: ${e.message}`;
+        }
+      } finally {
+        if (btn) btn.disabled = false;
       }
     }
     
