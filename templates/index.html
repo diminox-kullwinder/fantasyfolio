@@ -1519,6 +1519,140 @@
       margin-bottom: 12px;
     }
     
+    /* Asset Locations */
+    .asset-locations-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .location-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    
+    .location-item.disabled {
+      opacity: 0.6;
+    }
+    
+    .location-icon {
+      font-size: 1.5rem;
+      width: 40px;
+      text-align: center;
+    }
+    
+    .location-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .location-name {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    
+    .location-path {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .location-badges {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    
+    .location-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-secondary);
+    }
+    
+    .location-badge.documents {
+      background: rgba(77, 171, 247, 0.2);
+      color: #4dabf7;
+    }
+    
+    .location-badge.models {
+      background: rgba(190, 75, 219, 0.2);
+      color: #be4bdb;
+    }
+    
+    .location-badge.local { background: rgba(64, 192, 87, 0.2); color: #40c057; }
+    .location-badge.mount { background: rgba(255, 212, 59, 0.2); color: #ffd43b; }
+    .location-badge.ssh, .location-badge.sftp { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+    
+    .location-actions {
+      display: flex;
+      gap: 6px;
+    }
+    
+    .location-actions button {
+      padding: 6px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .location-actions button:hover {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .location-empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    /* Add Location Modal */
+    .add-location-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 20px;
+    }
+    
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-row label {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .form-row input, .form-row select {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    
+    .form-row .input-with-btn {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .form-row .input-with-btn input {
+      flex: 1;
+    }
+    
     /* Journal controls */
     .journal-controls {
       display: flex;
@@ -3036,29 +3170,26 @@
         </div>
         
         <div class="settings-section">
-          <h3>📄 PDF/Documents</h3>
-          <div class="settings-field">
-            <label>Root Directory</label>
-            <div class="path-input-row">
-              <input type="text" id="settingPdfRoot" placeholder="/path/to/pdfs" />
-              <button onclick="browseDirectory('pdf_root', 'settingPdfRoot')">Browse</button>
-              <button class="index-btn" onclick="indexNow('pdf')" title="Index PDFs now">🔄 Index</button>
-            </div>
-            <div class="index-status" id="pdfIndexStatus"></div>
+          <h3>📁 Asset Locations</h3>
+          <p class="settings-hint">Configure where your documents and 3D models are stored.</p>
+          
+          <!-- Asset Locations List -->
+          <div class="asset-locations-list" id="assetLocationsList">
+            <div class="location-empty">Loading...</div>
           </div>
-        </div>
-        
-        <div class="settings-section">
-          <h3>🎲 3D Models</h3>
-          <div class="settings-field">
-            <label>Root Directory</label>
-            <div class="path-input-row">
-              <input type="text" id="setting3dRoot" placeholder="/path/to/3d-files" />
-              <button onclick="browseDirectory('3d_root', 'setting3dRoot')">Browse</button>
-              <button class="index-btn" onclick="indexNow('3d')" title="Index 3D files now">🔄 Index</button>
-            </div>
-            <div class="index-status" id="3dIndexStatus"></div>
+          
+          <!-- Add Location Button -->
+          <button class="btn btn-primary" onclick="showAddLocationModal()" style="margin-top: 12px;">
+            ➕ Add Asset Location
+          </button>
+          
+          <!-- Index Buttons -->
+          <div class="index-buttons-row" style="margin-top: 16px; display: flex; gap: 10px;">
+            <button class="index-btn" onclick="indexNow('pdf')" title="Index all document locations">🔄 Index Documents</button>
+            <button class="index-btn" onclick="indexNow('3d')" title="Index all 3D model locations">🔄 Index 3D Models</button>
           </div>
+          <div class="index-status" id="pdfIndexStatus"></div>
+          <div class="index-status" id="3dIndexStatus"></div>
         </div>
         
         <div class="settings-section">
@@ -3320,6 +3451,73 @@
       <div class="dir-browser-footer">
         <button class="btn btn-secondary" onclick="closeSshKeyHelp()">Close</button>
         <button class="btn btn-primary" onclick="useSshKey()" id="useSshKeyBtn" style="display: none;">Use This Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Asset Location Modal -->
+  <div class="dir-browser-overlay" id="addLocationModal">
+    <div class="dir-browser-modal" style="max-width: 500px;">
+      <div class="dir-browser-header">
+        <h3>📁 Add Asset Location</h3>
+        <button class="upload-close" onclick="closeAddLocationModal()">×</button>
+      </div>
+      <div class="add-location-form">
+        <div class="form-row">
+          <label>Name</label>
+          <input type="text" id="locName" placeholder="e.g., Main Document Archive" />
+        </div>
+        
+        <div class="form-row">
+          <label>Asset Type</label>
+          <select id="locAssetType">
+            <option value="documents">📄 Documents (PDFs)</option>
+            <option value="models">🎲 3D Models</option>
+          </select>
+        </div>
+        
+        <div class="form-row">
+          <label>Location Type</label>
+          <select id="locType" onchange="toggleLocationFields()">
+            <option value="local">Local Path</option>
+            <option value="mount">Local Mount (SMB/NFS)</option>
+            <option value="ssh">Remote SSH</option>
+            <option value="sftp">Remote SFTP</option>
+          </select>
+        </div>
+        
+        <div class="form-row">
+          <label>Path</label>
+          <div class="input-with-btn">
+            <input type="text" id="locPath" placeholder="/path/to/assets" />
+            <button class="btn btn-secondary" onclick="browseLocationPath()" id="locBrowseBtn">📁</button>
+          </div>
+        </div>
+        
+        <div class="form-row" id="locSshHostRow" style="display: none;">
+          <label>SSH Host</label>
+          <input type="text" id="locSshHost" placeholder="user@hostname or SSH config alias" />
+        </div>
+        
+        <div class="form-row" id="locSshKeyRow" style="display: none;">
+          <label>SSH Key (optional)</label>
+          <div class="input-with-btn">
+            <input type="text" id="locSshKey" placeholder="~/.ssh/id_rsa (leave empty for SSH config)" />
+            <button class="btn btn-secondary" onclick="showSshKeyHelp()">❓</button>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="locEnabled" checked style="width: auto;" />
+            Enabled
+          </label>
+        </div>
+      </div>
+      <div class="dir-browser-footer">
+        <div id="locValidationMsg" style="flex: 1; font-size: 0.85rem;"></div>
+        <button class="btn btn-secondary" onclick="closeAddLocationModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewLocation()">💾 Save</button>
       </div>
     </div>
   </div>
@@ -5020,6 +5218,7 @@
     
     let browserTargetSetting = null;
     let browserTargetInput = null;
+    let assetLocations = [];
     
     async function openSettings() {
       // Load current settings
@@ -5027,8 +5226,6 @@
         const res = await fetch('/api/settings');
         const settings = await res.json();
         
-        document.getElementById('settingPdfRoot').value = settings.pdf_root || '';
-        document.getElementById('setting3dRoot').value = settings['3d_root'] || '';
         document.getElementById('settingSmbPaths').value = 
           settings.smb_paths ? JSON.parse(settings.smb_paths).join('\n') : '';
       } catch (e) {
@@ -5036,6 +5233,9 @@
       }
       
       document.getElementById('settingsModal').classList.add('active');
+      
+      // Load asset locations
+      await loadAssetLocations();
       
       // Set default start date to today if empty
       const startDateInput = document.getElementById('newPolicyStartDate');
@@ -5045,6 +5245,218 @@
       
       // Load volume status when opening settings
       refreshVolumeStatus();
+    }
+    
+    // ==================== ASSET LOCATIONS ====================
+    
+    async function loadAssetLocations() {
+      const container = document.getElementById('assetLocationsList');
+      container.innerHTML = '<div class="location-empty">Loading...</div>';
+      
+      try {
+        const response = await fetch('/api/asset-locations');
+        const data = await response.json();
+        assetLocations = data.locations || [];
+        
+        if (assetLocations.length === 0) {
+          container.innerHTML = '<div class="location-empty">No asset locations configured. Click "Add Asset Location" to get started.</div>';
+          return;
+        }
+        
+        container.innerHTML = assetLocations.map(loc => renderLocationItem(loc)).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="location-empty">Failed to load locations</div>';
+        console.error('Error loading asset locations:', e);
+      }
+    }
+    
+    function renderLocationItem(loc) {
+      const icon = loc.asset_type === 'documents' ? '📄' : '🎲';
+      const typeLabel = loc.asset_type === 'documents' ? 'Documents' : 'Models';
+      const locTypeLabels = { local: 'Local', mount: 'Mount', ssh: 'SSH', sftp: 'SFTP' };
+      const disabledClass = loc.enabled ? '' : 'disabled';
+      
+      return `
+        <div class="location-item ${disabledClass}" data-id="${loc.id}">
+          <div class="location-icon">${icon}</div>
+          <div class="location-info">
+            <div class="location-name">${escapeHtml(loc.name)}</div>
+            <div class="location-path" title="${escapeHtml(loc.path)}">${escapeHtml(loc.path)}</div>
+            <div class="location-badges">
+              <span class="location-badge ${loc.asset_type}">${typeLabel}</span>
+              <span class="location-badge ${loc.location_type}">${locTypeLabels[loc.location_type] || loc.location_type}</span>
+              ${!loc.enabled ? '<span class="location-badge" style="background:rgba(255,0,0,0.2);color:#ff6b6b;">Disabled</span>' : ''}
+            </div>
+          </div>
+          <div class="location-actions">
+            <button onclick="testAssetLocation('${loc.id}')" title="Test connection">🔗</button>
+            <button onclick="toggleLocationEnabled('${loc.id}')" title="${loc.enabled ? 'Disable' : 'Enable'}">${loc.enabled ? '⏸️' : '▶️'}</button>
+            <button onclick="deleteAssetLocation('${loc.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function showAddLocationModal() {
+      // Reset form
+      document.getElementById('locName').value = '';
+      document.getElementById('locAssetType').value = 'documents';
+      document.getElementById('locType').value = 'local';
+      document.getElementById('locPath').value = '';
+      document.getElementById('locSshHost').value = '';
+      document.getElementById('locSshKey').value = '';
+      document.getElementById('locEnabled').checked = true;
+      document.getElementById('locValidationMsg').textContent = '';
+      
+      toggleLocationFields();
+      document.getElementById('addLocationModal').classList.add('active');
+    }
+    
+    function closeAddLocationModal() {
+      document.getElementById('addLocationModal').classList.remove('active');
+    }
+    
+    function toggleLocationFields() {
+      const locType = document.getElementById('locType').value;
+      const isRemote = locType === 'ssh' || locType === 'sftp';
+      
+      document.getElementById('locSshHostRow').style.display = isRemote ? 'block' : 'none';
+      document.getElementById('locSshKeyRow').style.display = isRemote ? 'block' : 'none';
+      document.getElementById('locBrowseBtn').style.display = isRemote ? 'none' : 'inline-block';
+      
+      // Update path placeholder
+      const pathInput = document.getElementById('locPath');
+      if (locType === 'sftp') {
+        pathInput.placeholder = '/remote/path/to/assets';
+      } else if (locType === 'ssh') {
+        pathInput.placeholder = '/remote/path/to/assets';
+      } else {
+        pathInput.placeholder = '/path/to/assets';
+      }
+    }
+    
+    function browseLocationPath() {
+      dirBrowserTargetInput = document.getElementById('locPath');
+      openDirBrowser(dirBrowserTargetInput.value || '');
+    }
+    
+    async function saveNewLocation() {
+      const msgEl = document.getElementById('locValidationMsg');
+      msgEl.textContent = '';
+      
+      const locationData = {
+        name: document.getElementById('locName').value.trim(),
+        asset_type: document.getElementById('locAssetType').value,
+        location_type: document.getElementById('locType').value,
+        path: document.getElementById('locPath').value.trim(),
+        ssh_host: document.getElementById('locSshHost').value.trim(),
+        ssh_key: document.getElementById('locSshKey').value.trim(),
+        enabled: document.getElementById('locEnabled').checked
+      };
+      
+      // Validation
+      if (!locationData.name) {
+        msgEl.textContent = '❌ Name is required';
+        msgEl.style.color = '#ff6b6b';
+        return;
+      }
+      if (!locationData.path) {
+        msgEl.textContent = '❌ Path is required';
+        msgEl.style.color = '#ff6b6b';
+        return;
+      }
+      
+      const isRemote = locationData.location_type === 'ssh' || locationData.location_type === 'sftp';
+      if (isRemote && !locationData.ssh_host) {
+        msgEl.textContent = '❌ SSH host is required for remote locations';
+        msgEl.style.color = '#ff6b6b';
+        return;
+      }
+      
+      msgEl.textContent = '⏳ Saving...';
+      msgEl.style.color = 'var(--text-secondary)';
+      
+      try {
+        const response = await fetch('/api/asset-locations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(locationData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          showToast('Location added', 'success');
+          closeAddLocationModal();
+          await loadAssetLocations();
+        } else {
+          msgEl.textContent = '❌ ' + (result.error || 'Failed to add location');
+          msgEl.style.color = '#ff6b6b';
+        }
+      } catch (e) {
+        msgEl.textContent = '❌ ' + e.message;
+        msgEl.style.color = '#ff6b6b';
+      }
+    }
+    
+    async function testAssetLocation(locationId) {
+      showToast('Testing connection...', 'info');
+      
+      try {
+        const response = await fetch(`/api/asset-locations/${locationId}/test`, { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+          const msg = result.file_count !== undefined 
+            ? `✅ ${result.message} (${result.file_count} files)`
+            : `✅ ${result.message}`;
+          showToast(msg, 'success');
+        } else {
+          showToast('❌ ' + (result.error || 'Test failed'), 'error');
+        }
+      } catch (e) {
+        showToast('❌ ' + e.message, 'error');
+      }
+    }
+    
+    async function toggleLocationEnabled(locationId) {
+      const loc = assetLocations.find(l => l.id === locationId);
+      if (!loc) return;
+      
+      try {
+        const response = await fetch(`/api/asset-locations/${locationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: !loc.enabled })
+        });
+        
+        if (response.ok) {
+          showToast(loc.enabled ? 'Location disabled' : 'Location enabled', 'success');
+          await loadAssetLocations();
+        }
+      } catch (e) {
+        showToast('Failed to update', 'error');
+      }
+    }
+    
+    async function deleteAssetLocation(locationId) {
+      const loc = assetLocations.find(l => l.id === locationId);
+      if (!loc) return;
+      
+      if (!confirm(`Delete location "${loc.name}"?`)) return;
+      
+      try {
+        const response = await fetch(`/api/asset-locations/${locationId}`, { method: 'DELETE' });
+        
+        if (response.ok) {
+          showToast('Location deleted', 'success');
+          await loadAssetLocations();
+        } else {
+          showToast('Failed to delete', 'error');
+        }
+      } catch (e) {
+        showToast('Failed to delete', 'error');
+      }
     }
     
     async function refreshVolumeStatus() {
@@ -5173,8 +5585,6 @@
         .filter(p => p);
       
       const settings = {
-        pdf_root: document.getElementById('settingPdfRoot').value,
-        '3d_root': document.getElementById('setting3dRoot').value,
         smb_paths: JSON.stringify(smbPaths)
       };
       
@@ -5187,12 +5597,12 @@
         
         if (res.ok) {
           closeSettings();
-          alert('Settings saved! You may need to re-index content for changes to take effect.');
+          showToast('Settings saved!', 'success');
         } else {
-          alert('Failed to save settings');
+          showToast('Failed to save settings', 'error');
         }
       } catch (e) {
-        alert('Error saving settings: ' + e.message);
+        showToast('Error saving settings: ' + e.message, 'error');
       }
     }
     
@@ -5247,9 +5657,23 @@
       
       let path;
       if (type === 'pdf') {
-        path = document.getElementById('settingPdfRoot').value;
+        // Get paths from document asset locations
+        const docLocations = assetLocations.filter(l => l.asset_type === 'documents' && l.enabled);
+        if (docLocations.length === 0) {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = '❌ No document locations configured';
+          return;
+        }
+        path = docLocations.map(l => l.path).join(',');
       } else if (type === '3d') {
-        path = document.getElementById('setting3dRoot').value;
+        // Get paths from 3D model asset locations
+        const modelLocations = assetLocations.filter(l => l.asset_type === 'models' && l.enabled);
+        if (modelLocations.length === 0) {
+          statusEl.className = 'index-status error';
+          statusEl.textContent = '❌ No 3D model locations configured';
+          return;
+        }
+        path = modelLocations.map(l => l.path).join(',');
       } else if (type === 'smb') {
         const paths = document.getElementById('settingSmbPaths').value
           .split('\n').map(p => p.trim()).filter(p => p);

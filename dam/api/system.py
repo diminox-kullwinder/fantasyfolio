@@ -817,6 +817,98 @@ def api_backup_policy_validate():
 
 
 # =============================================================================
+# ASSET LOCATIONS API
+# =============================================================================
+
+@system_bp.route('/asset-locations')
+def api_asset_locations_list():
+    """List all asset locations."""
+    from dam.services.asset_locations import get_all_locations
+    
+    try:
+        locations = get_all_locations()
+        return jsonify({
+            'locations': locations,
+            'total': len(locations)
+        })
+    except Exception as e:
+        logger.error(f"Error listing locations: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to list locations', 'message': str(e)}), 500
+
+
+@system_bp.route('/asset-locations', methods=['POST'])
+def api_asset_locations_add():
+    """Add a new asset location."""
+    from flask import request
+    from dam.services.asset_locations import add_location
+    
+    try:
+        data = request.get_json() or {}
+        result = add_location(data)
+        
+        if result.get('success'):
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error adding location: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to add location', 'message': str(e)}), 500
+
+
+@system_bp.route('/asset-locations/<location_id>', methods=['PUT', 'PATCH'])
+def api_asset_locations_update(location_id: str):
+    """Update an asset location."""
+    from flask import request
+    from dam.services.asset_locations import update_location
+    
+    try:
+        data = request.get_json() or {}
+        result = update_location(location_id, data)
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error updating location: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to update location', 'message': str(e)}), 500
+
+
+@system_bp.route('/asset-locations/<location_id>', methods=['DELETE'])
+def api_asset_locations_delete(location_id: str):
+    """Delete an asset location."""
+    from dam.services.asset_locations import delete_location
+    
+    try:
+        result = delete_location(location_id)
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error deleting location: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to delete location', 'message': str(e)}), 500
+
+
+@system_bp.route('/asset-locations/<location_id>/test', methods=['POST'])
+def api_asset_locations_test(location_id: str):
+    """Test if an asset location is accessible."""
+    from dam.services.asset_locations import get_location_by_id, test_location
+    
+    try:
+        location = get_location_by_id(location_id)
+        if not location:
+            return jsonify({'error': 'Location not found'}), 404
+        
+        result = test_location(location)
+        return jsonify(result), 200 if result.get('success') else 400
+    except Exception as e:
+        logger.error(f"Error testing location: {e}", exc_info=True)
+        return jsonify({'error': 'Test failed', 'message': str(e)}), 500
+
+
+# =============================================================================
 # SSH KEY API
 # =============================================================================
 
