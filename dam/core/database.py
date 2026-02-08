@@ -112,35 +112,54 @@ def get_connection():
 
 # ==================== Asset Operations ====================
 
-def get_stats() -> Dict[str, Any]:
-    """Get overall database statistics."""
+def get_stats(include_deleted: bool = False) -> Dict[str, Any]:
+    """Get overall database statistics.
+    
+    Args:
+        include_deleted: If True, include soft-deleted records in counts
+    """
     db = get_db()
+    deleted_filter = "" if include_deleted else "WHERE deleted_at IS NULL"
     with db.connection() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
-        total_size = conn.execute("SELECT SUM(file_size) FROM assets").fetchone()[0] or 0
-        publishers = conn.execute("SELECT COUNT(DISTINCT publisher) FROM assets").fetchone()[0]
+        total = conn.execute(f"SELECT COUNT(*) FROM assets {deleted_filter}").fetchone()[0]
+        total_size = conn.execute(f"SELECT SUM(file_size) FROM assets {deleted_filter}").fetchone()[0] or 0
+        publishers = conn.execute(f"SELECT COUNT(DISTINCT publisher) FROM assets {deleted_filter}").fetchone()[0]
+        
+        # Count deleted (for trash indicator)
+        deleted_count = conn.execute("SELECT COUNT(*) FROM assets WHERE deleted_at IS NOT NULL").fetchone()[0]
         
         return {
             "total_assets": total,
             "total_size_bytes": total_size,
-            "unique_publishers": publishers
+            "unique_publishers": publishers,
+            "deleted_count": deleted_count
         }
 
 
-def search_assets(query: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-    """Search assets using full-text search with prefix matching."""
+def search_assets(query: str, limit: int = 50, offset: int = 0, include_deleted: bool = False) -> List[Dict[str, Any]]:
+    """Search assets using full-text search with prefix matching.
+    
+    Args:
+        query: Search query
+        limit: Maximum results
+        offset: Pagination offset
+        include_deleted: If True, include soft-deleted records
+    """
     db = get_db()
     # Add wildcard for prefix matching (e.g., "drag" matches "dragon")
     # Split into terms and add * to each for prefix matching
     terms = query.strip().split()
     fts_query = ' '.join(f'{term}*' for term in terms if term)
     
+    deleted_filter = "" if include_deleted else "AND a.deleted_at IS NULL"
+    
     with db.connection() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT a.*, highlight(assets_fts, 0, '<mark>', '</mark>') as highlight
             FROM assets a
             JOIN assets_fts ON a.id = assets_fts.rowid
             WHERE assets_fts MATCH ?
+            {deleted_filter}
             ORDER BY rank
             LIMIT ? OFFSET ?
         """, (fts_query, limit, offset)).fetchall()
@@ -152,31 +171,45 @@ def get_asset_by_id(asset_id: int) -> Optional[Dict[str, Any]]:
     return get_db().fetchone("SELECT * FROM assets WHERE id = ?", (asset_id,))
 
 
-def list_assets(folder: Optional[str] = None, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
-    """List assets with optional folder filter."""
+def list_assets(folder: Optional[str] = None, limit: int = 100, offset: int = 0, include_deleted: bool = False) -> List[Dict[str, Any]]:
+    """List assets with optional folder filter.
+    
+    Args:
+        folder: Filter by folder path prefix
+        limit: Maximum results
+        offset: Pagination offset
+        include_deleted: If True, include soft-deleted records
+    """
     db = get_db()
+    deleted_filter = "deleted_at IS NULL" if not include_deleted else "1=1"
     with db.connection() as conn:
         if folder:
             rows = conn.execute(
-                "SELECT * FROM assets WHERE folder_path LIKE ? ORDER BY filename LIMIT ? OFFSET ?",
+                f"SELECT * FROM assets WHERE folder_path LIKE ? AND {deleted_filter} ORDER BY filename LIMIT ? OFFSET ?",
                 (folder + '%', limit, offset)
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM assets ORDER BY filename LIMIT ? OFFSET ?",
+                f"SELECT * FROM assets WHERE {deleted_filter} ORDER BY filename LIMIT ? OFFSET ?",
                 (limit, offset)
             ).fetchall()
         return [dict(row) for row in rows]
 
 
-def get_folder_tree() -> List[Dict[str, Any]]:
-    """Get folder structure for navigation."""
+def get_folder_tree(include_deleted: bool = False) -> List[Dict[str, Any]]:
+    """Get folder structure for navigation.
+    
+    Args:
+        include_deleted: If True, include soft-deleted records in counts
+    """
     db = get_db()
+    deleted_filter = "AND deleted_at IS NULL" if not include_deleted else ""
     with db.connection() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT folder_path, COUNT(*) as count
             FROM assets
             WHERE folder_path IS NOT NULL AND folder_path != ''
+            {deleted_filter}
             GROUP BY folder_path
             ORDER BY folder_path
         """).fetchall()
@@ -208,41 +241,60 @@ def insert_asset(asset: Dict[str, Any]) -> int:
 
 # ==================== 3D Model Operations ====================
 
-def get_models_stats() -> Dict[str, Any]:
-    """Get 3D model statistics."""
+def get_models_stats(include_deleted: bool = False) -> Dict[str, Any]:
+    """Get 3D model statistics.
+    
+    Args:
+        include_deleted: If True, include soft-deleted records in counts
+    """
     db = get_db()
+    deleted_filter = "WHERE deleted_at IS NULL" if not include_deleted else ""
+    deleted_filter_and = "AND deleted_at IS NULL" if not include_deleted else ""
     with db.connection() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM models").fetchone()[0]
+        total = conn.execute(f"SELECT COUNT(*) FROM models {deleted_filter}").fetchone()[0]
         by_format = conn.execute(
-            "SELECT format, COUNT(*) as count FROM models GROUP BY format"
+            f"SELECT format, COUNT(*) as count FROM models {deleted_filter} GROUP BY format"
         ).fetchall()
         collections = conn.execute(
-            "SELECT COUNT(DISTINCT collection) FROM models"
+            f"SELECT COUNT(DISTINCT collection) FROM models {deleted_filter}"
         ).fetchone()[0]
         total_size = conn.execute(
-            "SELECT SUM(file_size) FROM models"
+            f"SELECT SUM(file_size) FROM models {deleted_filter}"
         ).fetchone()[0] or 0
+        
+        # Count deleted (for trash indicator)
+        deleted_count = conn.execute("SELECT COUNT(*) FROM models WHERE deleted_at IS NOT NULL").fetchone()[0]
         
         return {
             'total_models': total,
             'by_format': {row['format']: row['count'] for row in by_format},
             'collections': collections,
-            'total_size_mb': round(total_size / (1024*1024), 2)
+            'total_size_mb': round(total_size / (1024*1024), 2),
+            'deleted_count': deleted_count
         }
 
 
-def search_models(query: str, limit: int = 50) -> List[Dict[str, Any]]:
-    """Search 3D models using full-text search with prefix matching."""
+def search_models(query: str, limit: int = 50, include_deleted: bool = False) -> List[Dict[str, Any]]:
+    """Search 3D models using full-text search with prefix matching.
+    
+    Args:
+        query: Search query
+        limit: Maximum results
+        include_deleted: If True, include soft-deleted records
+    """
     db = get_db()
     # Add wildcard for prefix matching (e.g., "robo" matches "robot")
     terms = query.strip().split()
     fts_query = ' '.join(f'{term}*' for term in terms if term)
     
+    deleted_filter = "AND m.deleted_at IS NULL" if not include_deleted else ""
+    
     with db.connection() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT m.* FROM models m
             JOIN models_fts ON m.id = models_fts.rowid
             WHERE models_fts MATCH ?
+            {deleted_filter}
             LIMIT ?
         """, (fts_query, limit)).fetchall()
         return [dict(row) for row in rows]
@@ -349,15 +401,30 @@ def search_pages(query: str, limit: int = 50) -> List[Dict[str, Any]]:
         return [dict(row) for row in rows]
 
 
-def get_text_extraction_stats() -> Dict[str, Any]:
-    """Get statistics about text extraction."""
+def get_text_extraction_stats(include_deleted: bool = False) -> Dict[str, Any]:
+    """Get statistics about text extraction.
+    
+    Args:
+        include_deleted: If True, include soft-deleted records in counts
+    """
     db = get_db()
+    deleted_filter = "WHERE deleted_at IS NULL" if not include_deleted else ""
+    deleted_filter_and = "AND a.deleted_at IS NULL" if not include_deleted else ""
     with db.connection() as conn:
-        total_assets = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
-        with_text = conn.execute(
-            "SELECT COUNT(DISTINCT asset_id) FROM asset_pages WHERE text_content IS NOT NULL AND text_content != ''"
-        ).fetchone()[0]
-        total_pages = conn.execute("SELECT COUNT(*) FROM asset_pages").fetchone()[0]
+        total_assets = conn.execute(f"SELECT COUNT(*) FROM assets {deleted_filter}").fetchone()[0]
+        with_text = conn.execute(f"""
+            SELECT COUNT(DISTINCT p.asset_id) 
+            FROM asset_pages p
+            JOIN assets a ON p.asset_id = a.id
+            WHERE p.text_content IS NOT NULL AND p.text_content != ''
+            {deleted_filter_and}
+        """).fetchone()[0]
+        total_pages = conn.execute(f"""
+            SELECT COUNT(*) 
+            FROM asset_pages p
+            JOIN assets a ON p.asset_id = a.id
+            WHERE 1=1 {deleted_filter_and}
+        """).fetchone()[0]
         
         return {
             'total_assets': total_assets,
@@ -413,18 +480,201 @@ def needs_reindex(file_path: str, modified_at: str) -> bool:
     return existing.get('modified_at') != modified_at
 
 
-def delete_missing_assets(existing_paths: set) -> int:
-    """Delete assets whose files no longer exist. Returns count of deleted."""
+def delete_missing_assets(existing_paths: set, soft_delete: bool = True) -> int:
+    """Soft-delete (or hard-delete) assets whose files no longer exist.
+    
+    Args:
+        existing_paths: Set of file paths that still exist
+        soft_delete: If True (default), set deleted_at instead of hard delete
+    
+    Returns:
+        Count of deleted/soft-deleted records
+    """
     db = get_db()
     deleted = 0
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    
     with db.connection() as conn:
-        rows = conn.execute("SELECT id, file_path FROM assets").fetchall()
+        # Only check non-deleted assets
+        rows = conn.execute("SELECT id, file_path FROM assets WHERE deleted_at IS NULL").fetchall()
         for row in rows:
             if row['file_path'] not in existing_paths:
-                conn.execute("DELETE FROM assets WHERE id = ?", (row['id'],))
+                if soft_delete:
+                    conn.execute("UPDATE assets SET deleted_at = ? WHERE id = ?", (now, row['id']))
+                else:
+                    conn.execute("DELETE FROM assets WHERE id = ?", (row['id'],))
                 deleted += 1
         conn.commit()
     return deleted
+
+
+def soft_delete_asset(asset_id: int, source: str = 'api') -> bool:
+    """Soft-delete an asset by setting deleted_at timestamp.
+    
+    Args:
+        asset_id: ID of asset to delete
+        source: Origin of deletion ('api', 'indexer', 'cleanup')
+    
+    Returns:
+        True if asset was found and deleted, False otherwise
+    """
+    db = get_db()
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    
+    with db.connection() as conn:
+        cursor = conn.execute(
+            "UPDATE assets SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+            (now, asset_id)
+        )
+        conn.commit()
+        
+        if cursor.rowcount > 0:
+            # Log to change journal
+            try:
+                from dam.services.change_journal import log_asset_change
+                log_asset_change(asset_id, 'trash', source=source)
+            except Exception:
+                pass  # Don't fail if journal logging fails
+            return True
+        return False
+
+
+def restore_asset(asset_id: int, source: str = 'api') -> bool:
+    """Restore a soft-deleted asset by clearing deleted_at.
+    
+    Returns:
+        True if asset was found and restored, False otherwise
+    """
+    db = get_db()
+    with db.connection() as conn:
+        cursor = conn.execute(
+            "UPDATE assets SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL",
+            (asset_id,)
+        )
+        conn.commit()
+        
+        if cursor.rowcount > 0:
+            # Log to change journal
+            try:
+                from dam.services.change_journal import log_asset_change
+                log_asset_change(asset_id, 'restore', source=source)
+            except Exception:
+                pass
+            return True
+        return False
+
+
+def get_deleted_assets(limit: int = 100) -> List[Dict[str, Any]]:
+    """Get list of soft-deleted assets (Trash contents).
+    
+    Returns:
+        List of deleted assets ordered by deletion time (newest first)
+    """
+    return get_db().fetchall("""
+        SELECT * FROM assets 
+        WHERE deleted_at IS NOT NULL 
+        ORDER BY deleted_at DESC 
+        LIMIT ?
+    """, (limit,))
+
+
+def permanently_delete_asset(asset_id: int) -> bool:
+    """Permanently delete an asset (hard delete from database).
+    
+    Returns:
+        True if asset was found and deleted, False otherwise
+    """
+    db = get_db()
+    with db.connection() as conn:
+        # Delete related records first
+        conn.execute("DELETE FROM asset_pages WHERE asset_id = ?", (asset_id,))
+        conn.execute("DELETE FROM asset_bookmarks WHERE asset_id = ?", (asset_id,))
+        # Delete the asset
+        cursor = conn.execute("DELETE FROM assets WHERE id = ?", (asset_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def empty_trash(older_than_days: Optional[int] = None) -> int:
+    """Permanently delete all soft-deleted assets (or those older than N days).
+    
+    Args:
+        older_than_days: If provided, only delete items deleted more than N days ago
+    
+    Returns:
+        Count of permanently deleted records
+    """
+    db = get_db()
+    with db.connection() as conn:
+        if older_than_days is not None:
+            # Delete items older than N days
+            cursor = conn.execute("""
+                DELETE FROM assets 
+                WHERE deleted_at IS NOT NULL 
+                AND deleted_at < datetime('now', ? || ' days')
+            """, (f'-{older_than_days}',))
+        else:
+            # Delete all soft-deleted items
+            cursor = conn.execute("DELETE FROM assets WHERE deleted_at IS NOT NULL")
+        conn.commit()
+        return cursor.rowcount
+
+
+# Similar functions for models
+
+def soft_delete_model(model_id: int, source: str = 'api') -> bool:
+    """Soft-delete a model by setting deleted_at timestamp."""
+    db = get_db()
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    
+    with db.connection() as conn:
+        cursor = conn.execute(
+            "UPDATE models SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+            (now, model_id)
+        )
+        conn.commit()
+        
+        if cursor.rowcount > 0:
+            try:
+                from dam.services.change_journal import log_model_change
+                log_model_change(model_id, 'trash', source=source)
+            except Exception:
+                pass
+            return True
+        return False
+
+
+def restore_model(model_id: int, source: str = 'api') -> bool:
+    """Restore a soft-deleted model by clearing deleted_at."""
+    db = get_db()
+    with db.connection() as conn:
+        cursor = conn.execute(
+            "UPDATE models SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL",
+            (model_id,)
+        )
+        conn.commit()
+        
+        if cursor.rowcount > 0:
+            try:
+                from dam.services.change_journal import log_model_change
+                log_model_change(model_id, 'restore', source=source)
+            except Exception:
+                pass
+            return True
+        return False
+
+
+def get_deleted_models(limit: int = 100) -> List[Dict[str, Any]]:
+    """Get list of soft-deleted models (Trash contents)."""
+    return get_db().fetchall("""
+        SELECT * FROM models 
+        WHERE deleted_at IS NOT NULL 
+        ORDER BY deleted_at DESC 
+        LIMIT ?
+    """, (limit,))
 
 
 def get_assets_without_text(limit: int = 100) -> List[Dict[str, Any]]:
@@ -442,12 +692,18 @@ def get_assets_without_text(limit: int = 100) -> List[Dict[str, Any]]:
 
 # ==================== Publishers and Game Systems ====================
 
-def get_publishers() -> List[Dict[str, Any]]:
-    """Get list of publishers with counts."""
-    return get_db().fetchall("""
+def get_publishers(include_deleted: bool = False) -> List[Dict[str, Any]]:
+    """Get list of publishers with counts.
+    
+    Args:
+        include_deleted: If True, include soft-deleted records in counts
+    """
+    deleted_filter = "AND deleted_at IS NULL" if not include_deleted else ""
+    return get_db().fetchall(f"""
         SELECT publisher, COUNT(*) as count
         FROM assets
         WHERE publisher IS NOT NULL AND publisher != ''
+        {deleted_filter}
         GROUP BY publisher
         ORDER BY count DESC
     """)

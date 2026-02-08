@@ -26,7 +26,13 @@ def api_trigger_index():
     - type: Content type (pdf, 3d, smb)
     - path: Path to index
     - background: Run in background (default: true)
+    
+    Returns:
+    - status: "started" if indexing began, "suspended" if volume unavailable
+    - message: Human-readable status message
     """
+    from dam.services.volume_monitor import check_volumes_for_index, check_volume_available
+    
     config = get_config()
     data = request.get_json(silent=True)
     
@@ -40,11 +46,68 @@ def api_trigger_index():
     if not path:
         return jsonify({'error': 'No path provided'}), 400
     
-    # Validate path exists
+    # === VOLUME AVAILABILITY CHECK ===
+    # Map content type to volume check type
+    volume_check_type = {
+        'pdf': 'pdfs',
+        '3d': 'models',
+        'smb': 'models'  # SMB typically used for 3D models
+    }.get(content_type, 'all')
+    
+    # Check volume availability BEFORE validating paths
+    volume_check = check_volumes_for_index(volume_check_type)
+    
+    if not volume_check['can_proceed']:
+        # Volume unavailable - return suspended status (200 OK, not error)
+        logger.info(f"Indexing suspended: {volume_check['message']}")
+        return jsonify({
+            'status': 'suspended',
+            'message': volume_check['message'],
+            'unavailable_volumes': volume_check['unavailable_volumes'],
+            'volume_status': volume_check['volume_status']
+        }), 200  # 200 OK - this is expected behavior, not an error
+    
+    # Volume available - proceed with path validation
     paths = path.split(',') if ',' in path else [path]
     for p in paths:
-        if not os.path.isdir(p.strip()):
-            return jsonify({'error': f'Path not found: {p}'}), 400
+        p_stripped = p.strip()
+        if not os.path.isdir(p_stripped):
+            # Path doesn't exist - check if it's a volume issue
+            vol_status = check_volume_available(p_stripped)
+            if not vol_status['available']:
+                return jsonify({
+                    'status': 'suspended',
+                    'message': f"Volume unavailable: {vol_status['reason']}",
+                    'path': p_stripped
+                }), 200
+            else:
+                return jsonify({'error': f'Path not found: {p}'}), 400
+    
+    # === AUTO-SNAPSHOT BEFORE INDEXING ===
+    # Create a snapshot before potentially modifying the database
+    try:
+        from dam.core.database import get_setting
+        auto_snapshot = get_setting('auto_snapshot_before_index')
+        if auto_snapshot != 'false':  # Default to enabled
+            from dam.services.snapshot import create_snapshot, list_snapshots
+            
+            # Only create if no snapshot in last hour (avoid spam)
+            snapshots = list_snapshots()
+            recent_snapshot = False
+            if snapshots:
+                from datetime import datetime, timedelta
+                latest = datetime.fromisoformat(snapshots[0]['timestamp'])
+                if datetime.now() - latest < timedelta(hours=1):
+                    recent_snapshot = True
+            
+            if not recent_snapshot:
+                logger.info("Creating auto-snapshot before indexing")
+                snapshot_result = create_snapshot(note=f"Auto: before {content_type} index")
+                if snapshot_result['status'] == 'completed':
+                    logger.info(f"Auto-snapshot created: {snapshot_result['filename']}")
+    except Exception as e:
+        # Don't fail indexing if snapshot fails
+        logger.warning(f"Auto-snapshot failed (continuing with index): {e}")
     
     # Determine indexer script
     scripts_dir = Path(__file__).parent.parent / "indexer"
@@ -79,6 +142,7 @@ def api_trigger_index():
                     )
             
             return jsonify({
+                'status': 'started',
                 'success': True,
                 'message': f'Indexing started in background for {len(paths)} path(s)',
                 'log_file': str(log_file),
@@ -95,7 +159,7 @@ def api_trigger_index():
             )
             
             if result.returncode == 0:
-                return jsonify({'success': True, 'message': f'Indexing complete for {path}'})
+                return jsonify({'status': 'completed', 'success': True, 'message': f'Indexing complete for {path}'})
             else:
                 return jsonify({'error': result.stderr or 'Indexing failed'}), 500
             

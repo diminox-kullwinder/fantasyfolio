@@ -45,3 +45,7 @@ htmlcov/
 # Local config (keep .env.example)
 .env
 config/local.py
+
+# Snapshot database files (large binaries)
+data/snapshots/*.db
+data/snapshots/*.json

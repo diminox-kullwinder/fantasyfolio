@@ -121,15 +121,37 @@ def api_render_page(asset_id: int, page_num: int):
 
 @assets_bp.route('/assets/<int:asset_id>/download')
 def api_download_asset(asset_id: int):
-    """Download the original asset file."""
+    """Download the original asset file.
+    
+    Returns 503 with volume_unavailable error if the storage volume is offline.
+    This helps UI distinguish between "file deleted" vs "volume unmounted".
+    """
     asset = get_asset_by_id(asset_id)
     
     if not asset:
         return jsonify({'error': 'Asset not found'}), 404
     
     file_path = Path(asset['file_path'])
+    
+    # Check volume availability before attempting download
+    from dam.services.volume_monitor import check_volume_for_path
+    volume_status = check_volume_for_path(str(file_path))
+    
+    if not volume_status['available']:
+        return jsonify({
+            'error': 'volume_unavailable',
+            'message': f"Storage volume is offline: {volume_status['reason']}",
+            'volume': volume_status.get('volume_name'),
+            'file_path': str(file_path)
+        }), 503  # Service Unavailable
+    
+    # Volume is available - check if file exists
     if not file_path.exists():
-        return jsonify({'error': 'File not found'}), 404
+        return jsonify({
+            'error': 'file_not_found',
+            'message': 'File not found on disk (may have been moved or deleted)',
+            'file_path': str(file_path)
+        }), 404
     
     return send_file(
         file_path,

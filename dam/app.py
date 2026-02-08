@@ -110,12 +110,14 @@ def register_blueprints(app: Flask):
     from dam.api.search import search_bp
     from dam.api.settings import settings_bp
     from dam.api.indexer import indexer_bp
+    from dam.api.system import system_bp
     
     app.register_blueprint(assets_bp, url_prefix='/api')
     app.register_blueprint(models_bp, url_prefix='/api')
     app.register_blueprint(search_bp, url_prefix='/api')
     app.register_blueprint(settings_bp, url_prefix='/api')
     app.register_blueprint(indexer_bp, url_prefix='/api')
+    app.register_blueprint(system_bp, url_prefix='/api')
 
 
 def register_error_handlers(app: Flask):

@@ -288,14 +288,42 @@ def api_model_file(model_id: int):
 
 @models_bp.route('/models/<int:model_id>/download')
 def api_model_download(model_id: int):
-    """Download the original model file."""
+    """Download the original model file.
+    
+    Returns 503 with volume_unavailable error if the storage volume is offline.
+    This helps UI distinguish between "file deleted" vs "volume unmounted".
+    """
     model = get_model_by_id(model_id)
     
     if not model:
         return jsonify({'error': 'Model not found'}), 404
     
+    # Determine the path to check for volume availability
+    # For archived models, check the archive path; otherwise check file_path
+    check_path = model.get('archive_path') or model['file_path']
+    
+    # Check volume availability before attempting download
+    from dam.services.volume_monitor import check_volume_for_path
+    volume_status = check_volume_for_path(str(check_path))
+    
+    if not volume_status['available']:
+        return jsonify({
+            'error': 'volume_unavailable',
+            'message': f"Storage volume is offline: {volume_status['reason']}",
+            'volume': volume_status.get('volume_name'),
+            'file_path': str(check_path)
+        }), 503  # Service Unavailable
+    
     try:
         if model.get('archive_path') and model.get('archive_member'):
+            # Check if archive file exists
+            if not os.path.exists(model['archive_path']):
+                return jsonify({
+                    'error': 'file_not_found',
+                    'message': 'Archive file not found on disk (may have been moved or deleted)',
+                    'file_path': model['archive_path']
+                }), 404
+            
             with zipfile.ZipFile(model['archive_path'], 'r') as zf:
                 data = zf.read(model['archive_member'])
             return send_file(
@@ -310,10 +338,26 @@ def api_model_download(model_id: int):
                 download_name=model['filename']
             )
         else:
-            return jsonify({'error': 'File not found'}), 404
+            return jsonify({
+                'error': 'file_not_found',
+                'message': 'File not found on disk (may have been moved or deleted)',
+                'file_path': model['file_path']
+            }), 404
+    except zipfile.BadZipFile:
+        return jsonify({
+            'error': 'archive_corrupt',
+            'message': 'Archive file is corrupted or invalid',
+            'file_path': model.get('archive_path')
+        }), 500
+    except KeyError:
+        return jsonify({
+            'error': 'member_not_found',
+            'message': f"File '{model.get('archive_member')}' not found in archive",
+            'file_path': model.get('archive_path')
+        }), 404
     except Exception as e:
         logger.error(f"Download error for model {model_id}: {e}")
-        return jsonify({'error': 'Download failed'}), 500
+        return jsonify({'error': 'Download failed', 'message': str(e)}), 500
 
 
 @models_bp.route('/models/thumbnail-stats')
@@ -366,27 +410,45 @@ def api_render_thumbnails():
     
     # Start background rendering
     def render_batch():
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"SMB read timeout for model {model['id']}")
+        
         for i, model in enumerate(models_to_render):
             try:
                 model_format = (model['format'] or 'stl').lower()
                 if model_format not in ('stl', 'obj', '3mf'):
                     continue
                 
-                # Get model data
-                if model['archive_path'] and model['archive_member']:
-                    with zipfile.ZipFile(model['archive_path'], 'r') as zf:
-                        model_data = zf.read(model['archive_member'])
-                elif os.path.exists(model['file_path']):
-                    with open(model['file_path'], 'rb') as f:
-                        model_data = f.read()
-                else:
-                    logger.warning(f"Model file not found for {model['id']}")
-                    continue
+                # Set 30-second alarm for file operations (prevents SMB hangs)
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(30)
                 
-                # Render thumbnail
-                render_3d_thumbnail(model_data, model_format, str(thumbnail_dir / f"{model['id']}.png"))
-                logger.info(f"Background render {i+1}/{len(models_to_render)}: model {model['id']} ({model_format})")
+                try:
+                    # Get model data
+                    if model['archive_path'] and model['archive_member']:
+                        with zipfile.ZipFile(model['archive_path'], 'r') as zf:
+                            model_data = zf.read(model['archive_member'])
+                    elif os.path.exists(model['file_path']):
+                        with open(model['file_path'], 'rb') as f:
+                            model_data = f.read()
+                    else:
+                        logger.warning(f"Model file not found for {model['id']}")
+                        continue
+                    
+                    # Clear alarm after successful read
+                    signal.alarm(0)
+                    
+                    # Render thumbnail
+                    render_3d_thumbnail(model_data, model_format, str(thumbnail_dir / f"{model['id']}.png"))
+                    logger.info(f"Background render {i+1}/{len(models_to_render)}: model {model['id']} ({model_format})")
+                except TimeoutError as te:
+                    signal.alarm(0)
+                    logger.warning(f"Timeout reading model {model['id']} from {model['file_path']} (SMB offline?): {te}")
+                    
             except Exception as e:
+                signal.alarm(0)
                 logger.error(f"Background thumbnail render error for model {model['id']}: {e}")
     
     # Start in background thread

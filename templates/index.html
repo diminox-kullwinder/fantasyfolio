@@ -97,6 +97,27 @@
       opacity: 1;
     }
     
+    .settings-btn {
+      position: relative;
+    }
+    
+    .trash-badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: #e74c3c;
+      color: white;
+      font-size: 0.65rem;
+      font-weight: bold;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+    
     .search-box {
       flex: 1;
       max-width: 600px;
@@ -1446,12 +1467,608 @@
     .settings-modal {
       background: var(--bg-secondary);
       border-radius: 12px;
-      width: 90%;
-      max-width: 500px;
+      width: 70%;
+      max-width: 85%;
+      min-width: 400px;
+      height: 75vh;
       max-height: 90vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      resize: both;
+    }
+    
+    .settings-modal-large {
+      width: 75%;
+    }
+    
+    /* Settings Tabs */
+    .settings-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+    }
+    
+    .settings-tab {
+      padding: 12px 20px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+    
+    .settings-tab:hover {
+      color: var(--text);
+    }
+    
+    .settings-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    
+    .settings-tab-content {
+      display: block;
+    }
+    
+    .settings-hint {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    
+    /* Journal controls */
+    .journal-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .journal-status {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+    
+    .journal-status .status-indicator {
+      color: #40c057;
+    }
+    
+    .journal-list, .snapshot-list {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: 12px;
+      display: none;
+    }
+    
+    .journal-list.visible, .snapshot-list.visible {
+      display: block;
+    }
+    
+    .journal-entry, .snapshot-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    
+    .journal-entry:last-child, .snapshot-item:last-child {
+      border-bottom: none;
+    }
+    
+    .journal-entry:hover, .snapshot-item:hover {
+      background: var(--bg-primary);
+    }
+    
+    .journal-action {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    
+    .journal-action.create { background: rgba(64, 192, 87, 0.2); color: #40c057; }
+    .journal-action.trash { background: rgba(250, 82, 82, 0.2); color: #fa5252; }
+    .journal-action.restore { background: rgba(77, 171, 247, 0.2); color: #4dabf7; }
+    .journal-action.update { background: rgba(250, 176, 5, 0.2); color: #fab005; }
+    
+    .journal-entity {
+      flex: 1;
+      color: var(--text);
+    }
+    
+    .journal-time {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+    
+    .journal-empty, .snapshot-empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    .journal-active {
+      color: #40c057;
+    }
+    
+    .snapshot-info {
+      flex: 1;
+    }
+    
+    .snapshot-name {
+      font-weight: 500;
+    }
+    
+    .snapshot-meta {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .snapshot-actions {
+      display: flex;
+      gap: 6px;
+    }
+    
+    .snapshot-actions button {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .snapshot-actions button:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .restic-status {
+      padding: 8px 0;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    
+    .restic-status.error {
+      color: #fa5252;
+    }
+    
+    .restic-status.success {
+      color: #40c057;
+    }
+    
+    .restic-snapshots-panel {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+    }
+    
+    .restic-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .restic-panel-header h4 {
+      margin: 0;
+      font-size: 1rem;
+    }
+    
+    .btn-sm {
+      padding: 4px 10px !important;
+      font-size: 0.85rem;
+    }
+    
+    /* Backup Policy Table */
+    .policy-section {
+      margin-bottom: 20px;
+    }
+    
+    .policy-section h4 {
+      margin: 0 0 10px 0;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+    
+    .policy-table {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 0.85rem;
+    }
+    
+    .policy-table-header {
+      display: grid;
+      grid-template-columns: 1.5fr 2fr 1fr 1.2fr 1.2fr 1fr 80px;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    
+    .policy-table-body {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .policy-row {
+      display: grid;
+      grid-template-columns: 1.5fr 2fr 1fr 1.2fr 1.2fr 1fr 80px;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    
+    .policy-row:last-child {
+      border-bottom: none;
+    }
+    
+    .policy-row:hover {
+      background: var(--bg-primary);
+    }
+    
+    .policy-row .col-name {
+      font-weight: 500;
+    }
+    
+    .policy-row .col-dest {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .policy-row .col-dest .dest-type {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      margin-right: 4px;
+    }
+    
+    .policy-row .col-dest .dest-type.local {
+      background: rgba(64, 192, 87, 0.2);
+      color: #40c057;
+    }
+    
+    .policy-row .col-dest .dest-type.network {
+      background: rgba(77, 171, 247, 0.2);
+      color: #4dabf7;
+    }
+    
+    .policy-row .col-dest .dest-type.restic {
+      background: rgba(190, 75, 219, 0.2);
+      color: #be4bdb;
+    }
+    
+    .policy-row .snapshots-btn {
+      background: rgba(190, 75, 219, 0.2);
+      color: #be4bdb;
+      border: 1px solid rgba(190, 75, 219, 0.4);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    
+    .policy-row .snapshots-btn:hover {
+      background: rgba(190, 75, 219, 0.4);
+    }
+    
+    .policy-row .state-select {
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-primary);
+      color: var(--text);
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    
+    .policy-row .col-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .policy-row .col-actions button {
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-primary);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .policy-row .col-actions button:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .policy-empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+    
+    /* Add Policy Form */
+    .policy-add-section {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+    }
+    
+    .policy-add-section h4 {
+      margin: 0 0 12px 0;
+      font-size: 0.95rem;
+    }
+    
+    .policy-add-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .policy-input {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    
+    .policy-input.name { width: 140px; }
+    .policy-input.dest-type { width: 120px; }
+    .policy-input.path { flex: 1; min-width: 180px; }
+    .policy-input.ssh-host { width: 140px; }
+    .policy-input.ssh-key { flex: 1; min-width: 180px; }
+    .policy-input.frequency { width: 100px; }
+    .policy-input.time { width: 100px; }
+    .policy-input.date { width: 140px; }
+    .policy-input.retention { width: 70px; text-align: center; }
+    .policy-input.state { width: 100px; }
+    .policy-input.restic-pw { width: 150px; }
+    
+    .path-input-wrapper {
+      display: flex;
+      flex: 1;
+      min-width: 180px;
+      gap: 4px;
+    }
+    
+    .path-input-wrapper .policy-input.path {
+      min-width: 120px;
+    }
+    
+    .browse-btn {
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    
+    .browse-btn:hover {
+      background: var(--accent);
+      color: white;
+    }
+    
+    /* Directory Browser Modal */
+    .dir-browser-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 3500;
+    }
+    
+    .dir-browser-overlay.active {
+      display: flex;
+    }
+    
+    .dir-browser-modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      width: 500px;
+      max-width: 90%;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .dir-browser-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .dir-browser-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    
+    .dir-browser-path {
+      padding: 12px 20px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      word-break: break-all;
+    }
+    
+    .dir-browser-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    
+    .dir-browser-item {
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    
+    .dir-browser-item:hover {
+      background: var(--bg-card);
+    }
+    
+    .dir-browser-item.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .dir-browser-item .icon {
+      font-size: 1.2rem;
+    }
+    
+    .dir-browser-item .name {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+    
+    .dir-browser-item.parent-dir {
+      color: var(--accent);
+      font-weight: 500;
+    }
+    
+    .dir-browser-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    .dir-browser-newfolder {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+    
+    .dir-browser-newfolder input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    
+    .dir-browser-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    .policy-add-row .field-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .policy-save-btn {
+      padding: 8px 16px !important;
+    }
+    
+    .policy-validation-msg {
+      font-size: 0.85rem;
+      padding: 8px 0;
+      min-height: 20px;
+    }
+    
+    .policy-validation-msg.error {
+      color: #fa5252;
+    }
+    
+    .policy-validation-msg.success {
+      color: #40c057;
+    }
+    
+    /* Backup subsections */
+    .backup-subsection {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+    }
+    
+    .backup-subsection h4 {
+      margin: 0 0 12px 0;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    
+    .snapshot-controls, .backup-policies {
+      margin-bottom: 12px;
+    }
+    
+    .snapshot-controls {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .snapshot-status {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .policy-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .policy-item:last-child {
+      border-bottom: none;
+    }
+    
+    .policy-name {
+      font-weight: 500;
+    }
+    
+    .policy-status {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    
+    .trash-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
     }
     
     .settings-header {
@@ -1590,6 +2207,378 @@
       display: block !important;
       background: rgba(77, 171, 247, 0.2);
       color: #4dabf7;
+    }
+    
+    /* Volume Status */
+    .volume-status-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .volume-status-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    
+    .volume-status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    
+    .volume-status-indicator.available {
+      background: #40c057;
+      box-shadow: 0 0 8px rgba(64, 192, 87, 0.5);
+    }
+    
+    .volume-status-indicator.unavailable {
+      background: #fa5252;
+      box-shadow: 0 0 8px rgba(250, 82, 82, 0.5);
+    }
+    
+    .volume-status-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .volume-status-name {
+      font-weight: 500;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    
+    .volume-status-path {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .volume-status-reason {
+      font-size: 0.8rem;
+      color: #fa5252;
+      margin-top: 2px;
+    }
+    
+    .volume-status-loading {
+      color: var(--text-secondary);
+      font-style: italic;
+      padding: 10px;
+    }
+    
+    /* Suspended index button */
+    .index-btn.suspended {
+      background: rgba(250, 82, 82, 0.1);
+      border-color: rgba(250, 82, 82, 0.3);
+    }
+    
+    .suspended-badge {
+      margin-left: 4px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .index-status.suspended {
+      color: #fab005;
+      background: rgba(250, 176, 5, 0.1);
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      max-width: 400px;
+    }
+    
+    .toast.show {
+      transform: translateX(0);
+    }
+    
+    .toast-icon {
+      font-size: 1.2rem;
+    }
+    
+    .toast-message {
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    
+    .toast-success {
+      border-color: rgba(64, 192, 87, 0.5);
+      background: rgba(64, 192, 87, 0.1);
+    }
+    
+    .toast-warning {
+      border-color: rgba(250, 176, 5, 0.5);
+      background: rgba(250, 176, 5, 0.1);
+    }
+    
+    .toast-error {
+      border-color: rgba(250, 82, 82, 0.5);
+      background: rgba(250, 82, 82, 0.1);
+    }
+    
+    .toast-info {
+      border-color: rgba(77, 171, 247, 0.5);
+      background: rgba(77, 171, 247, 0.1);
+    }
+    
+    /* Download Error Modal */
+    .download-error-modal {
+      max-width: 450px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .download-error-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .download-error-header.warning {
+      background: rgba(250, 176, 5, 0.15);
+      border-bottom-color: rgba(250, 176, 5, 0.3);
+    }
+    
+    .download-error-header.error {
+      background: rgba(250, 82, 82, 0.15);
+      border-bottom-color: rgba(250, 82, 82, 0.3);
+    }
+    
+    .download-error-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    
+    .download-error-body {
+      padding: 20px;
+    }
+    
+    .download-error-body p {
+      margin: 0 0 12px 0;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    
+    .download-error-details {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      padding: 8px 12px;
+      border-radius: 6px;
+      word-break: break-all;
+    }
+    
+    .download-error-suggestion {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-top: 16px !important;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .download-error-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-primary);
+    }
+    
+    /* Trash Modal */
+    .trash-modal {
+      max-width: 700px;
+      max-height: 80vh;
+    }
+    
+    .trash-summary {
+      padding: 12px 16px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    
+    .trash-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .trash-tab {
+      flex: 1;
+      padding: 10px 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .trash-tab:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .trash-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    
+    .trash-tab-count {
+      background: rgba(255,255,255,0.2);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+    }
+    
+    .trash-tab.active .trash-tab-count {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .trash-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    
+    .trash-empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    .trash-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    
+    .trash-item:last-child {
+      border-bottom: none;
+    }
+    
+    .trash-item:hover {
+      background: var(--bg-primary);
+    }
+    
+    .trash-item-icon {
+      font-size: 1.5rem;
+      opacity: 0.6;
+    }
+    
+    .trash-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .trash-item-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .trash-item-meta {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    
+    .trash-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .trash-item-actions button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+    }
+    
+    .trash-item-actions button:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .trash-item-actions .restore-btn:hover {
+      background: rgba(64, 192, 87, 0.2);
+      border-color: rgba(64, 192, 87, 0.5);
+    }
+    
+    .trash-item-actions .delete-btn:hover {
+      background: rgba(250, 82, 82, 0.2);
+      border-color: rgba(250, 82, 82, 0.5);
+    }
+    
+    .trash-footer {
+      justify-content: space-between;
+    }
+    
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+      border: none;
+    }
+    
+    .btn-danger:hover:not(:disabled) {
+      background: #c0392b;
+    }
+    
+    .btn-danger:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     
     .settings-footer {
@@ -1874,7 +2863,7 @@
       </div>
       <div class="stats" id="stats">Loading...</div>
       <button class="settings-btn" onclick="openUpload()" title="Upload files" id="uploadBtn">⬆️</button>
-      <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
+      <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️<span class="trash-badge" id="trashBadge" style="display:none">0</span></button>
     </header>
     
     <div class="advanced-search-panel" id="advancedSearchPanel">
@@ -2020,12 +3009,32 @@
 
   <!-- Settings Modal -->
   <div class="settings-overlay" id="settingsModal">
-    <div class="settings-modal">
+    <div class="settings-modal settings-modal-large">
       <div class="settings-header">
         <h2>⚙️ Settings</h2>
         <button class="settings-close" onclick="closeSettings()">×</button>
       </div>
-      <div class="settings-body">
+      
+      <!-- Settings Tabs -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" onclick="switchSettingsTab('general')" id="settingsTabGeneral">
+          ⚙️ General
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('advanced')" id="settingsTabAdvanced">
+          🔧 Advanced
+        </button>
+      </div>
+      
+      <!-- General Tab -->
+      <div class="settings-body settings-tab-content" id="settingsGeneral">
+        <div class="settings-section" id="volumeStatusSection">
+          <h3>📡 Volume Status</h3>
+          <div class="volume-status-container" id="volumeStatusContainer">
+            <div class="volume-status-loading">Checking volumes...</div>
+          </div>
+          <button type="button" class="index-btn" onclick="refreshVolumeStatus()" style="margin-top: 8px;">🔄 Refresh Status</button>
+        </div>
+        
         <div class="settings-section">
           <h3>📄 PDF/Documents</h3>
           <div class="settings-field">
@@ -2075,9 +3084,242 @@
           </div>
         </div>
       </div>
+      
+      <!-- Advanced Tab -->
+      <div class="settings-body settings-tab-content" id="settingsAdvanced" style="display:none;">
+        
+        <!-- Trash Section -->
+        <div class="settings-section">
+          <h3>🗑️ Trash</h3>
+          <div class="trash-summary" id="trashSummary">
+            <span class="trash-count">Loading...</span>
+          </div>
+          
+          <div class="trash-tabs">
+            <button class="trash-tab active" onclick="switchTrashTab('assets')" id="trashTabAssets">
+              📄 PDFs <span class="trash-tab-count" id="trashAssetCount">0</span>
+            </button>
+            <button class="trash-tab" onclick="switchTrashTab('models')" id="trashTabModels">
+              🎲 Models <span class="trash-tab-count" id="trashModelCount">0</span>
+            </button>
+          </div>
+          
+          <div class="trash-list" id="trashList">
+            <div class="trash-empty">Trash is empty</div>
+          </div>
+          
+          <div class="trash-actions">
+            <button class="btn btn-danger" onclick="emptyTrash()" id="emptyTrashBtn" disabled>🗑️ Empty Trash</button>
+          </div>
+        </div>
+        
+        <!-- Change Journal Section -->
+        <div class="settings-section">
+          <h3>📜 Change Journal</h3>
+          <p class="settings-hint">Track all modifications to your assets for audit and recovery.</p>
+          <div class="journal-controls" id="journalControls">
+            <div class="journal-status" id="journalStatus">
+              <span class="status-indicator journal-active">●</span> 
+              <span id="journalStatusText">Loading...</span>
+            </div>
+            <button class="index-btn" onclick="toggleJournalView()" id="viewJournalBtn">📋 View Activity</button>
+            <select id="journalFilter" onchange="loadJournalEntries()" style="margin-left: 8px;">
+              <option value="">All actions</option>
+              <option value="create">Creates</option>
+              <option value="trash">Deletes</option>
+              <option value="restore">Restores</option>
+              <option value="update">Updates</option>
+            </select>
+          </div>
+          <div class="journal-list" id="journalList"></div>
+        </div>
+        
+        <!-- Snapshots Section -->
+        <div class="settings-section">
+          <h3>📸 Database Snapshots</h3>
+          <p class="settings-hint">Point-in-time backups for disaster recovery.</p>
+          
+          <div class="snapshot-controls">
+            <button class="index-btn" onclick="createSnapshot()">📸 Create Snapshot</button>
+            <button class="index-btn" onclick="toggleSnapshotList()" id="toggleSnapshotsBtn">📋 View All</button>
+          </div>
+          <div class="snapshot-status" id="snapshotStatus">
+            Last snapshot: <span id="lastSnapshotTime">Never</span>
+          </div>
+          <div class="snapshot-list" id="snapshotList"></div>
+        </div>
+        
+        <!-- Restic Snapshots Modal (shown when viewing policy snapshots) -->
+        <div class="restic-snapshots-panel" id="resticSnapshotsPanel" style="display:none;">
+          <div class="restic-panel-header">
+            <h4>📋 Snapshots: <span id="resticPolicyName">-</span></h4>
+            <button class="btn btn-secondary btn-sm" onclick="closeResticSnapshots()">✕ Close</button>
+          </div>
+          <div class="restic-status" id="resticSnapshotsStatus"></div>
+          <div class="snapshot-list" id="resticSnapshotList"></div>
+        </div>
+        
+        <!-- Backup Policies Section -->
+        <div class="settings-section">
+          <h3>💾 Backup</h3>
+          
+          <!-- Active Policies -->
+          <div class="policy-section">
+            <h4>Active Policies</h4>
+            <div class="policy-table" id="activePoliciesTable">
+              <div class="policy-table-header">
+                <span class="col-name">Name</span>
+                <span class="col-dest">Destination</span>
+                <span class="col-freq">Frequency</span>
+                <span class="col-last">Last Backup</span>
+                <span class="col-next">Next Scheduled</span>
+                <span class="col-state">State</span>
+                <span class="col-actions">Actions</span>
+              </div>
+              <div class="policy-table-body" id="activePoliciesList">
+                <div class="policy-empty">No active policies</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Inactive/Disabled Policies -->
+          <div class="policy-section">
+            <h4>Inactive/Disabled Policies</h4>
+            <div class="policy-table" id="inactivePoliciesTable">
+              <div class="policy-table-body" id="inactivePoliciesList">
+                <div class="policy-empty">No inactive policies</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Add Policy Form -->
+          <div class="policy-add-section">
+            <h4>➕ Add Policy</h4>
+            <div class="policy-add-form" id="policyAddForm">
+              <div class="policy-add-row">
+                <input type="text" id="newPolicyName" placeholder="Policy Name" class="policy-input name" />
+                <select id="newPolicyDestType" onchange="toggleDestinationFields()" class="policy-input dest-type">
+                  <option value="local">Local (copy)</option>
+                  <option value="restic">Restic Local (dedup)</option>
+                  <option value="restic-remote">Restic Remote (dedup)</option>
+                  <option value="network">Network (SSH/rsync)</option>
+                </select>
+                <div class="path-input-wrapper" id="localPathWrapper">
+                  <input type="text" id="newPolicyPath" placeholder="/path/to/backups" class="policy-input path" />
+                  <button type="button" class="browse-btn" onclick="browseBackupPath()">📁 Browse</button>
+                </div>
+                <input type="text" id="newPolicySshHost" placeholder="user@host" class="policy-input ssh-host" style="display:none;" />
+                <input type="password" id="newPolicyResticPassword" placeholder="Repo password" class="policy-input restic-pw" style="display:none;" />
+                <input type="password" id="newPolicyResticPasswordConfirm" placeholder="Confirm password" class="policy-input restic-pw" style="display:none;" />
+              </div>
+              <div class="policy-add-row">
+                <span class="field-label">Schedule:</span>
+                <select id="newPolicyFrequency" class="policy-input frequency">
+                  <option value="daily" selected>Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+                <span class="field-label">at</span>
+                <input type="time" id="newPolicyTime" class="policy-input time" value="02:00" />
+                <span class="field-label">starting</span>
+                <input type="date" id="newPolicyStartDate" class="policy-input date" />
+              </div>
+              <div class="policy-add-row">
+                <span class="field-label">Keep</span>
+                <input type="number" id="newPolicyRetention" class="policy-input retention" value="7" min="1" max="365" />
+                <span class="field-label">copies</span>
+                <select id="newPolicyState" class="policy-input state">
+                  <option value="disabled">Disabled</option>
+                  <option value="paused">Paused</option>
+                  <option value="active">Active</option>
+                </select>
+                <button class="btn btn-primary policy-save-btn" onclick="saveNewPolicy()">💾 Save</button>
+              </div>
+              <div class="policy-add-row network-fields" id="networkFields" style="display:none;">
+                <span class="field-label">SSH Key:</span>
+                <input type="text" id="newPolicySshKey" placeholder="~/.ssh/id_rsa (optional)" class="policy-input ssh-key" />
+                <button class="btn btn-secondary" onclick="showSshKeyHelp()">❓ Help</button>
+                <button class="btn btn-secondary" onclick="testPolicyConnection()">🔗 Test Connection</button>
+              </div>
+              <div class="policy-validation-msg" id="policyValidationMsg"></div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      
       <div class="settings-footer">
         <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
         <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Directory Browser Modal -->
+  <div class="dir-browser-overlay" id="dirBrowserModal">
+    <div class="dir-browser-modal">
+      <div class="dir-browser-header">
+        <h3>📁 Select Directory</h3>
+        <button class="upload-close" onclick="closeDirBrowser()">×</button>
+      </div>
+      <div class="dir-browser-path" id="dirBrowserPath">/</div>
+      <div class="dir-browser-list" id="dirBrowserList">
+        <div class="dir-browser-empty">Loading...</div>
+      </div>
+      <div class="dir-browser-newfolder">
+        <input type="text" id="newFolderInput" placeholder="New folder name..." />
+        <button class="btn btn-secondary" onclick="createNewFolder()">📁 Create</button>
+      </div>
+      <div class="dir-browser-footer">
+        <button class="btn btn-secondary" onclick="closeDirBrowser()">Cancel</button>
+        <button class="btn btn-primary" onclick="selectCurrentDir()">✓ Select This Directory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SSH Key Help Modal -->
+  <div class="dir-browser-overlay" id="sshKeyHelpModal">
+    <div class="dir-browser-modal" style="max-width: 600px;">
+      <div class="dir-browser-header">
+        <h3>🔑 SSH Key Setup</h3>
+        <button class="upload-close" onclick="closeSshKeyHelp()">×</button>
+      </div>
+      <div style="padding: 20px; line-height: 1.6;">
+        <p style="margin-bottom: 16px;">SSH keys allow secure, password-free connections to remote servers.</p>
+        
+        <div id="sshKeyLoading" style="text-align: center; padding: 20px;">
+          Loading key status...
+        </div>
+        
+        <div id="sshKeyNotExists" style="display: none;">
+          <p style="margin-bottom: 16px;">No SSH key found. Click below to generate one:</p>
+          <button class="btn btn-primary" onclick="generateSshKey()" id="generateKeyBtn">🔑 Generate SSH Key</button>
+        </div>
+        
+        <div id="sshKeyExists" style="display: none;">
+          <h4 style="margin-bottom: 8px; color: #40c057;">✅ SSH Key Ready</h4>
+          <p style="margin-bottom: 12px; font-size: 0.9rem;">Key path: <code id="sshKeyPathDisplay">~/.ssh/dam_backup_key</code></p>
+          
+          <h4 style="margin-bottom: 8px;">Copy this public key to your remote server:</h4>
+          <div style="position: relative;">
+            <pre id="sshPublicKeyDisplay" style="background: var(--bg-primary); padding: 12px; border-radius: 6px; margin-bottom: 8px; overflow-x: auto; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all;"></pre>
+            <button onclick="copySshPublicKey()" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 0.75rem; background: var(--accent); border: none; border-radius: 4px; color: white; cursor: pointer;">📋 Copy</button>
+          </div>
+          
+          <h4 style="margin-bottom: 8px; margin-top: 16px;">On your remote server, run:</h4>
+          <pre style="background: var(--bg-primary); padding: 12px; border-radius: 6px; margin-bottom: 16px; overflow-x: auto; font-size: 0.85rem;">echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys</pre>
+          
+          <p style="color: var(--text-secondary); font-size: 0.85rem;">Or use: <code>ssh-copy-id -i ~/.ssh/dam_backup_key user@your-server.com</code></p>
+        </div>
+        
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+          📚 <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent" target="_blank" style="color: var(--accent);">Full SSH Key Guide (GitHub Docs)</a>
+        </p>
+      </div>
+      <div class="dir-browser-footer">
+        <button class="btn btn-secondary" onclick="closeSshKeyHelp()">Close</button>
+        <button class="btn btn-primary" onclick="useSshKey()" id="useSshKeyBtn" style="display: none;">Use This Key</button>
       </div>
     </div>
   </div>
@@ -2518,9 +3760,9 @@
             <button class="btn btn-secondary" onclick="open3dViewer(${id})" id="btn3dPreview">
               🎮 3D Preview
             </button>
-            <a href="/api/models/${id}/download" class="btn btn-primary">
+            <button class="btn btn-primary" onclick="downloadModel(${id}, '${model.filename?.replace(/'/g, "\\'")}')">
               ⬇ Download
-            </a>
+            </button>
           </div>
         </div>
       `;
@@ -3475,9 +4717,9 @@
             <button class="btn btn-primary" onclick="closeModal(); openToPage(${id}, 1)">
               📖 Preview
             </button>
-            <a href="/api/download/${id}" class="btn btn-secondary" download>
+            <button class="btn btn-secondary" onclick="downloadAsset(${id}, '${asset.filename?.replace(/'/g, "\\'")}')">
               ⬇ Download
-            </a>
+            </button>
           </div>
           
           <div class="page-extract-section">
@@ -3794,6 +5036,130 @@
       }
       
       document.getElementById('settingsModal').classList.add('active');
+      
+      // Set default start date to today if empty
+      const startDateInput = document.getElementById('newPolicyStartDate');
+      if (startDateInput && !startDateInput.value) {
+        startDateInput.value = new Date().toISOString().split('T')[0];
+      }
+      
+      // Load volume status when opening settings
+      refreshVolumeStatus();
+    }
+    
+    async function refreshVolumeStatus() {
+      const container = document.getElementById('volumeStatusContainer');
+      container.innerHTML = '<div class="volume-status-loading">Checking volumes...</div>';
+      
+      try {
+        const res = await fetch('/api/system/volume-status');
+        const data = await res.json();
+        
+        let html = '';
+        const volumeNames = { pdfs: '📄 PDFs', models: '🎲 3D Models' };
+        
+        for (const [name, status] of Object.entries(data.volumes)) {
+          const displayName = volumeNames[name] || name;
+          const indicatorClass = status.available ? 'available' : 'unavailable';
+          const statusText = status.available ? '✓ Available' : '✗ Unavailable';
+          
+          html += `
+            <div class="volume-status-item">
+              <div class="volume-status-indicator ${indicatorClass}"></div>
+              <div class="volume-status-info">
+                <div class="volume-status-name">${displayName}</div>
+                <div class="volume-status-path" title="${status.path}">${status.path}</div>
+                ${!status.available && status.reason ? 
+                  `<div class="volume-status-reason">${status.reason}</div>` : ''}
+              </div>
+            </div>
+          `;
+        }
+        
+        container.innerHTML = html;
+        
+        // Update index button states based on volume status
+        updateIndexButtonStates(data);
+        
+      } catch (e) {
+        console.error('Failed to check volume status:', e);
+        container.innerHTML = '<div class="volume-status-loading" style="color: #fa5252;">Failed to check volume status</div>';
+      }
+    }
+    
+    function updateIndexButtonStates(volumeStatus) {
+      // Store status globally
+      window.volumeStatus = volumeStatus;
+      
+      // Update PDF index button
+      if (volumeStatus.volumes.pdfs && !volumeStatus.volumes.pdfs.available) {
+        updateIndexButtonSuspended('pdf', true, volumeStatus.volumes.pdfs.reason);
+      } else {
+        updateIndexButtonSuspended('pdf', false);
+      }
+      
+      // Update 3D/SMB index buttons
+      if (volumeStatus.volumes.models && !volumeStatus.volumes.models.available) {
+        updateIndexButtonSuspended('3d', true, volumeStatus.volumes.models.reason);
+        updateIndexButtonSuspended('smb', true, volumeStatus.volumes.models.reason);
+      } else {
+        updateIndexButtonSuspended('3d', false);
+        updateIndexButtonSuspended('smb', false);
+      }
+    }
+    
+    function updateIndexButtonSuspended(type, isSuspended, reason = '') {
+      // Find the index button for this type
+      const buttonSelector = {
+        'pdf': 'button[onclick="indexNow(\'pdf\')"]',
+        '3d': 'button[onclick="indexNow(\'3d\')"]',
+        'smb': 'button[onclick="indexNow(\'smb\')"]'
+      }[type];
+      
+      const btn = document.querySelector(buttonSelector);
+      if (!btn) return;
+      
+      const originalText = { 'pdf': '🔄 Index', '3d': '🔄 Index', 'smb': '🔄 Index SMB Paths' }[type];
+      
+      if (isSuspended) {
+        btn.classList.add('suspended');
+        btn.innerHTML = `${originalText} <span class="suspended-badge">⏸️</span>`;
+        btn.title = `SUSPENDED: ${reason || 'Volume unavailable'}`;
+      } else {
+        btn.classList.remove('suspended');
+        btn.innerHTML = originalText;
+        btn.title = type === 'smb' ? 'Index SMB paths now' : `Index ${type.toUpperCase()}s now`;
+      }
+    }
+    
+    // Toast notification system
+    function showToast(message, type = 'info') {
+      // Create toast container if it doesn't exist
+      let container = document.getElementById('toastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+      
+      // Create toast element
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      const icons = { 'success': '✅', 'warning': '⚠️', 'error': '❌', 'info': 'ℹ️' };
+      toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-message">${message}</span>`;
+      
+      container.appendChild(toast);
+      
+      // Trigger animation
+      setTimeout(() => toast.classList.add('show'), 10);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
     }
     
     function closeSettings() {
@@ -3914,10 +5280,26 @@
         const data = await res.json();
         
         if (res.ok) {
-          statusEl.className = 'index-status success';
-          statusEl.textContent = `✅ ${data.message}`;
-          // Refresh stats
-          loadStats();
+          // Check for suspended status
+          if (data.status === 'suspended') {
+            statusEl.className = 'index-status suspended';
+            statusEl.textContent = `⏸️ ${data.message}`;
+            // Update button to show suspended state
+            updateIndexButtonSuspended(type, true, data.message);
+            // Show toast notification
+            showToast(data.message, 'warning');
+          } else if (data.status === 'started') {
+            statusEl.className = 'index-status success';
+            statusEl.textContent = `✅ ${data.message}`;
+            // Clear any suspended state
+            updateIndexButtonSuspended(type, false);
+            // Refresh stats
+            loadStats();
+          } else {
+            statusEl.className = 'index-status success';
+            statusEl.textContent = `✅ ${data.message}`;
+            loadStats();
+          }
         } else {
           statusEl.className = 'index-status error';
           statusEl.textContent = `❌ ${data.error}`;
@@ -4408,6 +5790,1318 @@
     // ==================== END UPLOAD ====================
 
     // Resize handle functionality
+    // ==========================================================================
+    // DOWNLOAD ERROR HANDLING
+    // ==========================================================================
+    
+    /**
+     * Handle download with availability check.
+     * Shows appropriate error if volume is offline or file is missing.
+     */
+    async function handleDownload(url, filename) {
+      try {
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          // Success - trigger actual download
+          const blob = await response.blob();
+          const downloadUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = filename || 'download';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(downloadUrl);
+          return;
+        }
+        
+        // Error response - parse and display
+        const data = await response.json();
+        
+        if (response.status === 503 && data.error === 'volume_unavailable') {
+          // Volume offline - show prominent warning
+          showDownloadError({
+            title: '📴 Storage Volume Offline',
+            message: data.message || 'The storage volume containing this file is currently unavailable.',
+            details: `Volume: ${data.volume || 'Unknown'}`,
+            type: 'warning',
+            suggestion: 'Check that the external drive or network share is connected.'
+          });
+        } else if (response.status === 404) {
+          // File not found
+          showDownloadError({
+            title: '🔍 File Not Found',
+            message: data.message || 'The file could not be found on disk.',
+            details: data.file_path ? `Path: ${data.file_path}` : '',
+            type: 'error',
+            suggestion: 'The file may have been moved, renamed, or deleted. Try re-indexing.'
+          });
+        } else {
+          // Generic error
+          showDownloadError({
+            title: '❌ Download Failed',
+            message: data.message || data.error || 'An unknown error occurred.',
+            type: 'error'
+          });
+        }
+      } catch (e) {
+        showToast(`Download error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Show download error modal with details.
+     */
+    function showDownloadError(opts) {
+      const { title, message, details, type, suggestion } = opts;
+      
+      const modalHtml = `
+        <div id="downloadErrorModal" class="modal-overlay" onclick="closeDownloadErrorModal(event)">
+          <div class="modal-content download-error-modal">
+            <div class="download-error-header ${type || 'error'}">
+              <h3>${title}</h3>
+            </div>
+            <div class="download-error-body">
+              <p>${message}</p>
+              ${details ? `<p class="download-error-details">${details}</p>` : ''}
+              ${suggestion ? `<p class="download-error-suggestion">💡 ${suggestion}</p>` : ''}
+            </div>
+            <div class="download-error-actions">
+              <button class="btn btn-secondary" onclick="closeDownloadErrorModal()">Close</button>
+              <button class="btn btn-primary" onclick="closeDownloadErrorModal(); openSettings()">Check Volumes</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Remove any existing modal
+      const existing = document.getElementById('downloadErrorModal');
+      if (existing) existing.remove();
+      
+      // Add modal to page
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+    
+    function closeDownloadErrorModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      const modal = document.getElementById('downloadErrorModal');
+      if (modal) modal.remove();
+    }
+    
+    /**
+     * Download asset with availability check.
+     */
+    function downloadAsset(assetId, filename) {
+      handleDownload(`/api/assets/${assetId}/download`, filename);
+    }
+    
+    /**
+     * Download model with availability check.
+     */
+    function downloadModel(modelId, filename) {
+      handleDownload(`/api/models/${modelId}/download`, filename);
+    }
+    
+    // ==========================================================================
+    // TRASH MANAGEMENT
+    // ==========================================================================
+    
+    let trashData = { assets: [], models: [] };
+    let currentTrashTab = 'assets';
+    
+    /**
+     * Open Trash (now part of Settings Advanced tab).
+     */
+    async function openTrash() {
+      openSettings();
+      switchSettingsTab('advanced');
+      await loadTrashContents();
+    }
+    
+    function closeTrash() {
+      closeSettings();
+    }
+    
+    /**
+     * Switch between Settings tabs.
+     */
+    function switchSettingsTab(tab) {
+      // Update tab buttons
+      document.getElementById('settingsTabGeneral').classList.toggle('active', tab === 'general');
+      document.getElementById('settingsTabAdvanced').classList.toggle('active', tab === 'advanced');
+      
+      // Show/hide content
+      document.getElementById('settingsGeneral').style.display = tab === 'general' ? 'block' : 'none';
+      document.getElementById('settingsAdvanced').style.display = tab === 'advanced' ? 'block' : 'none';
+      
+      // Load data for advanced tab
+      if (tab === 'advanced') {
+        loadTrashContents();
+        loadJournalStatus();
+        loadSnapshotStatus();
+        loadBackupPolicies();
+      }
+    }
+    
+    /**
+     * Load change journal status.
+     */
+    async function loadJournalStatus() {
+      try {
+        const response = await fetch('/api/journal/status');
+        if (response.ok) {
+          const data = await response.json();
+          const total = data.total_entries || 0;
+          const recent = data.recent_24h || 0;
+          document.getElementById('journalStatusText').textContent = 
+            `${total} entries (${recent} in last 24h)`;
+        } else {
+          document.getElementById('journalStatusText').textContent = 'Available';
+        }
+      } catch (e) {
+        document.getElementById('journalStatusText').textContent = 'Available';
+      }
+    }
+    
+    /**
+     * Toggle journal entries view.
+     */
+    function toggleJournalView() {
+      const list = document.getElementById('journalList');
+      const isVisible = list.classList.contains('visible');
+      
+      if (isVisible) {
+        list.classList.remove('visible');
+        document.getElementById('viewJournalBtn').textContent = '📋 View Activity';
+      } else {
+        list.classList.add('visible');
+        document.getElementById('viewJournalBtn').textContent = '📋 Hide Activity';
+        loadJournalEntries();
+      }
+    }
+    
+    /**
+     * Load journal entries.
+     */
+    async function loadJournalEntries() {
+      const list = document.getElementById('journalList');
+      const filter = document.getElementById('journalFilter').value;
+      
+      try {
+        let url = '/api/journal?limit=50';
+        if (filter) url += `&action=${filter}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to load');
+        
+        const data = await response.json();
+        
+        if (!data.entries || data.entries.length === 0) {
+          list.innerHTML = '<div class="journal-empty">No activity recorded yet</div>';
+          return;
+        }
+        
+        list.innerHTML = data.entries.map(entry => `
+          <div class="journal-entry">
+            <span class="journal-action ${entry.action}">${entry.action}</span>
+            <span class="journal-entity">${entry.entity_type} #${entry.entity_id}</span>
+            <span class="journal-time">${formatTrashDate(entry.timestamp)}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        list.innerHTML = '<div class="journal-empty">Error loading activity</div>';
+      }
+    }
+    
+    /**
+     * Load snapshot status.
+     */
+    async function loadSnapshotStatus() {
+      try {
+        const response = await fetch('/api/snapshots/latest');
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('lastSnapshotTime').textContent = 
+            data.timestamp ? formatTrashDate(data.timestamp) : 'Never';
+        } else {
+          document.getElementById('lastSnapshotTime').textContent = 'Never';
+        }
+      } catch (e) {
+        document.getElementById('lastSnapshotTime').textContent = 'Never';
+      }
+    }
+    
+    /**
+     * Toggle snapshot list view.
+     */
+    function toggleSnapshotList() {
+      const list = document.getElementById('snapshotList');
+      const isVisible = list.classList.contains('visible');
+      
+      if (isVisible) {
+        list.classList.remove('visible');
+        document.getElementById('toggleSnapshotsBtn').textContent = '📋 View All';
+      } else {
+        list.classList.add('visible');
+        document.getElementById('toggleSnapshotsBtn').textContent = '📋 Hide List';
+        loadSnapshotList();
+      }
+    }
+    
+    /**
+     * Load snapshot list.
+     */
+    async function loadSnapshotList() {
+      const list = document.getElementById('snapshotList');
+      
+      try {
+        const response = await fetch('/api/snapshots');
+        if (!response.ok) throw new Error('Failed to load');
+        
+        const data = await response.json();
+        
+        if (!data.snapshots || data.snapshots.length === 0) {
+          list.innerHTML = '<div class="snapshot-empty">No snapshots yet</div>';
+          return;
+        }
+        
+        list.innerHTML = data.snapshots.map(snap => `
+          <div class="snapshot-item">
+            <div class="snapshot-info">
+              <div class="snapshot-name">${snap.filename}</div>
+              <div class="snapshot-meta">${snap.size_human || '?'} • ${formatTrashDate(snap.timestamp)}</div>
+            </div>
+            <div class="snapshot-actions">
+              <button onclick="restoreSnapshot('${snap.filename}')" title="Restore this snapshot">↩️</button>
+              <button onclick="deleteSnapshot('${snap.filename}')" title="Delete this snapshot">🗑️</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        list.innerHTML = '<div class="snapshot-empty">Error loading snapshots</div>';
+      }
+    }
+    
+    /**
+     * Create database snapshot.
+     */
+    async function createSnapshot() {
+      showToast('Creating snapshot...', 'info');
+      try {
+        const response = await fetch('/api/snapshots', { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note: 'Manual snapshot' })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'completed') {
+          showToast(`Snapshot created: ${data.size_human}`, 'success');
+          loadSnapshotStatus();
+          if (document.getElementById('snapshotList').classList.contains('visible')) {
+            loadSnapshotList();
+          }
+        } else {
+          showToast(data.error || 'Snapshot failed', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Restore from snapshot.
+     */
+    async function restoreSnapshot(filename) {
+      if (!confirm(`Restore database from ${filename}?\n\nThis will replace the current database. A backup will be created first.`)) {
+        return;
+      }
+      
+      showToast('Restoring...', 'info');
+      try {
+        const response = await fetch(`/api/snapshots/${filename}/restore`, { method: 'POST' });
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'completed') {
+          showToast('Database restored! Refresh the page.', 'success');
+        } else {
+          showToast(data.error || 'Restore failed', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Delete a snapshot.
+     */
+    async function deleteSnapshot(filename) {
+      if (!confirm(`Delete snapshot ${filename}?`)) return;
+      
+      try {
+        const response = await fetch(`/api/snapshots/${filename}`, { method: 'DELETE' });
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast('Snapshot deleted', 'success');
+          loadSnapshotList();
+          loadSnapshotStatus();
+        } else {
+          showToast(data.error || 'Delete failed', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    // ==================== RESTIC POLICY SNAPSHOTS ====================
+    
+    let currentResticPolicy = null;
+    
+    /**
+     * Show snapshots for a Restic backup policy.
+     */
+    async function showPolicySnapshots(policyId) {
+      // Find the policy
+      const allPolicies = [...(backupPolicies.active || []), ...(backupPolicies.inactive || [])];
+      const policy = allPolicies.find(p => p.id === policyId);
+      
+      if (!policy) {
+        showToast('Policy not found', 'error');
+        return;
+      }
+      
+      if (policy.destination_type !== 'restic' && policy.destination_type !== 'restic-remote') {
+        showToast('Not a Restic policy', 'error');
+        return;
+      }
+      
+      currentResticPolicy = policy;
+      
+      const panel = document.getElementById('resticSnapshotsPanel');
+      const nameEl = document.getElementById('resticPolicyName');
+      const statusEl = document.getElementById('resticSnapshotsStatus');
+      const listEl = document.getElementById('resticSnapshotList');
+      
+      nameEl.textContent = policy.name;
+      statusEl.textContent = 'Loading snapshots...';
+      listEl.innerHTML = '';
+      panel.style.display = 'block';
+      
+      // Scroll panel into view
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      
+      try {
+        const url = `/api/restic/snapshots?repo_path=${encodeURIComponent(policy.path)}&password=${encodeURIComponent(policy.restic_password)}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          statusEl.textContent = `❌ ${data.error || 'Failed to load snapshots'}`;
+          statusEl.className = 'restic-status error';
+          return;
+        }
+        
+        if (data.snapshots.length === 0) {
+          statusEl.textContent = 'No snapshots yet. Run a backup first.';
+          statusEl.className = 'restic-status';
+          return;
+        }
+        
+        statusEl.textContent = `${data.snapshots.length} snapshot(s) in repository`;
+        statusEl.className = 'restic-status';
+        
+        // Render snapshot list
+        listEl.innerHTML = data.snapshots.map(snap => {
+          const time = new Date(snap.time).toLocaleString();
+          const tags = snap.tags.length ? snap.tags.join(', ') : '';
+          return `
+            <div class="snapshot-item">
+              <div class="snapshot-info">
+                <span class="snapshot-name">${snap.id}</span>
+                <span class="snapshot-meta">${time}${tags ? ' • ' + tags : ''}</span>
+              </div>
+              <div class="snapshot-actions">
+                <button onclick="restoreFromPolicy('${snap.full_id}')" title="Restore this snapshot">🔄 Restore</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        // Show the list
+        listEl.style.display = 'block';
+        
+      } catch (e) {
+        statusEl.textContent = `❌ Error: ${e.message}`;
+        statusEl.className = 'restic-status error';
+      }
+    }
+    
+    /**
+     * Close the Restic snapshots panel.
+     */
+    function closeResticSnapshots() {
+      document.getElementById('resticSnapshotsPanel').style.display = 'none';
+      currentResticPolicy = null;
+    }
+    
+    /**
+     * Restore database from a policy's Restic snapshot.
+     */
+    async function restoreFromPolicy(snapshotId) {
+      if (!currentResticPolicy) {
+        showToast('No policy selected', 'error');
+        return;
+      }
+      
+      if (!confirm(`Restore database from snapshot ${snapshotId.substring(0, 8)}?\n\nThis will:\n1. Create a safety backup of current database\n2. Restore the selected snapshot\n3. Replace the current database\n\nContinue?`)) {
+        return;
+      }
+      
+      const statusEl = document.getElementById('resticSnapshotsStatus');
+      statusEl.textContent = '🔄 Restoring... (this may take a moment)';
+      statusEl.className = 'restic-status';
+      
+      try {
+        const response = await fetch('/api/restic/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            repo_path: currentResticPolicy.path,
+            password: currentResticPolicy.restic_password,
+            snapshot_id: snapshotId
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          statusEl.textContent = `✅ ${data.message} — Reloading in 3 seconds...`;
+          statusEl.className = 'restic-status success';
+          showToast('Database restored! Reloading...', 'success');
+          
+          // Auto-reload after 3 seconds
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+        } else {
+          statusEl.textContent = `❌ ${data.error || 'Restore failed'}`;
+          statusEl.className = 'restic-status error';
+          showToast(data.error || 'Restore failed', 'error');
+        }
+      } catch (e) {
+        statusEl.textContent = `❌ Error: ${e.message}`;
+        statusEl.className = 'restic-status error';
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    let backupPolicies = { active: [], inactive: [], policies: [] };
+    
+    /**
+     * Load backup policies from API.
+     */
+    async function loadBackupPolicies() {
+      try {
+        const response = await fetch('/api/backup/policies');
+        if (response.ok) {
+          backupPolicies = await response.json();
+          renderPolicyTables();
+        }
+      } catch (e) {
+        console.error('Failed to load backup policies:', e);
+      }
+    }
+    
+    /**
+     * Render policy tables (active and inactive).
+     */
+    function renderPolicyTables() {
+      const activeList = document.getElementById('activePoliciesList');
+      const inactiveList = document.getElementById('inactivePoliciesList');
+      
+      // Render active policies
+      if (backupPolicies.active && backupPolicies.active.length > 0) {
+        activeList.innerHTML = backupPolicies.active.map(p => renderPolicyRow(p)).join('');
+      } else {
+        activeList.innerHTML = '<div class="policy-empty">No active policies</div>';
+      }
+      
+      // Render inactive policies
+      if (backupPolicies.inactive && backupPolicies.inactive.length > 0) {
+        inactiveList.innerHTML = backupPolicies.inactive.map(p => renderPolicyRow(p)).join('');
+      } else {
+        inactiveList.innerHTML = '<div class="policy-empty">No inactive policies</div>';
+      }
+    }
+    
+    /**
+     * Render a single policy row.
+     */
+    function renderPolicyRow(policy) {
+      const destType = policy.destination_type || 'local';
+      const isRestic = destType === 'restic' || destType === 'restic-remote';
+      let destDisplay;
+      if (destType === 'network') {
+        destDisplay = `<span class="dest-type network">SSH</span>${policy.ssh_host}:${policy.path}`;
+      } else if (destType === 'restic') {
+        destDisplay = `<span class="dest-type restic">Restic</span>${policy.path}`;
+      } else if (destType === 'restic-remote') {
+        destDisplay = `<span class="dest-type restic">Restic 🌐</span>${policy.path}`;
+      } else {
+        destDisplay = `<span class="dest-type local">Local</span>${policy.path}`;
+      }
+      
+      const lastBackup = policy.last_backup ? formatTrashDate(policy.last_backup) : '—';
+      const nextScheduled = policy.next_scheduled ? formatTrashDate(policy.next_scheduled) : '—';
+      
+      // Add Snapshots button for Restic policies (both local and remote)
+      const snapshotsBtn = isRestic 
+        ? `<button onclick="showPolicySnapshots('${policy.id}')" title="View snapshots & restore" class="snapshots-btn">📋 Snapshots</button>`
+        : '';
+      
+      return `
+        <div class="policy-row" data-id="${policy.id}">
+          <span class="col-name">${escapeHtml(policy.name)}</span>
+          <span class="col-dest" title="${escapeHtml(policy.path)}">${destDisplay}</span>
+          <span class="col-freq">${policy.frequency}</span>
+          <span class="col-last">${lastBackup}</span>
+          <span class="col-next">${nextScheduled}</span>
+          <span class="col-state">
+            <select class="state-select" onchange="updatePolicyState('${policy.id}', this.value)">
+              <option value="active" ${policy.state === 'active' ? 'selected' : ''}>Active</option>
+              <option value="paused" ${policy.state === 'paused' ? 'selected' : ''}>Paused</option>
+              <option value="disabled" ${policy.state === 'disabled' ? 'selected' : ''}>Disabled</option>
+            </select>
+          </span>
+          <span class="col-actions">
+            ${snapshotsBtn}
+            <button onclick="runPolicyBackup('${policy.id}')" title="Run now">▶️</button>
+            <button onclick="deletePolicy('${policy.id}')" title="Delete">🗑️</button>
+          </span>
+        </div>
+      `;
+    }
+    
+    /**
+     * Server-side directory browser state.
+     */
+    let dirBrowserCurrentPath = '';
+    let dirBrowserTargetInput = null;
+    
+    /**
+     * Browse for backup directory path (server-side).
+     */
+    function browseBackupPath() {
+      dirBrowserTargetInput = document.getElementById('newPolicyPath');
+      const startPath = dirBrowserTargetInput.value || '';
+      openDirBrowser(startPath);
+    }
+    
+    /**
+     * Open directory browser modal.
+     */
+    async function openDirBrowser(startPath = '') {
+      document.getElementById('dirBrowserModal').classList.add('active');
+      await loadDirectory(startPath);
+    }
+    
+    /**
+     * Close directory browser modal.
+     */
+    function closeDirBrowser() {
+      document.getElementById('dirBrowserModal').classList.remove('active');
+    }
+    
+    /**
+     * Load directory listing from server.
+     */
+    async function loadDirectory(path = '') {
+      const listEl = document.getElementById('dirBrowserList');
+      const pathEl = document.getElementById('dirBrowserPath');
+      
+      listEl.innerHTML = '<div class="dir-browser-empty">Loading...</div>';
+      
+      try {
+        const url = path ? `/api/browse-directories?path=${encodeURIComponent(path)}` : '/api/browse-directories';
+        const resp = await fetch(url);
+        const data = await resp.json();
+        
+        if (!resp.ok) {
+          listEl.innerHTML = `<div class="dir-browser-empty">❌ ${data.error || 'Failed to load'}</div>`;
+          return;
+        }
+        
+        dirBrowserCurrentPath = data.current_path;
+        pathEl.textContent = data.current_path;
+        
+        // Build list with event delegation
+        listEl.innerHTML = '';
+        
+        // Parent directory link
+        if (data.parent_path) {
+          const parentEl = document.createElement('div');
+          parentEl.className = 'dir-browser-item parent-dir';
+          parentEl.innerHTML = '<span class="icon">⬆️</span><span class="name">..</span>';
+          parentEl.addEventListener('click', () => loadDirectory(data.parent_path));
+          listEl.appendChild(parentEl);
+        }
+        
+        // Directory listing
+        if (data.directories.length === 0) {
+          listEl.innerHTML += '<div class="dir-browser-empty">No subdirectories</div>';
+        } else {
+          for (const dir of data.directories) {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'dir-browser-item' + (!dir.readable ? ' disabled' : '');
+            itemEl.innerHTML = `
+              <span class="icon">📁</span>
+              <span class="name">${escapeHtml(dir.name)}</span>
+              ${!dir.readable ? '<span style="color:var(--text-secondary);font-size:0.8rem;">🔒</span>' : ''}
+            `;
+            if (dir.readable) {
+              itemEl.addEventListener('click', () => loadDirectory(dir.path));
+            }
+            listEl.appendChild(itemEl);
+          }
+        }
+        
+      } catch (err) {
+        listEl.innerHTML = `<div class="dir-browser-empty">❌ ${err.message}</div>`;
+      }
+    }
+    
+    /**
+     * Select current directory and close browser.
+     */
+    function selectCurrentDir() {
+      if (dirBrowserTargetInput && dirBrowserCurrentPath) {
+        dirBrowserTargetInput.value = dirBrowserCurrentPath;
+      }
+      closeDirBrowser();
+    }
+    
+    /**
+     * Create a new folder in the current directory.
+     */
+    async function createNewFolder() {
+      const nameInput = document.getElementById('newFolderInput');
+      const folderName = nameInput.value.trim();
+      
+      if (!folderName) {
+        showToast('Enter a folder name', 'error');
+        return;
+      }
+      
+      if (!dirBrowserCurrentPath) {
+        showToast('No directory selected', 'error');
+        return;
+      }
+      
+      try {
+        const resp = await fetch('/api/create-directory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path: dirBrowserCurrentPath,
+            name: folderName
+          })
+        });
+        
+        const data = await resp.json();
+        
+        if (!resp.ok) {
+          showToast(data.error || 'Failed to create folder', 'error');
+          return;
+        }
+        
+        showToast(`Created: ${folderName}`, 'success');
+        nameInput.value = '';
+        
+        // Refresh and navigate into the new folder
+        await loadDirectory(data.path);
+        
+      } catch (err) {
+        showToast('Error creating folder: ' + err.message, 'error');
+      }
+    }
+    
+    /**
+     * Toggle destination-specific fields visibility.
+     */
+    function toggleDestinationFields() {
+      // Clear any previous validation messages
+      const msgEl = document.getElementById('policyValidationMsg');
+      if (msgEl) {
+        msgEl.textContent = '';
+        msgEl.className = 'policy-validation-msg';
+      }
+      
+      const destType = document.getElementById('newPolicyDestType').value;
+      const isNetwork = destType === 'network';
+      const isResticLocal = destType === 'restic';
+      const isResticRemote = destType === 'restic-remote';
+      const isRestic = isResticLocal || isResticRemote;
+      const isLocal = destType === 'local';
+      
+      // SSH host field (network only - restic-remote uses path format)
+      document.getElementById('newPolicySshHost').style.display = isNetwork ? 'block' : 'none';
+      
+      // SSH key fields (network and restic-remote)
+      document.getElementById('networkFields').style.display = (isNetwork || isResticRemote) ? 'flex' : 'none';
+      
+      // Restic password fields (with confirmation)
+      document.getElementById('newPolicyResticPassword').style.display = isRestic ? 'block' : 'none';
+      document.getElementById('newPolicyResticPasswordConfirm').style.display = isRestic ? 'block' : 'none';
+      
+      // Browse button (show for local and restic-local only)
+      document.getElementById('localPathWrapper').querySelector('.browse-btn').style.display = (isLocal || isResticLocal) ? 'inline-block' : 'none';
+      
+      // Update path placeholder
+      const pathInput = document.getElementById('newPolicyPath');
+      if (isResticRemote) {
+        pathInput.placeholder = 'sftp:laptop:/path or sftp:user@192.168.1.1:/path';
+      } else if (isResticLocal) {
+        pathInput.placeholder = '/path/to/restic-repo';
+      } else if (isNetwork) {
+        pathInput.placeholder = '/remote/path/to/backups';
+      } else {
+        pathInput.placeholder = '/path/to/backups';
+      }
+    }
+    
+    // Alias for backward compatibility
+    function toggleNetworkFields() { toggleDestinationFields(); }
+    
+    /**
+     * Show SSH key help modal and load key status.
+     */
+    async function showSshKeyHelp() {
+      document.getElementById('sshKeyHelpModal').classList.add('active');
+      
+      // Show loading state
+      document.getElementById('sshKeyLoading').style.display = 'block';
+      document.getElementById('sshKeyNotExists').style.display = 'none';
+      document.getElementById('sshKeyExists').style.display = 'none';
+      document.getElementById('useSshKeyBtn').style.display = 'none';
+      
+      try {
+        const response = await fetch('/api/ssh/key');
+        const data = await response.json();
+        
+        document.getElementById('sshKeyLoading').style.display = 'none';
+        
+        if (data.exists && data.public_key) {
+          // Key exists - show it
+          document.getElementById('sshKeyExists').style.display = 'block';
+          document.getElementById('sshKeyPathDisplay').textContent = data.key_path;
+          document.getElementById('sshPublicKeyDisplay').textContent = data.public_key;
+          document.getElementById('useSshKeyBtn').style.display = 'inline-block';
+        } else {
+          // No key - show generate button
+          document.getElementById('sshKeyNotExists').style.display = 'block';
+        }
+      } catch (e) {
+        document.getElementById('sshKeyLoading').textContent = '❌ Error loading key status';
+      }
+    }
+    
+    /**
+     * Generate a new SSH key.
+     */
+    async function generateSshKey() {
+      const btn = document.getElementById('generateKeyBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating...';
+      
+      try {
+        const response = await fetch('/api/ssh/key', { method: 'POST' });
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showToast('SSH key generated!', 'success');
+          // Reload to show the key
+          await showSshKeyHelp();
+        } else {
+          showToast(data.error || 'Failed to generate key', 'error');
+          btn.disabled = false;
+          btn.textContent = '🔑 Generate SSH Key';
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+        btn.disabled = false;
+        btn.textContent = '🔑 Generate SSH Key';
+      }
+    }
+    
+    /**
+     * Copy public key to clipboard.
+     */
+    function copySshPublicKey() {
+      const publicKey = document.getElementById('sshPublicKeyDisplay').textContent;
+      navigator.clipboard.writeText(publicKey).then(() => {
+        showToast('Public key copied to clipboard!', 'success');
+      }).catch(() => {
+        showToast('Failed to copy - please select and copy manually', 'error');
+      });
+    }
+    
+    /**
+     * Use the SSH key - fill in the key path field.
+     */
+    function useSshKey() {
+      const keyPath = document.getElementById('sshKeyPathDisplay').textContent;
+      document.getElementById('newPolicySshKey').value = keyPath;
+      closeSshKeyHelp();
+      showToast('SSH key path filled in', 'success');
+    }
+    
+    /**
+     * Close SSH key help modal.
+     */
+    function closeSshKeyHelp() {
+      document.getElementById('sshKeyHelpModal').classList.remove('active');
+    }
+    
+    /**
+     * Save new policy.
+     */
+    async function saveNewPolicy() {
+      const msgEl = document.getElementById('policyValidationMsg');
+      msgEl.textContent = '';
+      msgEl.className = 'policy-validation-msg';
+      
+      const policyData = {
+        name: document.getElementById('newPolicyName').value.trim(),
+        destination_type: document.getElementById('newPolicyDestType').value,
+        path: document.getElementById('newPolicyPath').value.trim(),
+        frequency: document.getElementById('newPolicyFrequency').value,
+        schedule_time: document.getElementById('newPolicyTime').value || '02:00',
+        start_date: document.getElementById('newPolicyStartDate').value || null,
+        retention_count: parseInt(document.getElementById('newPolicyRetention').value) || 7,
+        state: document.getElementById('newPolicyState').value,
+        ssh_host: document.getElementById('newPolicySshHost').value.trim(),
+        ssh_key_path: document.getElementById('newPolicySshKey').value.trim(),
+        restic_password: document.getElementById('newPolicyResticPassword').value
+      };
+      
+      // Basic validation
+      if (!policyData.name) {
+        msgEl.textContent = '❌ Policy name is required';
+        msgEl.className = 'policy-validation-msg error';
+        return;
+      }
+      
+      if (!policyData.path) {
+        msgEl.textContent = '❌ Destination path is required';
+        msgEl.className = 'policy-validation-msg error';
+        return;
+      }
+      
+      if (policyData.retention_count < 1) {
+        msgEl.textContent = '❌ Retention must be at least 1 copy';
+        msgEl.className = 'policy-validation-msg error';
+        return;
+      }
+      
+      if (policyData.destination_type === 'network' && !policyData.ssh_host) {
+        msgEl.textContent = '❌ SSH host is required for network backups';
+        msgEl.className = 'policy-validation-msg error';
+        return;
+      }
+      
+      if (policyData.destination_type === 'restic' || policyData.destination_type === 'restic-remote') {
+        if (!policyData.restic_password) {
+          msgEl.textContent = '❌ Repository password is required for Restic backups';
+          msgEl.className = 'policy-validation-msg error';
+          return;
+        }
+        const confirmPassword = document.getElementById('newPolicyResticPasswordConfirm').value;
+        if (policyData.restic_password !== confirmPassword) {
+          msgEl.textContent = '❌ Passwords do not match';
+          msgEl.className = 'policy-validation-msg error';
+          return;
+        }
+        // Validate remote format
+        if (policyData.destination_type === 'restic-remote' && !policyData.path.startsWith('sftp:')) {
+          msgEl.textContent = '❌ Remote path must start with sftp: (e.g., sftp:user@host:/path)';
+          msgEl.className = 'policy-validation-msg error';
+          return;
+        }
+      }
+      
+      msgEl.textContent = '⏳ Validating...';
+      
+      try {
+        // Validate first
+        const validateResponse = await fetch('/api/backup/policies/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(policyData)
+        });
+        
+        const validateResult = await validateResponse.json();
+        
+        if (!validateResponse.ok) {
+          msgEl.textContent = `❌ ${validateResult.error}`;
+          msgEl.className = 'policy-validation-msg error';
+          return;
+        }
+        
+        // Create policy
+        const createResponse = await fetch('/api/backup/policies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(policyData)
+        });
+        
+        const createResult = await createResponse.json();
+        
+        if (createResponse.ok && createResult.success) {
+          msgEl.textContent = '✅ Policy created successfully';
+          msgEl.className = 'policy-validation-msg success';
+          
+          // Clear form
+          document.getElementById('newPolicyName').value = '';
+          document.getElementById('newPolicyPath').value = '';
+          document.getElementById('newPolicySshHost').value = '';
+          document.getElementById('newPolicySshKey').value = '';
+          document.getElementById('newPolicyResticPassword').value = '';
+          document.getElementById('newPolicyResticPasswordConfirm').value = '';
+          document.getElementById('newPolicyState').value = 'disabled';
+          
+          // Reload policies
+          await loadBackupPolicies();
+          
+          showToast('Policy created', 'success');
+        } else {
+          msgEl.textContent = `❌ ${createResult.error || 'Failed to create policy'}`;
+          msgEl.className = 'policy-validation-msg error';
+        }
+      } catch (e) {
+        msgEl.textContent = `❌ Error: ${e.message}`;
+        msgEl.className = 'policy-validation-msg error';
+      }
+    }
+    
+    /**
+     * Test network connection for new policy.
+     */
+    async function testPolicyConnection() {
+      const msgEl = document.getElementById('policyValidationMsg');
+      const destType = document.getElementById('newPolicyDestType').value;
+      let host = document.getElementById('newPolicySshHost').value.trim();
+      const path = document.getElementById('newPolicyPath').value.trim();
+      const keyPath = document.getElementById('newPolicySshKey').value.trim();
+      
+      console.log('Test connection:', { destType, host, path, keyPath });
+      
+      // For Restic Remote, extract host from path field
+      // Formats: sftp:user@host:/path, sftp:alias:/path, user@host:/path, alias:/path
+      if (destType === 'restic-remote' && !host && path) {
+        // Remove sftp: prefix if present
+        let cleanPath = path.replace(/^sftp:/, '');
+        // Extract host part (everything before the first :)
+        const colonIdx = cleanPath.indexOf(':');
+        if (colonIdx > 0) {
+          host = cleanPath.substring(0, colonIdx);
+        }
+        console.log('Extracted host:', host, 'from cleanPath:', cleanPath);
+      }
+      
+      if (!host) {
+        msgEl.textContent = '❌ Could not extract host from path. Use format: sftp:hostname:/path';
+        msgEl.className = 'policy-validation-msg error';
+        return;
+      }
+      
+      msgEl.textContent = '⏳ Testing connection...';
+      
+      try {
+        const response = await fetch('/api/ssh/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host, key_path: keyPath })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          msgEl.textContent = '✅ Connection successful';
+          msgEl.className = 'policy-validation-msg success';
+        } else {
+          msgEl.textContent = `❌ Connection failed: ${result.error}`;
+          msgEl.className = 'policy-validation-msg error';
+        }
+      } catch (e) {
+        msgEl.textContent = `❌ Error: ${e.message}`;
+        msgEl.className = 'policy-validation-msg error';
+      }
+    }
+    
+    /**
+     * Update policy state.
+     */
+    async function updatePolicyState(policyId, newState) {
+      try {
+        const response = await fetch(`/api/backup/policies/${policyId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: newState })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          showToast(`Policy ${newState}`, 'success');
+          await loadBackupPolicies();
+        } else {
+          showToast(result.error || 'Update failed', 'error');
+          await loadBackupPolicies(); // Reload to reset dropdown
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Run backup for a specific policy.
+     */
+    async function runPolicyBackup(policyId) {
+      showToast('Running backup...', 'info');
+      
+      try {
+        const response = await fetch(`/api/backup/policies/${policyId}/run`, { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+          showToast(`Backup complete: ${result.destination || 'Success'}`, 'success');
+          await loadBackupPolicies();
+        } else {
+          showToast(result.error || 'Backup failed', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Delete a policy.
+     */
+    async function deletePolicy(policyId) {
+      if (!confirm('Delete this backup policy?')) return;
+      
+      try {
+        const response = await fetch(`/api/backup/policies/${policyId}`, { method: 'DELETE' });
+        const result = await response.json();
+        
+        if (result.success) {
+          showToast('Policy deleted', 'success');
+          await loadBackupPolicies();
+        } else {
+          showToast(result.error || 'Delete failed', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Load trash contents from API.
+     */
+    async function loadTrashContents() {
+      try {
+        const response = await fetch('/api/trash');
+        if (!response.ok) throw new Error('Failed to load trash');
+        
+        trashData = await response.json();
+        
+        // Update counts
+        document.getElementById('trashAssetCount').textContent = trashData.total_assets || 0;
+        document.getElementById('trashModelCount').textContent = trashData.total_models || 0;
+        
+        // Update summary
+        const total = (trashData.total_assets || 0) + (trashData.total_models || 0);
+        document.getElementById('trashSummary').innerHTML = `
+          <span class="trash-count">${total} item${total !== 1 ? 's' : ''} in trash</span>
+        `;
+        
+        // Update badge in header
+        updateTrashBadge(total);
+        
+        // Enable/disable empty button
+        document.getElementById('emptyTrashBtn').disabled = total === 0;
+        
+        // Render current tab
+        renderTrashList();
+      } catch (e) {
+        console.error('Error loading trash:', e);
+        document.getElementById('trashList').innerHTML = `
+          <div class="trash-empty">Error loading trash: ${e.message}</div>
+        `;
+      }
+    }
+    
+    /**
+     * Update the trash badge in header.
+     */
+    function updateTrashBadge(count) {
+      const badge = document.getElementById('trashBadge');
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    /**
+     * Switch between assets and models tabs.
+     */
+    function switchTrashTab(tab) {
+      currentTrashTab = tab;
+      document.getElementById('trashTabAssets').classList.toggle('active', tab === 'assets');
+      document.getElementById('trashTabModels').classList.toggle('active', tab === 'models');
+      renderTrashList();
+    }
+    
+    /**
+     * Render the trash list for current tab.
+     */
+    function renderTrashList() {
+      const container = document.getElementById('trashList');
+      const items = currentTrashTab === 'assets' ? trashData.assets : trashData.models;
+      const type = currentTrashTab === 'assets' ? 'asset' : 'model';
+      const icon = currentTrashTab === 'assets' ? '📄' : '🎲';
+      
+      if (!items || items.length === 0) {
+        container.innerHTML = `<div class="trash-empty">No ${type}s in trash</div>`;
+        return;
+      }
+      
+      container.innerHTML = items.map(item => `
+        <div class="trash-item" data-id="${item.id}" data-type="${type}">
+          <div class="trash-item-icon">${icon}</div>
+          <div class="trash-item-info">
+            <div class="trash-item-name">${escapeHtml(item.title || item.filename)}</div>
+            <div class="trash-item-meta">
+              Deleted: ${formatTrashDate(item.deleted_at)}
+              ${item.file_size ? ` • ${formatSize(item.file_size)}` : ''}
+            </div>
+          </div>
+          <div class="trash-item-actions">
+            <button class="restore-btn" onclick="restoreItem('${type}', ${item.id})">↩️ Restore</button>
+            <button class="delete-btn" onclick="permanentlyDelete('${type}', ${item.id})">🗑️ Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    /**
+     * Format deletion date.
+     */
+    function formatTrashDate(isoDate) {
+      if (!isoDate) return 'Unknown';
+      const date = new Date(isoDate);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+      
+      if (diffHours < 1) return 'Just now';
+      if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+      return date.toLocaleDateString();
+    }
+    
+    /**
+     * Restore an item from trash.
+     */
+    async function restoreItem(type, id) {
+      try {
+        const response = await fetch(`/api/trash/${type}/${id}/restore`, { method: 'POST' });
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast(data.message || 'Item restored', 'success');
+          await loadTrashContents();
+          loadStats();  // Refresh main stats
+        } else {
+          showToast(data.error || 'Failed to restore', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Permanently delete an item.
+     */
+    async function permanentlyDelete(type, id) {
+      if (!confirm('Permanently delete this item? This cannot be undone.')) return;
+      
+      try {
+        const response = await fetch(`/api/trash/${type}/${id}/permanent`, { method: 'DELETE' });
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast(data.message || 'Item permanently deleted', 'success');
+          await loadTrashContents();
+        } else {
+          showToast(data.error || 'Failed to delete', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Empty entire trash.
+     */
+    async function emptyTrash() {
+      const total = (trashData.total_assets || 0) + (trashData.total_models || 0);
+      if (!confirm(`Permanently delete all ${total} items in trash? This cannot be undone.`)) return;
+      
+      try {
+        const response = await fetch('/api/trash/empty', { method: 'POST' });
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast(data.message || 'Trash emptied', 'success');
+          await loadTrashContents();
+          loadStats();
+        } else {
+          showToast(data.error || 'Failed to empty trash', 'error');
+        }
+      } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+      }
+    }
+    
+    /**
+     * Check trash count on page load (for badge).
+     */
+    async function checkTrashCount() {
+      try {
+        const response = await fetch('/api/trash');
+        if (response.ok) {
+          const data = await response.json();
+          const total = (data.total_assets || 0) + (data.total_models || 0);
+          updateTrashBadge(total);
+        }
+      } catch (e) {
+        // Silently fail - badge just won't show
+      }
+    }
+    
+    // Check trash count on load
+    document.addEventListener('DOMContentLoaded', checkTrashCount);
+    
+    // ==========================================================================
+    // SIDEBAR RESIZE HANDLE
+    // ==========================================================================
+    
     (function() {
       const handle = document.getElementById('resizeHandle');
       const sidebar = document.getElementById('sidebar');
