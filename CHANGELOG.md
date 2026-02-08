@@ -1,6 +1,39 @@
 # Changelog
 
-## [Unreleased] - 2026-02-07
+## [0.3.0] - 2026-02-07
+
+### Added
+- **Asset Locations Management**
+  - Add/edit/delete asset locations from Settings UI
+  - Support for Local, Network Mount (SMB), and SFTP location types
+  - SFTP option auto-hidden on macOS/Windows (requires sshfs)
+  - Test Connection button for validating paths
+  - Remount button for network-mounted volumes
+  - Migration script `003_add_asset_locations.py`
+
+- **SSH Key Workflow Improvements**
+  - "Use Existing" dropdown shows available keys
+  - "Create New Key" with clear naming
+  - "Advanced: SSH Config" moved to bottom with documentation link
+  - New endpoint `/api/ssh/key/public` for fetching public keys
+
+- **Settings UI Overhaul**
+  - Index buttons moved to dedicated "🔄 Reindex Library" section
+  - Renamed Index to "Scan" with explanatory text
+  - Asset Locations list with action buttons (Test, Index, Edit menu)
+  - Edit menu: Change Path, Disable, Delete with confirmation
+  - Removed redundant Volume Status section
+
+### Changed
+- Platform-aware UI: SFTP hidden on non-Linux hosts
+- Consolidated pdf_root/3d_root/smb_paths into asset_locations table
+
+### Database Migrations
+- `003_add_asset_locations.py` - Creates asset_locations table
+
+---
+
+## [0.2.0] - 2026-02-07
 
 ### Added
 - **Backup & Recovery System** - Multi-layer data protection

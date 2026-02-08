@@ -384,11 +384,31 @@ def api_thumbnail_stats():
     })
 
 
+# Global render status tracking
+_render_status = {
+    'active': False,
+    'total': 0,
+    'completed': 0,
+    'errors': 0,
+    'current_model': None,
+    'started_at': None,
+    'last_update': None
+}
+
+
+@models_bp.route('/models/render-thumbnails/status')
+def api_render_thumbnails_status():
+    """Get current thumbnail rendering status."""
+    return jsonify(_render_status)
+
+
 @models_bp.route('/models/render-thumbnails', methods=['POST'])
 def api_render_thumbnails():
     """Queue all missing 3D model thumbnails for rendering."""
     import threading
     from dam.indexer.thumbnails import render_3d_thumbnail
+    from datetime import datetime
+    global _render_status
     
     config = get_config()
     thumbnail_dir = Path(config.THUMBNAIL_DIR) / "3d"
@@ -408,48 +428,68 @@ def api_render_thumbnails():
         else:
             models_to_render.append(model)
     
+    # Initialize render status
+    _render_status['active'] = True
+    _render_status['total'] = len(models_to_render)
+    _render_status['completed'] = 0
+    _render_status['errors'] = 0
+    _render_status['current_model'] = None
+    _render_status['started_at'] = datetime.now().isoformat()
+    _render_status['last_update'] = datetime.now().isoformat()
+    
     # Start background rendering
     def render_batch():
-        import signal
-        
-        def timeout_handler(signum, frame):
-            raise TimeoutError(f"SMB read timeout for model {model['id']}")
+        global _render_status
         
         for i, model in enumerate(models_to_render):
+            _render_status['current_model'] = model['id']
+            _render_status['last_update'] = datetime.now().isoformat()
+            
             try:
                 model_format = (model['format'] or 'stl').lower()
                 if model_format not in ('stl', 'obj', '3mf'):
+                    _render_status['completed'] += 1
                     continue
                 
-                # Set 30-second alarm for file operations (prevents SMB hangs)
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(30)
-                
+                # Get model data
+                model_data = None
                 try:
-                    # Get model data
                     if model['archive_path'] and model['archive_member']:
-                        with zipfile.ZipFile(model['archive_path'], 'r') as zf:
-                            model_data = zf.read(model['archive_member'])
-                    elif os.path.exists(model['file_path']):
+                        if os.path.exists(model['archive_path']):
+                            with zipfile.ZipFile(model['archive_path'], 'r') as zf:
+                                model_data = zf.read(model['archive_member'])
+                    elif model['file_path'] and os.path.exists(model['file_path']):
                         with open(model['file_path'], 'rb') as f:
                             model_data = f.read()
-                    else:
-                        logger.warning(f"Model file not found for {model['id']}")
-                        continue
-                    
-                    # Clear alarm after successful read
-                    signal.alarm(0)
-                    
-                    # Render thumbnail
-                    render_3d_thumbnail(model_data, model_format, str(thumbnail_dir / f"{model['id']}.png"))
-                    logger.info(f"Background render {i+1}/{len(models_to_render)}: model {model['id']} ({model_format})")
-                except TimeoutError as te:
-                    signal.alarm(0)
-                    logger.warning(f"Timeout reading model {model['id']} from {model['file_path']} (SMB offline?): {te}")
+                except Exception as read_err:
+                    logger.debug(f"Could not read model {model['id']}: {read_err}")
+                    _render_status['errors'] += 1
+                    _render_status['completed'] += 1
+                    continue
+                
+                if not model_data:
+                    _render_status['errors'] += 1
+                    _render_status['completed'] += 1
+                    continue
+                
+                # Render thumbnail
+                render_3d_thumbnail(model_data, model_format, str(thumbnail_dir / f"{model['id']}.png"))
+                _render_status['completed'] += 1
+                
+                if (i + 1) % 100 == 0:
+                    pct = round((_render_status['completed'] / _render_status['total']) * 100, 1)
+                    logger.info(f"Thumbnail render: {_render_status['completed']}/{_render_status['total']} ({pct}%) - {_render_status['errors']} errors")
                     
             except Exception as e:
-                signal.alarm(0)
-                logger.error(f"Background thumbnail render error for model {model['id']}: {e}")
+                logger.debug(f"Thumbnail render error for model {model['id']}: {e}")
+                _render_status['errors'] += 1
+                _render_status['completed'] += 1
+        
+        # Mark as complete
+        _render_status['active'] = False
+        _render_status['current_model'] = None
+        _render_status['last_update'] = datetime.now().isoformat()
+        logger.info(f"Background render complete: {_render_status['completed']} processed, {_render_status['errors']} errors")
     
     # Start in background thread
     thread = threading.Thread(target=render_batch, daemon=True)

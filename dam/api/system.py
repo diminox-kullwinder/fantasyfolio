@@ -176,9 +176,11 @@ def api_health():
     
     Returns 200 if the application is running.
     """
+    import platform
     return jsonify({
         'status': 'healthy',
-        'service': 'DAM API'
+        'service': 'DAM API',
+        'platform': platform.system().lower()  # 'darwin', 'linux', 'windows'
     })
 
 
@@ -908,6 +910,26 @@ def api_asset_locations_test(location_id: str):
         return jsonify({'error': 'Test failed', 'message': str(e)}), 500
 
 
+@system_bp.route('/asset-locations/<location_id>/remount', methods=['POST'])
+def api_asset_locations_remount(location_id: str):
+    """Attempt to remount a network volume."""
+    from dam.services.asset_locations import get_location_by_id, remount_location
+    
+    try:
+        location = get_location_by_id(location_id)
+        if not location:
+            return jsonify({'error': 'Location not found'}), 404
+        
+        if location.get('location_type') != 'local_mount':
+            return jsonify({'error': 'Only mounted volumes can be remounted'}), 400
+        
+        result = remount_location(location)
+        return jsonify(result), 200 if result.get('success') else 400
+    except Exception as e:
+        logger.error(f"Error remounting location: {e}", exc_info=True)
+        return jsonify({'error': 'Remount failed', 'message': str(e)}), 500
+
+
 # =============================================================================
 # SSH KEY API
 # =============================================================================
@@ -994,6 +1016,39 @@ def api_ssh_keys_list():
     except Exception as e:
         logger.error(f"Error listing SSH keys: {e}", exc_info=True)
         return jsonify({'error': 'Failed to list keys', 'message': str(e)}), 500
+
+
+@system_bp.route('/ssh/key/public')
+def api_ssh_key_public():
+    """Get public key content for a given private key path."""
+    from flask import request
+    from pathlib import Path
+    import os
+    
+    try:
+        key_path = request.args.get('path', '')
+        if not key_path:
+            return jsonify({'error': 'Missing path parameter'}), 400
+        
+        # Expand user path and get public key path
+        key_path = os.path.expanduser(key_path)
+        pub_path = Path(key_path + '.pub')
+        
+        # Security: only allow keys in ~/.ssh
+        ssh_dir = Path.home() / '.ssh'
+        try:
+            pub_path.resolve().relative_to(ssh_dir.resolve())
+        except ValueError:
+            return jsonify({'error': 'Invalid key path'}), 403
+        
+        if not pub_path.exists():
+            return jsonify({'error': 'Public key not found', 'pub_path': str(pub_path)}), 404
+        
+        public_key = pub_path.read_text().strip()
+        return jsonify({'public_key': public_key, 'path': str(pub_path)})
+    except Exception as e:
+        logger.error(f"Error reading public key: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to read public key', 'message': str(e)}), 500
 
 
 @system_bp.route('/trash/cleanup/status')

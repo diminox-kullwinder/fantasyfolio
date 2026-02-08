@@ -1534,6 +1534,7 @@
       background: var(--bg-primary);
       border-radius: 8px;
       border: 1px solid var(--border);
+      position: relative;
     }
     
     .location-item.disabled {
@@ -1542,8 +1543,9 @@
     
     .location-icon {
       font-size: 1.5rem;
-      width: 40px;
+      width: 32px;
       text-align: center;
+      flex-shrink: 0;
     }
     
     .location-info {
@@ -1588,12 +1590,13 @@
     }
     
     .location-badge.local { background: rgba(64, 192, 87, 0.2); color: #40c057; }
-    .location-badge.mount { background: rgba(255, 212, 59, 0.2); color: #ffd43b; }
-    .location-badge.ssh, .location-badge.sftp { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+    .location-badge.local_mount { background: rgba(255, 212, 59, 0.2); color: #ffd43b; }
+    .location-badge.remote_sftp { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
     
     .location-actions {
       display: flex;
       gap: 6px;
+      align-items: center;
     }
     
     .location-actions button {
@@ -1603,11 +1606,141 @@
       border-radius: 4px;
       cursor: pointer;
       font-size: 0.85rem;
+      white-space: nowrap;
     }
     
     .location-actions button:hover {
       background: var(--accent);
       color: white;
+    }
+    
+    .location-actions button.action-test {
+      background: rgba(64, 192, 87, 0.15);
+      border-color: rgba(64, 192, 87, 0.4);
+      color: #40c057;
+    }
+    
+    .location-actions button.action-test:hover {
+      background: #40c057;
+      color: white;
+    }
+    
+    .location-actions button.action-index {
+      background: rgba(77, 171, 247, 0.15);
+      border-color: rgba(77, 171, 247, 0.4);
+      color: #4dabf7;
+    }
+    
+    .location-actions button.action-index:hover {
+      background: #4dabf7;
+      color: white;
+    }
+    
+    .location-actions button.action-remount {
+      background: rgba(255, 212, 59, 0.15);
+      border-color: rgba(255, 212, 59, 0.4);
+      color: #ffd43b;
+    }
+    
+    .location-actions button.action-remount:hover {
+      background: #ffd43b;
+      color: #1a1a2e;
+    }
+    
+    /* Edit dropdown menu */
+    .location-edit-wrapper {
+      position: relative;
+    }
+    
+    .location-edit-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      min-width: 160px;
+      z-index: 100;
+      overflow: hidden;
+    }
+    
+    .location-edit-menu.open {
+      display: block;
+    }
+    
+    .location-edit-menu button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    
+    .location-edit-menu button:hover {
+      background: var(--bg-card);
+    }
+    
+    .location-edit-menu button.danger {
+      color: #fa5252;
+    }
+    
+    .location-edit-menu button.danger:hover {
+      background: rgba(250, 82, 82, 0.15);
+    }
+    
+    .location-edit-menu .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+    
+    /* Delete confirmation overlay */
+    .delete-confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 4000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .delete-confirm-overlay.active {
+      display: flex;
+    }
+    
+    .delete-confirm-modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      text-align: center;
+    }
+    
+    .delete-confirm-modal h3 {
+      color: #fa5252;
+      margin-bottom: 12px;
+    }
+    
+    .delete-confirm-modal p {
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+    
+    .delete-confirm-modal .buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
     }
     
     .location-empty {
@@ -1622,6 +1755,8 @@
       flex-direction: column;
       gap: 16px;
       padding: 20px;
+      overflow-y: auto;
+      flex: 1;
     }
     
     .form-row {
@@ -1651,6 +1786,216 @@
     
     .form-row .input-with-btn input {
       flex: 1;
+    }
+    
+    /* SSH Key Options in Add Location */
+    .ssh-key-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .ssh-key-select select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text);
+    }
+    
+    .ssh-key-path-row {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .ssh-key-path-row input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text);
+    }
+    
+    .ssh-dam-key-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    
+    .dam-key-status {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+    
+    .dam-key-status .exists {
+      color: #40c057;
+    }
+    
+    .dam-key-status .not-exists {
+      color: #ff6b6b;
+    }
+    
+    .dam-key-status .loading {
+      color: var(--text-secondary);
+    }
+    
+    .ssh-key-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .ssh-key-item:last-child {
+      border-bottom: none;
+    }
+    
+    .ssh-key-item:hover {
+      background: var(--bg-card);
+    }
+    
+    .ssh-key-item.selected {
+      background: rgba(77, 171, 247, 0.2);
+      border-color: var(--accent);
+    }
+    
+    .ssh-key-item .key-icon {
+      font-size: 1.2rem;
+    }
+    
+    .ssh-key-item .key-info {
+      flex: 1;
+    }
+    
+    .ssh-key-item .key-name {
+      font-weight: 500;
+    }
+    
+    .ssh-key-item .key-meta {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .ssh-key-item .key-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(77, 171, 247, 0.2);
+      color: var(--accent);
+    }
+    
+    /* SSH Auth Method Options */
+    .ssh-auth-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .ssh-auth-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .ssh-auth-option:hover {
+      border-color: var(--accent);
+    }
+    
+    .ssh-auth-option input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+    }
+    
+    .ssh-auth-option input[type="radio"]:checked + span {
+      color: var(--accent);
+      font-weight: 500;
+    }
+    
+    .ssh-auth-option.advanced {
+      border-style: dashed;
+      opacity: 0.8;
+    }
+    
+    .ssh-auth-option.advanced:hover {
+      opacity: 1;
+    }
+    
+    .ssh-auth-panel {
+      margin-top: 8px;
+      padding: 10px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    /* Test Connection Button - prominent style */
+    .btn-test-connection {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #3d7a4d 0%, #2d5a3d 100%);
+      border: 2px solid #4d9a5d;
+      border-radius: 6px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    
+    .btn-test-connection:hover {
+      background: linear-gradient(135deg, #4d9a5d 0%, #3d7a4d 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(61, 122, 77, 0.3);
+    }
+    
+    .btn-test-connection:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .field-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    #locTestConnectionRow {
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .test-result {
+      font-size: 0.9rem;
+    }
+    
+    .test-result.success { color: #40c057; }
+    .test-result.error { color: #ff6b6b; }
+    .test-result.loading { color: var(--text-secondary); }
+    
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 0.85rem;
     }
     
     /* Journal controls */
@@ -2031,9 +2376,10 @@
       border-radius: 12px;
       width: 500px;
       max-width: 90%;
-      max-height: 70vh;
+      max-height: 85vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
     
     .dir-browser-header {
@@ -2126,6 +2472,7 @@
       display: flex;
       justify-content: flex-end;
       gap: 10px;
+      flex-shrink: 0;  /* Ensure footer doesn't shrink */
     }
     
     .policy-add-row .field-label {
@@ -2341,71 +2688,6 @@
       display: block !important;
       background: rgba(77, 171, 247, 0.2);
       color: #4dabf7;
-    }
-    
-    /* Volume Status */
-    .volume-status-container {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    
-    .volume-status-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      background: var(--bg-secondary);
-      border-radius: 6px;
-      border: 1px solid var(--border);
-    }
-    
-    .volume-status-indicator {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    
-    .volume-status-indicator.available {
-      background: #40c057;
-      box-shadow: 0 0 8px rgba(64, 192, 87, 0.5);
-    }
-    
-    .volume-status-indicator.unavailable {
-      background: #fa5252;
-      box-shadow: 0 0 8px rgba(250, 82, 82, 0.5);
-    }
-    
-    .volume-status-info {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .volume-status-name {
-      font-weight: 500;
-      color: var(--text);
-      font-size: 0.95rem;
-    }
-    
-    .volume-status-path {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    
-    .volume-status-reason {
-      font-size: 0.8rem;
-      color: #fa5252;
-      margin-top: 2px;
-    }
-    
-    .volume-status-loading {
-      color: var(--text-secondary);
-      font-style: italic;
-      padding: 10px;
     }
     
     /* Suspended index button */
@@ -3161,14 +3443,6 @@
       
       <!-- General Tab -->
       <div class="settings-body settings-tab-content" id="settingsGeneral">
-        <div class="settings-section" id="volumeStatusSection">
-          <h3>📡 Volume Status</h3>
-          <div class="volume-status-container" id="volumeStatusContainer">
-            <div class="volume-status-loading">Checking volumes...</div>
-          </div>
-          <button type="button" class="index-btn" onclick="refreshVolumeStatus()" style="margin-top: 8px;">🔄 Refresh Status</button>
-        </div>
-        
         <div class="settings-section">
           <h3>📁 Asset Locations</h3>
           <p class="settings-hint">Configure where your documents and 3D models are stored.</p>
@@ -3182,11 +3456,14 @@
           <button class="btn btn-primary" onclick="showAddLocationModal()" style="margin-top: 12px;">
             ➕ Add Asset Location
           </button>
-          
-          <!-- Index Buttons -->
-          <div class="index-buttons-row" style="margin-top: 16px; display: flex; gap: 10px;">
-            <button class="index-btn" onclick="indexNow('pdf')" title="Index all document locations">🔄 Index Documents</button>
-            <button class="index-btn" onclick="indexNow('3d')" title="Index all 3D model locations">🔄 Index 3D Models</button>
+        </div>
+        
+        <div class="settings-section">
+          <h3>🔄 Reindex Library</h3>
+          <p style="font-size: 0.9rem; color: #888; margin-bottom: 12px;">Scan your configured locations to find new or changed files. Run after adding files or enabling new locations.</p>
+          <div class="index-buttons-row" style="display: flex; gap: 10px;">
+            <button class="index-btn" onclick="indexNow('pdf')" title="Scan all document locations for new/changed PDFs">🔄 Scan Documents</button>
+            <button class="index-btn" onclick="indexNow('3d')" title="Scan all 3D model locations for new/changed files">🔄 Scan 3D Models</button>
           </div>
           <div class="index-status" id="pdfIndexStatus"></div>
           <div class="index-status" id="3dIndexStatus"></div>
@@ -3205,15 +3482,6 @@
           </div>
         </div>
         
-        <div class="settings-section">
-          <h3>🌐 Network Paths (SMB)</h3>
-          <div class="settings-field">
-            <label>Additional mount points (one per line)</label>
-            <textarea id="settingSmbPaths" rows="3" placeholder="/Volumes/NAS/Media&#10;/Volumes/Share"></textarea>
-            <button class="index-btn smb-index" onclick="indexNow('smb')" title="Index SMB paths now">🔄 Index SMB Paths</button>
-            <div class="index-status" id="smbIndexStatus"></div>
-          </div>
-        </div>
       </div>
       
       <!-- Advanced Tab -->
@@ -3411,7 +3679,7 @@
 
   <!-- SSH Key Help Modal -->
   <div class="dir-browser-overlay" id="sshKeyHelpModal">
-    <div class="dir-browser-modal" style="max-width: 600px;">
+    <div class="dir-browser-modal" style="max-width: 550px;">
       <div class="dir-browser-header">
         <h3>🔑 SSH Key Setup</h3>
         <button class="upload-close" onclick="closeSshKeyHelp()">×</button>
@@ -3420,44 +3688,73 @@
         <p style="margin-bottom: 16px;">SSH keys allow secure, password-free connections to remote servers.</p>
         
         <div id="sshKeyLoading" style="text-align: center; padding: 20px;">
-          Loading key status...
+          Loading available keys...
         </div>
         
-        <div id="sshKeyNotExists" style="display: none;">
-          <p style="margin-bottom: 16px;">No SSH key found. Click below to generate one:</p>
-          <button class="btn btn-primary" onclick="generateSshKey()" id="generateKeyBtn">🔑 Generate SSH Key</button>
-        </div>
-        
-        <div id="sshKeyExists" style="display: none;">
-          <h4 style="margin-bottom: 8px; color: #40c057;">✅ SSH Key Ready</h4>
-          <p style="margin-bottom: 12px; font-size: 0.9rem;">Key path: <code id="sshKeyPathDisplay">~/.ssh/dam_backup_key</code></p>
-          
-          <h4 style="margin-bottom: 8px;">Copy this public key to your remote server:</h4>
-          <div style="position: relative;">
-            <pre id="sshPublicKeyDisplay" style="background: var(--bg-primary); padding: 12px; border-radius: 6px; margin-bottom: 8px; overflow-x: auto; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all;"></pre>
-            <button onclick="copySshPublicKey()" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 0.75rem; background: var(--accent); border: none; border-radius: 4px; color: white; cursor: pointer;">📋 Copy</button>
+        <div id="sshKeyOptions" style="display: none;">
+          <!-- Select Existing Key -->
+          <div class="form-row" style="margin-bottom: 16px;">
+            <label style="font-weight: 500; margin-bottom: 6px; display: block;">Use Existing Key</label>
+            <select id="sshKeySelect" onchange="onSshKeySelected()" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-primary); color: var(--text); font-size: 0.95rem;">
+              <option value="">-- Select a key --</option>
+            </select>
           </div>
           
-          <h4 style="margin-bottom: 8px; margin-top: 16px;">On your remote server, run:</h4>
-          <pre style="background: var(--bg-primary); padding: 12px; border-radius: 6px; margin-bottom: 16px; overflow-x: auto; font-size: 0.85rem;">echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys</pre>
+          <!-- Or Create New -->
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <span style="color: var(--text-secondary);">— or —</span>
+            <button class="btn btn-primary" onclick="generateSshKey()" id="generateKeyBtn">➕ Create New Key</button>
+          </div>
           
-          <p style="color: var(--text-secondary); font-size: 0.85rem;">Or use: <code>ssh-copy-id -i ~/.ssh/dam_backup_key user@your-server.com</code></p>
+          <!-- Selected Key Info (shown when key selected) -->
+          <div id="sshKeyInfo" style="display: none; background: var(--bg-primary); border-radius: 8px; padding: 16px; border: 1px solid var(--border);">
+            <h4 style="margin: 0 0 12px 0; color: #40c057;">✅ Key Selected</h4>
+            <p style="font-size: 0.9rem; margin-bottom: 12px;">Path: <code id="sshKeyPathDisplay"></code></p>
+            
+            <label style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; display: block;">Public key (copy to remote server's ~/.ssh/authorized_keys):</label>
+            <div style="position: relative;">
+              <pre id="sshPublicKeyDisplay" style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; margin: 0; overflow-x: auto; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 80px;"></pre>
+              <button onclick="copySshPublicKey()" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 0.75rem; background: var(--accent); border: none; border-radius: 4px; color: white; cursor: pointer;">📋 Copy</button>
+            </div>
+          </div>
+          
+          <!-- Test Connection -->
+          <div id="sshTestSection" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+            <label style="font-weight: 500; margin-bottom: 6px; display: block;">Test Connection</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="sshTestHost" placeholder="user@hostname" style="flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-primary); color: var(--text);" />
+              <button class="btn btn-test-connection" onclick="testSshConnectionFromModal()" id="sshTestBtn">🔗 Test</button>
+            </div>
+            <div id="sshTestResult" style="margin-top: 8px; font-size: 0.9rem;"></div>
+          </div>
         </div>
         
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
-          📚 <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent" target="_blank" style="color: var(--accent);">Full SSH Key Guide (GitHub Docs)</a>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
+          📚 <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh" target="_blank" style="color: var(--accent);">SSH Key Guide</a>
         </p>
       </div>
       <div class="dir-browser-footer">
-        <button class="btn btn-secondary" onclick="closeSshKeyHelp()">Close</button>
+        <button class="btn btn-secondary" onclick="closeSshKeyHelp()">Cancel</button>
         <button class="btn btn-primary" onclick="useSshKey()" id="useSshKeyBtn" style="display: none;">Use This Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Location Confirmation -->
+  <div class="delete-confirm-overlay" id="deleteConfirmOverlay">
+    <div class="delete-confirm-modal">
+      <h3>⚠️ Delete Location?</h3>
+      <p>Are you sure you want to delete "<span id="deleteLocName"></span>"?<br><br>This will remove the location from DAM but won't delete any files.</p>
+      <div class="buttons">
+        <button class="btn btn-secondary" onclick="cancelDelete()">Cancel</button>
+        <button class="btn btn-primary" style="background: #fa5252;" onclick="executeDelete()">Yes, Delete</button>
       </div>
     </div>
   </div>
 
   <!-- Add Asset Location Modal -->
   <div class="dir-browser-overlay" id="addLocationModal">
-    <div class="dir-browser-modal" style="max-width: 500px;">
+    <div class="dir-browser-modal" style="max-width: 600px; width: 95%;">
       <div class="dir-browser-header">
         <h3>📁 Add Asset Location</h3>
         <button class="upload-close" onclick="closeAddLocationModal()">×</button>
@@ -3480,10 +3777,10 @@
           <label>Location Type</label>
           <select id="locType" onchange="toggleLocationFields()">
             <option value="local">Local Path</option>
-            <option value="mount">Local Mount (SMB/NFS)</option>
-            <option value="ssh">Remote SSH</option>
-            <option value="sftp">Remote SFTP</option>
+            <option value="local_mount">Network Mount (SMB/NFS/AFP)</option>
+            <option value="remote_sftp" id="optionSftp">Remote SFTP (Linux only)</option>
           </select>
+          <p class="field-hint" id="sftpDisabledHint" style="display: none; color: #ff6b6b;">SFTP indexing requires sshfs, which needs kernel extensions on macOS/Windows. Only available on Linux.</p>
         </div>
         
         <div class="form-row">
@@ -3500,11 +3797,70 @@
         </div>
         
         <div class="form-row" id="locSshKeyRow" style="display: none;">
-          <label>SSH Key (optional)</label>
-          <div class="input-with-btn">
-            <input type="text" id="locSshKey" placeholder="~/.ssh/id_rsa (leave empty for SSH config)" />
-            <button class="btn btn-secondary" onclick="showSshKeyHelp()">❓</button>
+          <label>SSH Authentication</label>
+          
+          <!-- Option selector -->
+          <div class="ssh-auth-options">
+            <label class="ssh-auth-option">
+              <input type="radio" name="sshAuthMethod" value="existing" onchange="onSshAuthMethodChange()">
+              <span>🔑 Use Existing Key</span>
+            </label>
+            <label class="ssh-auth-option">
+              <input type="radio" name="sshAuthMethod" value="create" onchange="onSshAuthMethodChange()">
+              <span>➕ Create New Key</span>
+            </label>
+            <label class="ssh-auth-option advanced">
+              <input type="radio" name="sshAuthMethod" value="config" onchange="onSshAuthMethodChange()">
+              <span>⚙️ Advanced: SSH Config</span>
+            </label>
           </div>
+          
+          <!-- Use Existing Key Panel -->
+          <div id="sshExistingPanel" class="ssh-auth-panel" style="display: none;">
+            <select id="locSshKeySelect" onchange="onLocKeySelected()" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-primary); color: var(--text); margin-bottom: 8px;">
+              <option value="">-- Select a key --</option>
+            </select>
+            <div id="locKeyInfo" style="display: none; background: var(--bg-card); padding: 12px; border-radius: 6px; margin-top: 8px;">
+              <p style="font-size: 0.85rem; margin-bottom: 8px;">📋 Copy this public key to your remote server's <code>~/.ssh/authorized_keys</code>:</p>
+              <pre id="locPublicKeyDisplay" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; font-size: 0.75rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 60px;"></pre>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="copyLocPublicKey()">📋 Copy Key</button>
+                <a href="https://www.ssh.com/academy/ssh/authorized-keys-file" target="_blank" style="font-size: 0.8rem; color: var(--accent); align-self: center;">📖 How to add to authorized_keys</a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Create New Key Panel -->
+          <div id="sshCreatePanel" class="ssh-auth-panel" style="display: none;">
+            <div id="locCreateKeyStatus">
+              <button type="button" class="btn btn-primary" onclick="createNewKeyForLocation()">🔑 Generate New SSH Key</button>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px;">This will create a new key pair in <code>~/.ssh/</code></p>
+            </div>
+            <div id="locNewKeyInfo" style="display: none; background: var(--bg-card); padding: 12px; border-radius: 6px; margin-top: 8px;">
+              <p style="font-size: 0.85rem; color: #40c057; margin-bottom: 8px;">✅ Key created! Copy this public key to your remote server:</p>
+              <pre id="locNewPublicKeyDisplay" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; font-size: 0.75rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 60px;"></pre>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="copyLocNewPublicKey()">📋 Copy Key</button>
+                <a href="https://www.ssh.com/academy/ssh/authorized-keys-file" target="_blank" style="font-size: 0.8rem; color: var(--accent); align-self: center;">📖 How to add to authorized_keys</a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- SSH Config Panel -->
+          <div id="sshConfigPanel" class="ssh-auth-panel" style="display: none;">
+            <div style="background: var(--bg-card); padding: 12px; border-radius: 6px;">
+              <p style="font-size: 0.9rem; margin-bottom: 8px;">SSH Config lets you define connection settings in <code>~/.ssh/config</code>.</p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Your SSH Host above can be a config alias (e.g., "myserver" instead of "user@192.168.1.100").</p>
+              <a href="https://www.ssh.com/academy/ssh/config" target="_blank" class="btn btn-secondary btn-sm">📖 SSH Config Guide</a>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row" id="locTestConnectionRow" style="display: none;">
+          <button type="button" class="btn btn-test-connection" onclick="testLocationConnection()" id="locTestConnBtn">
+            🔗 Test Connection
+          </button>
+          <span class="test-result" id="locTestResult"></span>
         </div>
         
         <div class="form-row">
@@ -5219,17 +5575,27 @@
     let browserTargetSetting = null;
     let browserTargetInput = null;
     let assetLocations = [];
+    let hostPlatform = 'unknown';
     
     async function openSettings() {
-      // Load current settings
+      // Check platform and configure UI accordingly
       try {
-        const res = await fetch('/api/settings');
-        const settings = await res.json();
+        const healthRes = await fetch('/api/system/health');
+        const health = await healthRes.json();
+        hostPlatform = health.platform || 'unknown';
         
-        document.getElementById('settingSmbPaths').value = 
-          settings.smb_paths ? JSON.parse(settings.smb_paths).join('\n') : '';
+        // Hide SFTP option on macOS/Windows (requires sshfs which needs kernel extensions)
+        const sftpOption = document.getElementById('optionSftp');
+        const sftpHint = document.getElementById('sftpDisabledHint');
+        if (hostPlatform === 'darwin' || hostPlatform === 'win32') {
+          sftpOption.style.display = 'none';
+          sftpHint.style.display = 'block';
+        } else {
+          sftpOption.style.display = '';
+          sftpHint.style.display = 'none';
+        }
       } catch (e) {
-        console.error('Failed to load settings:', e);
+        console.error('Failed to check platform:', e);
       }
       
       document.getElementById('settingsModal').classList.add('active');
@@ -5273,7 +5639,7 @@
     function renderLocationItem(loc) {
       const icon = loc.asset_type === 'documents' ? '📄' : '🎲';
       const typeLabel = loc.asset_type === 'documents' ? 'Documents' : 'Models';
-      const locTypeLabels = { local: 'Local', mount: 'Mount', ssh: 'SSH', sftp: 'SFTP' };
+      const locTypeLabels = { local: 'Local', local_mount: 'Network Mount', remote_sftp: 'SFTP' };
       const disabledClass = loc.enabled ? '' : 'disabled';
       
       return `
@@ -5289,12 +5655,174 @@
             </div>
           </div>
           <div class="location-actions">
-            <button onclick="testAssetLocation('${loc.id}')" title="Test connection">🔗</button>
-            <button onclick="toggleLocationEnabled('${loc.id}')" title="${loc.enabled ? 'Disable' : 'Enable'}">${loc.enabled ? '⏸️' : '▶️'}</button>
-            <button onclick="deleteAssetLocation('${loc.id}')" title="Delete">🗑️</button>
+            <button class="action-test" onclick="testAssetLocation('${loc.id}')" title="Test connection">🔗 Test</button>
+            <button class="action-index" onclick="indexLocation('${loc.id}', '${loc.asset_type}')" title="Index this location">🔄 Index</button>
+            ${loc.location_type === 'local_mount' ? `<button class="action-remount" onclick="remountLocation('${loc.id}', '${escapeHtml(loc.path)}')" title="Remount this volume">🔌 Remount</button>` : ''}
+            <div class="location-edit-wrapper">
+              <button onclick="toggleLocationEditMenu(event, '${loc.id}')">⚙️ Edit</button>
+              <div class="location-edit-menu" id="editMenu-${loc.id}">
+                <button onclick="editLocationPath('${loc.id}')">📝 Change Path</button>
+                <button onclick="toggleLocationEnabled('${loc.id}')">${loc.enabled ? '⏸️ Disable' : '▶️ Enable'}</button>
+                <div class="menu-divider"></div>
+                <button class="danger" onclick="confirmDeleteLocation('${loc.id}', '${escapeHtml(loc.name)}')">🗑️ Delete</button>
+              </div>
+            </div>
           </div>
         </div>
       `;
+    }
+    
+    // Toggle edit menu
+    function toggleLocationEditMenu(event, locId) {
+      event.stopPropagation();
+      const menu = document.getElementById('editMenu-' + locId);
+      const wasOpen = menu.classList.contains('open');
+      
+      // Close all menus
+      document.querySelectorAll('.location-edit-menu.open').forEach(m => m.classList.remove('open'));
+      
+      if (!wasOpen) {
+        menu.classList.add('open');
+        // Close on outside click
+        setTimeout(() => {
+          document.addEventListener('click', closeAllEditMenus, { once: true });
+        }, 0);
+      }
+    }
+    
+    function closeAllEditMenus() {
+      document.querySelectorAll('.location-edit-menu.open').forEach(m => m.classList.remove('open'));
+    }
+    
+    // Index a specific location
+    async function indexLocation(locId, assetType) {
+      const type = assetType === 'documents' ? 'pdf' : '3d';
+      
+      // Find the location to get its path
+      const loc = assetLocations.find(l => l.id === locId);
+      if (!loc) {
+        showToast('Location not found', 'error');
+        return;
+      }
+      
+      showToast(`Indexing ${loc.name}...`, 'info');
+      
+      try {
+        const response = await fetch('/api/index', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, path: loc.path })
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+          if (data.status === 'suspended') {
+            showToast(`⏸️ ${data.message}`, 'warning');
+          } else {
+            showToast('✅ Indexing started!', 'success');
+          }
+        } else {
+          showToast(data.error || 'Failed to start indexing', 'error');
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    }
+    
+    // Edit location path
+    function editLocationPath(locId) {
+      closeAllEditMenus();
+      const loc = assetLocations.find(l => l.id === locId);
+      if (!loc) return;
+      
+      const newPath = prompt('Enter new path:', loc.path);
+      if (newPath && newPath !== loc.path) {
+        updateLocationPath(locId, newPath);
+      }
+    }
+    
+    async function updateLocationPath(locId, newPath) {
+      try {
+        const response = await fetch(`/api/asset-locations/${locId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: newPath })
+        });
+        
+        if (response.ok) {
+          showToast('Path updated!', 'success');
+          await loadAssetLocations();
+        } else {
+          const data = await response.json();
+          showToast(data.error || 'Failed to update', 'error');
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    }
+    
+    // Delete confirmation
+    let pendingDeleteId = null;
+    
+    function confirmDeleteLocation(locId, locName) {
+      closeAllEditMenus();
+      pendingDeleteId = locId;
+      document.getElementById('deleteLocName').textContent = locName;
+      document.getElementById('deleteConfirmOverlay').classList.add('active');
+    }
+    
+    function cancelDelete() {
+      pendingDeleteId = null;
+      document.getElementById('deleteConfirmOverlay').classList.remove('active');
+    }
+    
+    async function executeDelete() {
+      if (!pendingDeleteId) return;
+      
+      try {
+        const response = await fetch(`/api/asset-locations/${pendingDeleteId}`, { method: 'DELETE' });
+        
+        if (response.ok) {
+          showToast('Location deleted', 'success');
+          await loadAssetLocations();
+        } else {
+          const data = await response.json();
+          showToast(data.error || 'Failed to delete', 'error');
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+      
+      cancelDelete();
+    }
+    
+    // Test location connectivity
+    async function testAssetLocation(locId) {
+      try {
+        const response = await fetch(`/api/asset-locations/${locId}/test`, { method: 'POST' });
+        const data = await response.json();
+        showToast(data.success ? '✅ Connection successful!' : `❌ ${data.error || 'Connection failed'}`, data.success ? 'success' : 'error');
+      } catch (e) {
+        showToast('Test failed: ' + e.message, 'error');
+      }
+    }
+    
+    // Remount a network volume
+    async function remountLocation(locId, path) {
+      showToast('🔌 Attempting to remount...', 'info');
+      
+      try {
+        const response = await fetch(`/api/asset-locations/${locId}/remount`, { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+          showToast('✅ Volume remounted successfully!', 'success');
+        } else {
+          showToast(`❌ Remount failed: ${data.error || 'Unknown error'}`, 'error');
+        }
+      } catch (e) {
+        showToast('Remount failed: ' + e.message, 'error');
+      }
     }
     
     function showAddLocationModal() {
@@ -5304,9 +5832,11 @@
       document.getElementById('locType').value = 'local';
       document.getElementById('locPath').value = '';
       document.getElementById('locSshHost').value = '';
-      document.getElementById('locSshKey').value = '';
       document.getElementById('locEnabled').checked = true;
       document.getElementById('locValidationMsg').textContent = '';
+      
+      // Reset SSH auth state
+      resetSshAuthState();
       
       toggleLocationFields();
       document.getElementById('addLocationModal').classList.add('active');
@@ -5316,22 +5846,254 @@
       document.getElementById('addLocationModal').classList.remove('active');
     }
     
+    // Track selected key path for location modal
+    let locSelectedKeyPath = null;
+    let locNewKeyPath = null;
+    
     function toggleLocationFields() {
       const locType = document.getElementById('locType').value;
-      const isRemote = locType === 'ssh' || locType === 'sftp';
+      const isRemote = locType === 'remote_sftp';
       
       document.getElementById('locSshHostRow').style.display = isRemote ? 'block' : 'none';
       document.getElementById('locSshKeyRow').style.display = isRemote ? 'block' : 'none';
       document.getElementById('locBrowseBtn').style.display = isRemote ? 'none' : 'inline-block';
       
+      // Reset SSH auth state
+      if (isRemote) {
+        resetSshAuthState();
+        loadLocationSshKeys();
+      }
+      
+      // Test connection visibility is controlled by auth method selection
+      updateTestConnectionVisibility();
+      
       // Update path placeholder
       const pathInput = document.getElementById('locPath');
-      if (locType === 'sftp') {
+      if (isRemote) {
         pathInput.placeholder = '/remote/path/to/assets';
-      } else if (locType === 'ssh') {
-        pathInput.placeholder = '/remote/path/to/assets';
+      } else if (locType === 'local_mount') {
+        pathInput.placeholder = '/Volumes/ShareName/path';
       } else {
         pathInput.placeholder = '/path/to/assets';
+      }
+    }
+    
+    function resetSshAuthState() {
+      // Clear radio selections
+      document.querySelectorAll('input[name="sshAuthMethod"]').forEach(r => r.checked = false);
+      
+      // Hide all panels
+      document.getElementById('sshExistingPanel').style.display = 'none';
+      document.getElementById('sshCreatePanel').style.display = 'none';
+      document.getElementById('sshConfigPanel').style.display = 'none';
+      document.getElementById('locKeyInfo').style.display = 'none';
+      document.getElementById('locNewKeyInfo').style.display = 'none';
+      document.getElementById('locCreateKeyStatus').style.display = 'block';
+      
+      // Reset state
+      locSelectedKeyPath = null;
+      locNewKeyPath = null;
+      document.getElementById('locSshKeySelect').value = '';
+      document.getElementById('locTestResult').textContent = '';
+    }
+    
+    function onSshAuthMethodChange() {
+      const method = document.querySelector('input[name="sshAuthMethod"]:checked')?.value;
+      
+      // Hide all panels
+      document.getElementById('sshExistingPanel').style.display = 'none';
+      document.getElementById('sshCreatePanel').style.display = 'none';
+      document.getElementById('sshConfigPanel').style.display = 'none';
+      
+      // Show selected panel
+      if (method === 'existing') {
+        document.getElementById('sshExistingPanel').style.display = 'block';
+      } else if (method === 'create') {
+        document.getElementById('sshCreatePanel').style.display = 'block';
+      } else if (method === 'config') {
+        document.getElementById('sshConfigPanel').style.display = 'block';
+      }
+      
+      updateTestConnectionVisibility();
+    }
+    
+    function updateTestConnectionVisibility() {
+      const locType = document.getElementById('locType').value;
+      const method = document.querySelector('input[name="sshAuthMethod"]:checked')?.value;
+      const isRemote = locType === 'remote_sftp';
+      
+      // Show test button if:
+      // - Remote location AND
+      // - (existing key selected OR new key created OR config selected)
+      const hasValidConfig = isRemote && (
+        (method === 'existing' && locSelectedKeyPath) ||
+        (method === 'create' && locNewKeyPath) ||
+        method === 'config'
+      );
+      
+      document.getElementById('locTestConnectionRow').style.display = hasValidConfig ? 'flex' : 'none';
+    }
+    
+    // Load SSH keys into the location dropdown
+    async function loadLocationSshKeys() {
+      const select = document.getElementById('locSshKeySelect');
+      select.innerHTML = '<option value="">-- Select a key --</option>';
+      
+      try {
+        const response = await fetch('/api/ssh/keys');
+        const data = await response.json();
+        
+        if (data.keys && data.keys.length > 0) {
+          data.keys.forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key.path;
+            opt.textContent = `${key.name} (${key.type})`;
+            select.appendChild(opt);
+          });
+        }
+      } catch (e) {
+        console.error('Error loading SSH keys:', e);
+      }
+    }
+    
+    // When a key is selected from dropdown
+    async function onLocKeySelected() {
+      const select = document.getElementById('locSshKeySelect');
+      const keyPath = select.value;
+      
+      if (!keyPath) {
+        locSelectedKeyPath = null;
+        document.getElementById('locKeyInfo').style.display = 'none';
+        updateTestConnectionVisibility();
+        return;
+      }
+      
+      locSelectedKeyPath = keyPath;
+      
+      // Load and display public key
+      try {
+        const response = await fetch(`/api/ssh/key/public?path=${encodeURIComponent(keyPath)}`);
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('locPublicKeyDisplay').textContent = data.public_key || 'Unable to load public key';
+        } else {
+          document.getElementById('locPublicKeyDisplay').textContent = 'Public key file: ' + keyPath + '.pub';
+        }
+      } catch (e) {
+        document.getElementById('locPublicKeyDisplay').textContent = 'Public key file: ' + keyPath + '.pub';
+      }
+      
+      document.getElementById('locKeyInfo').style.display = 'block';
+      updateTestConnectionVisibility();
+    }
+    
+    function copyLocPublicKey() {
+      const text = document.getElementById('locPublicKeyDisplay').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Public key copied!', 'success');
+      }).catch(() => {
+        showToast('Failed to copy', 'error');
+      });
+    }
+    
+    function copyLocNewPublicKey() {
+      const text = document.getElementById('locNewPublicKeyDisplay').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Public key copied!', 'success');
+      }).catch(() => {
+        showToast('Failed to copy', 'error');
+      });
+    }
+    
+    // Create new SSH key for location
+    async function createNewKeyForLocation() {
+      const statusEl = document.getElementById('locCreateKeyStatus');
+      statusEl.innerHTML = '<p style="color: var(--text-secondary);">⏳ Generating key...</p>';
+      
+      try {
+        const response = await fetch('/api/ssh/key', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success || data.exists) {
+          locNewKeyPath = data.key_path;
+          
+          // Show the key info
+          document.getElementById('locNewPublicKeyDisplay').textContent = data.public_key || 'Key generated at ' + data.key_path;
+          document.getElementById('locCreateKeyStatus').style.display = 'none';
+          document.getElementById('locNewKeyInfo').style.display = 'block';
+          
+          // Also refresh the existing keys dropdown
+          await loadLocationSshKeys();
+          
+          showToast('SSH key ready!', 'success');
+          updateTestConnectionVisibility();
+        } else {
+          statusEl.innerHTML = `
+            <button type="button" class="btn btn-primary" onclick="createNewKeyForLocation()">🔑 Generate New SSH Key</button>
+            <p style="font-size: 0.85rem; color: #fa5252; margin-top: 8px;">❌ ${data.error || 'Failed to generate key'}</p>
+          `;
+        }
+      } catch (e) {
+        statusEl.innerHTML = `
+          <button type="button" class="btn btn-primary" onclick="createNewKeyForLocation()">🔑 Generate New SSH Key</button>
+          <p style="font-size: 0.85rem; color: #fa5252; margin-top: 8px;">❌ Error: ${e.message}</p>
+        `;
+      }
+    }
+    
+    // Get the currently selected SSH key path for saving
+    function getSelectedSshKeyPath() {
+      const method = document.querySelector('input[name="sshAuthMethod"]:checked')?.value;
+      
+      if (method === 'existing') {
+        return locSelectedKeyPath || '';
+      } else if (method === 'create') {
+        return locNewKeyPath || '';
+      }
+      // For 'config' method, return empty - SSH will use system config
+      return '';
+    }
+    
+    // Test location connection
+    async function testLocationConnection() {
+      const resultEl = document.getElementById('locTestResult');
+      const btn = document.getElementById('locTestConnBtn');
+      
+      const host = document.getElementById('locSshHost').value.trim();
+      const keyPath = getSelectedSshKeyPath();  // Uses auth method selection
+      const remotePath = document.getElementById('locPath').value.trim();
+      
+      if (!host) {
+        resultEl.className = 'test-result error';
+        resultEl.textContent = '❌ SSH host required';
+        return;
+      }
+      
+      btn.disabled = true;
+      resultEl.className = 'test-result loading';
+      resultEl.textContent = '⏳ Testing...';
+      
+      try {
+        const response = await fetch('/api/ssh/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host, key_path: keyPath || null })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          resultEl.className = 'test-result success';
+          resultEl.textContent = '✅ Connection successful!';
+        } else {
+          resultEl.className = 'test-result error';
+          resultEl.textContent = '❌ ' + (data.error || 'Connection failed');
+        }
+      } catch (e) {
+        resultEl.className = 'test-result error';
+        resultEl.textContent = '❌ ' + e.message;
+      } finally {
+        btn.disabled = false;
       }
     }
     
@@ -5350,7 +6112,7 @@
         location_type: document.getElementById('locType').value,
         path: document.getElementById('locPath').value.trim(),
         ssh_host: document.getElementById('locSshHost').value.trim(),
-        ssh_key: document.getElementById('locSshKey').value.trim(),
+        ssh_key_path: getSelectedSshKeyPath(),  // Uses new auth method selection
         enabled: document.getElementById('locEnabled').checked
       };
       
@@ -5366,7 +6128,7 @@
         return;
       }
       
-      const isRemote = locationData.location_type === 'ssh' || locationData.location_type === 'sftp';
+      const isRemote = locationData.location_type === 'remote_sftp';
       if (isRemote && !locationData.ssh_host) {
         msgEl.textContent = '❌ SSH host is required for remote locations';
         msgEl.style.color = '#ff6b6b';
@@ -5460,42 +6222,13 @@
     }
     
     async function refreshVolumeStatus() {
-      const container = document.getElementById('volumeStatusContainer');
-      container.innerHTML = '<div class="volume-status-loading">Checking volumes...</div>';
-      
+      // Check volume status for index button states
       try {
         const res = await fetch('/api/system/volume-status');
         const data = await res.json();
-        
-        let html = '';
-        const volumeNames = { pdfs: '📄 PDFs', models: '🎲 3D Models' };
-        
-        for (const [name, status] of Object.entries(data.volumes)) {
-          const displayName = volumeNames[name] || name;
-          const indicatorClass = status.available ? 'available' : 'unavailable';
-          const statusText = status.available ? '✓ Available' : '✗ Unavailable';
-          
-          html += `
-            <div class="volume-status-item">
-              <div class="volume-status-indicator ${indicatorClass}"></div>
-              <div class="volume-status-info">
-                <div class="volume-status-name">${displayName}</div>
-                <div class="volume-status-path" title="${status.path}">${status.path}</div>
-                ${!status.available && status.reason ? 
-                  `<div class="volume-status-reason">${status.reason}</div>` : ''}
-              </div>
-            </div>
-          `;
-        }
-        
-        container.innerHTML = html;
-        
-        // Update index button states based on volume status
         updateIndexButtonStates(data);
-        
       } catch (e) {
         console.error('Failed to check volume status:', e);
-        container.innerHTML = '<div class="volume-status-loading" style="color: #fa5252;">Failed to check volume status</div>';
       }
     }
     
@@ -5510,13 +6243,11 @@
         updateIndexButtonSuspended('pdf', false);
       }
       
-      // Update 3D/SMB index buttons
+      // Update 3D index button
       if (volumeStatus.volumes.models && !volumeStatus.volumes.models.available) {
         updateIndexButtonSuspended('3d', true, volumeStatus.volumes.models.reason);
-        updateIndexButtonSuspended('smb', true, volumeStatus.volumes.models.reason);
       } else {
         updateIndexButtonSuspended('3d', false);
-        updateIndexButtonSuspended('smb', false);
       }
     }
     
@@ -5524,14 +6255,13 @@
       // Find the index button for this type
       const buttonSelector = {
         'pdf': 'button[onclick="indexNow(\'pdf\')"]',
-        '3d': 'button[onclick="indexNow(\'3d\')"]',
-        'smb': 'button[onclick="indexNow(\'smb\')"]'
+        '3d': 'button[onclick="indexNow(\'3d\')"]'
       }[type];
       
       const btn = document.querySelector(buttonSelector);
       if (!btn) return;
       
-      const originalText = { 'pdf': '🔄 Index', '3d': '🔄 Index', 'smb': '🔄 Index SMB Paths' }[type];
+      const originalText = { 'pdf': '🔄 Scan Documents', '3d': '🔄 Scan 3D Models' }[type];
       
       if (isSuspended) {
         btn.classList.add('suspended');
@@ -5540,7 +6270,7 @@
       } else {
         btn.classList.remove('suspended');
         btn.innerHTML = originalText;
-        btn.title = type === 'smb' ? 'Index SMB paths now' : `Index ${type.toUpperCase()}s now`;
+        btn.title = `Scan all ${type === 'pdf' ? 'document' : '3D model'} locations`;
       }
     }
     
@@ -5579,31 +6309,9 @@
     }
     
     async function saveSettings() {
-      const smbPaths = document.getElementById('settingSmbPaths').value
-        .split('\n')
-        .map(p => p.trim())
-        .filter(p => p);
-      
-      const settings = {
-        smb_paths: JSON.stringify(smbPaths)
-      };
-      
-      try {
-        const res = await fetch('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings)
-        });
-        
-        if (res.ok) {
-          closeSettings();
-          showToast('Settings saved!', 'success');
-        } else {
-          showToast('Failed to save settings', 'error');
-        }
-      } catch (e) {
-        showToast('Error saving settings: ' + e.message, 'error');
-      }
+      // Settings are now saved per-feature (Asset Locations, Backup Policies, etc.)
+      closeSettings();
+      showToast('Settings saved!', 'success');
     }
     
     async function browseDirectory(settingKey, inputId) {
@@ -5674,15 +6382,6 @@
           return;
         }
         path = modelLocations.map(l => l.path).join(',');
-      } else if (type === 'smb') {
-        const paths = document.getElementById('settingSmbPaths').value
-          .split('\n').map(p => p.trim()).filter(p => p);
-        if (paths.length === 0) {
-          statusEl.className = 'index-status error';
-          statusEl.textContent = '❌ No SMB paths configured';
-          return;
-        }
-        path = paths.join(',');
       }
       
       if (!path) {
@@ -6998,37 +7697,87 @@
     // Alias for backward compatibility
     function toggleNetworkFields() { toggleDestinationFields(); }
     
+    // Track selected SSH key for the modal
+    let selectedSshKeyPath = null;
+    let sshKeysCache = [];
+    
     /**
-     * Show SSH key help modal and load key status.
+     * Show SSH key help modal and load available keys.
      */
     async function showSshKeyHelp() {
       document.getElementById('sshKeyHelpModal').classList.add('active');
+      selectedSshKeyPath = null;
       
       // Show loading state
       document.getElementById('sshKeyLoading').style.display = 'block';
-      document.getElementById('sshKeyNotExists').style.display = 'none';
-      document.getElementById('sshKeyExists').style.display = 'none';
+      document.getElementById('sshKeyOptions').style.display = 'none';
+      document.getElementById('sshKeyInfo').style.display = 'none';
       document.getElementById('useSshKeyBtn').style.display = 'none';
+      document.getElementById('sshTestResult').innerHTML = '';
       
       try {
-        const response = await fetch('/api/ssh/key');
+        // Load all available keys
+        const response = await fetch('/api/ssh/keys');
         const data = await response.json();
+        sshKeysCache = data.keys || [];
+        
+        // Populate dropdown
+        const select = document.getElementById('sshKeySelect');
+        select.innerHTML = '<option value="">-- Select a key --</option>';
+        
+        sshKeysCache.forEach(key => {
+          const opt = document.createElement('option');
+          opt.value = key.path;
+          opt.textContent = `${key.name} (${key.type})${key.comment ? ' - ' + key.comment : ''}`;
+          select.appendChild(opt);
+        });
         
         document.getElementById('sshKeyLoading').style.display = 'none';
+        document.getElementById('sshKeyOptions').style.display = 'block';
         
-        if (data.exists && data.public_key) {
-          // Key exists - show it
-          document.getElementById('sshKeyExists').style.display = 'block';
-          document.getElementById('sshKeyPathDisplay').textContent = data.key_path;
-          document.getElementById('sshPublicKeyDisplay').textContent = data.public_key;
-          document.getElementById('useSshKeyBtn').style.display = 'inline-block';
+      } catch (e) {
+        document.getElementById('sshKeyLoading').textContent = '❌ Error loading keys';
+      }
+    }
+    
+    /**
+     * Handle key selection from dropdown.
+     */
+    async function onSshKeySelected() {
+      const select = document.getElementById('sshKeySelect');
+      const path = select.value;
+      
+      if (!path) {
+        document.getElementById('sshKeyInfo').style.display = 'none';
+        document.getElementById('useSshKeyBtn').style.display = 'none';
+        selectedSshKeyPath = null;
+        return;
+      }
+      
+      selectedSshKeyPath = path;
+      
+      // Find key in cache to get public key
+      const key = sshKeysCache.find(k => k.path === path);
+      document.getElementById('sshKeyPathDisplay').textContent = path;
+      
+      // Load public key
+      try {
+        const pubPath = path + '.pub';
+        // We need to fetch the public key content - use a simple endpoint or read from cache
+        // For now, show the path and let user know
+        const pubResponse = await fetch(`/api/ssh/key/public?path=${encodeURIComponent(path)}`);
+        if (pubResponse.ok) {
+          const pubData = await pubResponse.json();
+          document.getElementById('sshPublicKeyDisplay').textContent = pubData.public_key || 'Unable to load public key';
         } else {
-          // No key - show generate button
-          document.getElementById('sshKeyNotExists').style.display = 'block';
+          document.getElementById('sshPublicKeyDisplay').textContent = 'Public key file: ' + path + '.pub';
         }
       } catch (e) {
-        document.getElementById('sshKeyLoading').textContent = '❌ Error loading key status';
+        document.getElementById('sshPublicKeyDisplay').textContent = 'Public key file: ' + path + '.pub';
       }
+      
+      document.getElementById('sshKeyInfo').style.display = 'block';
+      document.getElementById('useSshKeyBtn').style.display = 'inline-block';
     }
     
     /**
@@ -7037,26 +7786,67 @@
     async function generateSshKey() {
       const btn = document.getElementById('generateKeyBtn');
       btn.disabled = true;
-      btn.textContent = '⏳ Generating...';
+      btn.textContent = '⏳ Creating...';
       
       try {
         const response = await fetch('/api/ssh/key', { method: 'POST' });
         const data = await response.json();
         
         if (response.ok && data.success) {
-          showToast('SSH key generated!', 'success');
-          // Reload to show the key
+          showToast('SSH key created!', 'success');
+          // Reload to show the new key in dropdown
           await showSshKeyHelp();
+          // Auto-select the new key
+          document.getElementById('sshKeySelect').value = data.key_path;
+          await onSshKeySelected();
         } else {
-          showToast(data.error || 'Failed to generate key', 'error');
+          showToast(data.error || 'Failed to create key', 'error');
           btn.disabled = false;
-          btn.textContent = '🔑 Generate SSH Key';
+          btn.textContent = '➕ Create New Key';
         }
       } catch (e) {
         showToast('Error: ' + e.message, 'error');
         btn.disabled = false;
-        btn.textContent = '🔑 Generate SSH Key';
+        btn.textContent = '➕ Create New Key';
       }
+    }
+    
+    /**
+     * Test SSH connection from the modal.
+     */
+    async function testSshConnectionFromModal() {
+      const host = document.getElementById('sshTestHost').value.trim();
+      const resultEl = document.getElementById('sshTestResult');
+      const btn = document.getElementById('sshTestBtn');
+      
+      if (!host) {
+        resultEl.innerHTML = '<span style="color: #ff6b6b;">Enter a host (e.g., user@hostname)</span>';
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Testing...';
+      resultEl.innerHTML = '<span style="color: var(--text-secondary);">Connecting...</span>';
+      
+      try {
+        const response = await fetch('/api/ssh/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host, key_path: selectedSshKeyPath })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          resultEl.innerHTML = '<span style="color: #40c057;">✅ Connection successful!</span>';
+        } else {
+          resultEl.innerHTML = `<span style="color: #ff6b6b;">❌ ${data.error || 'Connection failed'}</span>`;
+        }
+      } catch (e) {
+        resultEl.innerHTML = `<span style="color: #ff6b6b;">❌ Error: ${e.message}</span>`;
+      }
+      
+      btn.disabled = false;
+      btn.textContent = '🔗 Test';
     }
     
     /**
@@ -7075,7 +7865,11 @@
      * Use the SSH key - fill in the key path field.
      */
     function useSshKey() {
-      const keyPath = document.getElementById('sshKeyPathDisplay').textContent;
+      const keyPath = selectedSshKeyPath || document.getElementById('sshKeyPathDisplay').textContent;
+      if (!keyPath) {
+        showToast('Please select a key first', 'error');
+        return;
+      }
       document.getElementById('newPolicySshKey').value = keyPath;
       closeSshKeyHelp();
       showToast('SSH key path filled in', 'success');
