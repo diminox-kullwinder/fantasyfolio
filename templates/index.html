@@ -3292,6 +3292,16 @@
             <option value="current" id="advScopeCurrent">Current folder</option>
           </select>
         </div>
+        <div class="adv-search-group" id="advFormatGroup">
+          <label>File type:</label>
+          <select id="advSearchFormat">
+            <option value="">Any format</option>
+            <option value="stl">STL</option>
+            <option value="obj">OBJ</option>
+            <option value="3mf">3MF</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </div>
       </div>
       
       <div class="adv-search-terms" id="advSearchTerms">
@@ -3461,9 +3471,10 @@
         <div class="settings-section">
           <h3>🔄 Reindex Library</h3>
           <p style="font-size: 0.9rem; color: #888; margin-bottom: 12px;">Scan your configured locations to find new or changed files. Run after adding files or enabling new locations.</p>
-          <div class="index-buttons-row" style="display: flex; gap: 10px;">
+          <div class="index-buttons-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="index-btn" onclick="indexNow('pdf')" title="Scan all document locations for new/changed PDFs">🔄 Scan Documents</button>
             <button class="index-btn" onclick="indexNow('3d')" title="Scan all 3D model locations for new/changed files">🔄 Scan 3D Models</button>
+            <button class="index-btn" onclick="openIndexDirectoryPicker()" title="Browse and index a specific directory">📂 Index Directory...</button>
           </div>
           <div class="index-status" id="pdfIndexStatus"></div>
           <div class="index-status" id="3dIndexStatus"></div>
@@ -3941,6 +3952,210 @@
     </div>
   </div>
 
+  <!-- Column Browser for Index Directory -->
+  <div class="browser-overlay" id="columnBrowserModal">
+    <div class="column-browser-modal">
+      <div class="browser-header">
+        <h3>📂 Select Directory to Index</h3>
+        <button class="browser-close" onclick="closeColumnBrowser()">×</button>
+      </div>
+      <div class="column-browser-path" id="columnBrowserPath">Select an asset volume</div>
+      <div class="column-browser-container" id="columnBrowserContainer">
+        <div class="column-browser-columns" id="columnBrowserColumns">
+          <!-- Columns will be added here dynamically -->
+        </div>
+      </div>
+      <div class="browser-footer" style="flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 16px; margin-right: auto;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="forceIndexCheckbox"> Force re-index
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="regenThumbnailsCheckbox"> Regenerate thumbnails
+          </label>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" onclick="closeColumnBrowser()">Cancel</button>
+          <button class="btn btn-primary" onclick="confirmColumnBrowserSelection()" id="columnBrowserSelectBtn" disabled>▶ Index Selected</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .column-browser-modal {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 900px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .column-browser-path {
+      padding: 8px 16px;
+      background: rgba(0,0,0,0.2);
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .column-browser-container {
+      flex: 1;
+      overflow: hidden;
+      min-height: 300px;
+    }
+    .column-browser-columns {
+      display: flex;
+      height: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .column-browser-column {
+      min-width: 200px;
+      max-width: 250px;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .column-browser-column:last-child {
+      border-right: none;
+    }
+    .column-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .column-item:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .column-item.selected {
+      background: var(--accent);
+      color: white;
+    }
+    .column-item.volume {
+      font-weight: 600;
+    }
+    .column-item .icon {
+      font-size: 1.1rem;
+    }
+    .column-item .name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .column-item .arrow {
+      opacity: 0.5;
+    }
+    .column-header {
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      background: rgba(0,0,0,0.2);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  </style>
+
+  <!-- Context Menu for Folders -->
+  <div id="folderContextMenu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" onclick="contextMenuRefresh()">
+      <span>↻</span> Refresh
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="contextMenuForceIndex()">
+      <span>🔄</span> Force Full Index
+    </div>
+    <div class="context-menu-item" onclick="contextMenuForceThumbs()">
+      <span>🖼️</span> Force Regenerate Thumbnails
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="contextMenuShowStatus()">
+      <span>📊</span> Show Index Status...
+    </div>
+  </div>
+
+  <!-- Context Menu for Assets -->
+  <div id="assetContextMenu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" onclick="contextMenuViewAsset()">
+      <span>👁️</span> View Details
+    </div>
+    <div class="context-menu-item" onclick="contextMenuDownloadAsset()">
+      <span>⬇️</span> Download
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="contextMenuReindexAsset()">
+      <span>🔄</span> Re-index Asset
+    </div>
+    <div class="context-menu-item" onclick="contextMenuRegenThumb()">
+      <span>🖼️</span> Regenerate Thumbnail
+    </div>
+  </div>
+
+  <!-- Context Menu for Breadcrumbs (in info panels) -->
+  <div id="breadcrumbContextMenu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" onclick="breadcrumbContextNavigate()">
+      <span>📂</span> Go to Folder
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="breadcrumbContextForceIndex()">
+      <span>🔄</span> Force Re-index Folder
+    </div>
+    <div class="context-menu-item" onclick="breadcrumbContextForceThumbs()">
+      <span>🖼️</span> Regenerate Thumbnails
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="breadcrumbContextShowStatus()">
+      <span>📊</span> Show Index Status...
+    </div>
+  </div>
+
+  <style>
+    .context-menu {
+      position: fixed;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 0;
+      min-width: 200px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      z-index: 10000;
+    }
+    .context-menu-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+    }
+    .context-menu-item:hover {
+      background: var(--accent);
+      color: white;
+    }
+    .context-menu-item span {
+      width: 20px;
+      text-align: center;
+    }
+    .context-menu-divider {
+      border-top: 1px solid var(--border);
+      margin: 4px 0;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+
   <script>
     let currentView = 'grid';
     let currentFolder = null;
@@ -3951,8 +4166,74 @@
     let currentCollection = null;
     let currentFormat = null;  // STL, OBJ, 3MF filter for 3D models
     
+    // Context menu state
+    let contextMenuPath = null;
+    let contextMenuAssetId = null;
+    
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
+      // Close context menus on click outside
+      document.addEventListener('click', () => {
+        document.getElementById('folderContextMenu').style.display = 'none';
+        document.getElementById('assetContextMenu').style.display = 'none';
+        document.getElementById('breadcrumbContextMenu').style.display = 'none';
+      });
+      
+      // Add right-click handler for folder tree (PDFs)
+      document.getElementById('folderTree').addEventListener('contextmenu', (e) => {
+        const treeItem = e.target.closest('.tree-item');
+        if (treeItem) {
+          e.preventDefault();
+          contextMenuPath = treeItem.dataset.path || null;
+          showContextMenu('folderContextMenu', e.clientX, e.clientY);
+        }
+      });
+      
+      // Add right-click handler for 3D model folder tree
+      document.getElementById('modelFolderTree').addEventListener('contextmenu', (e) => {
+        const treeItem = e.target.closest('.tree-item');
+        if (treeItem) {
+          e.preventDefault();
+          contextMenuPath = treeItem.dataset.path || null;
+          showContextMenu('folderContextMenu', e.clientX, e.clientY);
+        }
+      });
+      
+      // Add right-click handler for asset cards (grid view) - event delegation
+      document.getElementById('assetGrid').addEventListener('contextmenu', (e) => {
+        const card = e.target.closest('.asset-card');
+        if (card && card.dataset.id) {
+          e.preventDefault();
+          e.stopPropagation();
+          contextMenuAssetId = parseInt(card.dataset.id, 10);
+          contextMenuAssetType = card.dataset.type || (contentType === '3d' ? 'model' : 'pdf');
+          showContextMenu('assetContextMenu', e.clientX, e.clientY);
+        }
+      });
+      
+      // Add right-click handler for asset rows (list view) - event delegation
+      document.getElementById('assetList').addEventListener('contextmenu', (e) => {
+        const row = e.target.closest('.asset-row');
+        if (row && row.dataset.id) {
+          e.preventDefault();
+          e.stopPropagation();
+          contextMenuAssetId = parseInt(row.dataset.id, 10);
+          contextMenuAssetType = row.dataset.type || (contentType === '3d' ? 'model' : 'pdf');
+          showContextMenu('assetContextMenu', e.clientX, e.clientY);
+        }
+      });
+      
+      // Add right-click handler for content search results (PDF search)
+      document.getElementById('contentResults').addEventListener('contextmenu', (e) => {
+        const card = e.target.closest('.asset-card');
+        if (card && card.dataset.id) {
+          e.preventDefault();
+          e.stopPropagation();
+          contextMenuAssetId = parseInt(card.dataset.id, 10);
+          contextMenuAssetType = card.dataset.type || 'pdf';
+          showContextMenu('assetContextMenu', e.clientX, e.clientY);
+        }
+      });
       loadStats();
       loadFolders();
       loadPublishers();
@@ -4226,7 +4507,7 @@
       // Grid view with preview thumbnails (cache-bust every 10s for pending renders)
       const cacheBust = Math.floor(Date.now() / 10000);
       grid.innerHTML = models.map(m => `
-        <div class="asset-card" onclick="show3dDetail(${m.id})" title="ID: ${m.id}">
+        <div class="asset-card" data-id="${m.id}" data-type="model" onclick="show3dDetail(${m.id})" title="ID: ${m.id}">
           <img class="asset-thumb model-grid-thumb" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
                onerror="console.error('Thumb failed for model ${m.id}:', this.src); this.src='/static/placeholder-3d.svg';" />
           <div class="asset-info">
@@ -4238,7 +4519,7 @@
       
       // List view
       list.innerHTML = models.map(m => `
-        <div class="asset-row" onclick="show3dDetail(${m.id})">
+        <div class="asset-row" data-id="${m.id}" data-type="model" onclick="show3dDetail(${m.id})">
           <img src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
                onerror="this.outerHTML='<div class=\\'model-icon-small\\'>🎲</div>'" />
           <div>
@@ -4836,6 +5117,7 @@
     
     function clearAdvancedSearch() {
       document.getElementById('advSearchScope').value = 'all';
+      document.getElementById('advSearchFormat').value = '';
       
       // Reset to single search term
       const container = document.getElementById('advSearchTerms');
@@ -4891,11 +5173,13 @@
       
       const scope = document.getElementById('advSearchScope').value;
       const folder = (scope === 'current' && currentFolder) ? currentFolder : null;
+      const format = document.getElementById('advSearchFormat').value;
       
       // Build search request
       const searchParams = new URLSearchParams();
       searchParams.set('terms', JSON.stringify(terms));
       if (folder) searchParams.set('folder', folder);
+      if (format) searchParams.set('format', format);
       
       const res = await fetch(`/api/search/advanced?${searchParams}`);
       const results = await res.json();
@@ -4912,9 +5196,18 @@
       document.getElementById('searchInput').value = queryDisplay;
       lastSearchQuery = queryDisplay;
       
-      // Render results (API uses 'assets'/'pages', fallback to 'metadata'/'content')
-      renderAssets(results.assets || results.metadata || []);
-      renderContentResults(results.pages || results.content || [], queryDisplay);
+      // Render results based on type
+      if (results.models && results.models.length > 0) {
+        // 3D model results
+        setContentType('3d');
+        render3dModels(results.models);
+        document.getElementById('contentResults').style.display = 'none';
+      } else {
+        // PDF results (API uses 'assets'/'pages', fallback to 'metadata'/'content')
+        setContentType('pdf');
+        renderAssets(results.assets || results.metadata || []);
+        renderContentResults(results.pages || results.content || [], queryDisplay);
+      }
       toggleView();
     }
     
@@ -5077,7 +5370,7 @@
       
       // Grid view for content results
       const gridHtml = assets.map(a => `
-        <div class="asset-card" onclick="showDetail(${a.asset_id})">
+        <div class="asset-card" data-id="${a.asset_id}" data-type="pdf" onclick="showDetail(${a.asset_id})">
           <img class="asset-thumb" src="/api/thumbnail/${a.asset_id}" alt="" loading="lazy" />
           <div class="asset-info">
             <div class="asset-title" title="${escapeHtml(a.title || a.filename)}">${escapeHtml(a.title || a.filename)}</div>
@@ -5133,7 +5426,7 @@
       
       // Grid view
       grid.innerHTML = assets.map(a => `
-        <div class="asset-card" onclick="showDetail(${a.id})">
+        <div class="asset-card" data-id="${a.id}" data-type="pdf" onclick="showDetail(${a.id})">
           <img class="asset-thumb" src="/api/thumbnail/${a.id}" alt="" loading="lazy" />
           <div class="asset-info">
             <div class="asset-title" title="${escapeHtml(a.title || a.filename)}">${escapeHtml(a.title || a.filename)}</div>
@@ -5144,7 +5437,7 @@
       
       // List view
       list.innerHTML = assets.map(a => `
-        <div class="asset-row" onclick="showDetail(${a.id})">
+        <div class="asset-row" data-id="${a.id}" data-type="pdf" onclick="showDetail(${a.id})">
           <img src="/api/thumbnail/${a.id}" alt="" loading="lazy" />
           <div>
             <div class="title">${escapeHtml(a.title || a.filename)}</div>
@@ -5540,7 +5833,8 @@
       const crumbs = parts.map((part, i) => {
         const fullPath = parts.slice(0, i + 1).join('/');
         // Use data attribute to avoid HTML escaping issues with & and quotes
-        return `<a href="#" class="breadcrumb-link" data-folder="${escapeHtml(fullPath)}" onclick="event.preventDefault(); event.stopPropagation(); navigateToFolder(this.dataset.folder)">${escapeHtml(part)}</a>`;
+        // Add oncontextmenu for right-click context menu
+        return `<a href="#" class="breadcrumb-link" data-folder="${escapeHtml(fullPath)}" onclick="event.preventDefault(); event.stopPropagation(); navigateToFolder(this.dataset.folder)" oncontextmenu="showBreadcrumbContextMenu(event, this.dataset.folder)">${escapeHtml(part)}</a>`;
       });
       return crumbs.join(' <span class="breadcrumb-sep">›</span> ');
     }
@@ -5663,6 +5957,10 @@
               <div class="location-edit-menu" id="editMenu-${loc.id}">
                 <button onclick="editLocationPath('${loc.id}')">📝 Change Path</button>
                 <button onclick="toggleLocationEnabled('${loc.id}')">${loc.enabled ? '⏸️ Disable' : '▶️ Enable'}</button>
+                <div class="menu-divider"></div>
+                <button onclick="forceIndexLocation('${loc.id}', '${escapeHtml(loc.path)}')">🔄 Force Full Index</button>
+                <button onclick="forceRegenThumbnails('${loc.id}', '${escapeHtml(loc.path)}')">🖼️ Force Regen Thumbnails</button>
+                <button onclick="showLocationStatus('${loc.id}')">📊 Index Status</button>
                 <div class="menu-divider"></div>
                 <button class="danger" onclick="confirmDeleteLocation('${loc.id}', '${escapeHtml(loc.name)}')">🗑️ Delete</button>
               </div>
@@ -6349,10 +6647,24 @@
     
     function closeBrowser() {
       document.getElementById('browserModal').classList.remove('active');
+      browserSelectCallback = null;  // Clear callback on close
     }
+    
+    let browserSelectCallback = null;  // Optional callback for browser selection
     
     function selectBrowserPath() {
       const path = document.getElementById('browserPath').textContent;
+      
+      // If there's a callback, use it
+      if (browserSelectCallback) {
+        const callback = browserSelectCallback;
+        browserSelectCallback = null;
+        closeBrowser();
+        callback(path);
+        return;
+      }
+      
+      // Default behavior: fill input
       if (browserTargetInput) {
         document.getElementById(browserTargetInput).value = path;
       }
@@ -8350,6 +8662,661 @@
         }
       });
     })();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONTEXT MENU FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    function showContextMenu(menuId, x, y) {
+      const menu = document.getElementById(menuId);
+      menu.style.display = 'block';
+      // Get actual menu dimensions after display
+      const rect = menu.getBoundingClientRect();
+      const menuWidth = rect.width || 220;
+      const menuHeight = rect.height || 200;
+      // Position at cursor, but keep within viewport
+      menu.style.left = Math.min(x, window.innerWidth - menuWidth - 10) + 'px';
+      menu.style.top = Math.min(y, window.innerHeight - menuHeight - 10) + 'px';
+    }
+    
+    async function contextMenuRefresh() {
+      document.getElementById('folderContextMenu').style.display = 'none';
+      if (contextMenuPath) {
+        filterFolder(contextMenuPath);
+      } else {
+        load3dFolders();
+        loadModels();
+      }
+    }
+    
+    async function contextMenuForceIndex() {
+      document.getElementById('folderContextMenu').style.display = 'none';
+      const path = contextMenuPath || currentFolder;
+      if (!path) {
+        showNotification('No folder selected', 'error');
+        return;
+      }
+      
+      showNotification('Starting index...', 'info');
+      
+      try {
+        const res = await fetch('/api/index/directory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, force: true, recursive: true })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(`Indexed: ${data.new} new, ${data.update} updated, ${data.skip} skipped`, 'success');
+          load3dFolders();
+          loadModels();
+        } else {
+          showNotification(data.error || 'Index failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Index failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function contextMenuForceThumbs() {
+      document.getElementById('folderContextMenu').style.display = 'none';
+      showNotification('Thumbnail rendering queued (runs in background)', 'info');
+      
+      try {
+        const res = await fetch('/api/thumbnails/render/pending', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ limit: 100 })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(`Rendered: ${data.rendered}, Failed: ${data.failed}`, 'success');
+        }
+      } catch (e) {
+        showNotification('Thumbnail render failed', 'error');
+      }
+    }
+    
+    async function contextMenuShowStatus() {
+      document.getElementById('folderContextMenu').style.display = 'none';
+      
+      try {
+        const res = await fetch('/api/models/index-stats');
+        const stats = await res.json();
+        
+        const html = `
+          <div style="padding: 20px;">
+            <h2 style="margin-bottom: 20px;">📊 Index Status</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td style="padding: 8px; border-bottom: 1px solid var(--border);">Total Models</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: right;">${stats.total?.toLocaleString() || 0}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid var(--border);">With Hash</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: right;">${stats.with_hash?.toLocaleString() || 0}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid var(--border);">With Thumbnail</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: right;">${stats.with_thumbnail?.toLocaleString() || 0}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid var(--border);">Missing</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: right; color: ${stats.missing_count > 0 ? '#ff6b6b' : 'inherit'};">${stats.missing_count || 0}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid var(--border);">Offline</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: right;">${stats.offline_count || 0}</td></tr>
+            </table>
+            ${Object.keys(stats.by_status || {}).length > 0 ? `
+              <h3 style="margin: 20px 0 10px;">By Status</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                ${Object.entries(stats.by_status || {}).map(([k, v]) => `
+                  <tr><td style="padding: 8px; border-bottom: 1px solid var(--border);">${k}</td>
+                      <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align: right;">${v.toLocaleString()}</td></tr>
+                `).join('')}
+              </table>
+            ` : ''}
+          </div>
+        `;
+        
+        document.getElementById('modalBody').innerHTML = html;
+        document.getElementById('modal').classList.add('show');
+      } catch (e) {
+        showNotification('Failed to load stats', 'error');
+      }
+    }
+    
+    // Asset context menu functions
+    let contextMenuAssetType = 'model';  // 'model' or 'pdf'
+    
+    function showAssetContextMenu(e, assetId, assetType = 'model') {
+      e.preventDefault();
+      e.stopPropagation();
+      contextMenuAssetId = assetId;
+      contextMenuAssetType = assetType;
+      showContextMenu('assetContextMenu', e.clientX, e.clientY);
+    }
+    
+    function contextMenuViewAsset() {
+      document.getElementById('assetContextMenu').style.display = 'none';
+      if (contextMenuAssetId) {
+        if (contextMenuAssetType === 'pdf') {
+          showDetail(contextMenuAssetId);
+        } else {
+          show3dDetail(contextMenuAssetId);
+        }
+      }
+    }
+    
+    async function contextMenuDownloadAsset() {
+      document.getElementById('assetContextMenu').style.display = 'none';
+      if (contextMenuAssetId) {
+        const endpoint = contextMenuAssetType === 'pdf' ? 'assets' : 'models';
+        window.open(`/api/${endpoint}/${contextMenuAssetId}/download`, '_blank');
+      }
+    }
+    
+    async function contextMenuReindexAsset() {
+      document.getElementById('assetContextMenu').style.display = 'none';
+      if (!contextMenuAssetId) return;
+      
+      showNotification('Re-indexing...', 'info');
+      
+      try {
+        const endpoint = contextMenuAssetType === 'pdf' ? 'assets' : 'models';
+        const res = await fetch(`/api/${endpoint}/${contextMenuAssetId}/reindex`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: true })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(`Status: ${data.status} - ${data.reason || ''}`, 'success');
+        } else {
+          showNotification(data.error || 'Re-index failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Re-index failed', 'error');
+      }
+    }
+    
+    async function contextMenuRegenThumb() {
+      document.getElementById('assetContextMenu').style.display = 'none';
+      if (!contextMenuAssetId) return;
+      
+      showNotification('Regenerating thumbnail...', 'info');
+      
+      try {
+        const endpoint = contextMenuAssetType === 'pdf' ? 'assets' : 'models';
+        const res = await fetch(`/api/${endpoint}/${contextMenuAssetId}/regenerate-thumbnail`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: true })
+        });
+        const data = await res.json();
+        
+        if (res.ok && (data.status === 'rendered' || data.status === 'reindexed')) {
+          showNotification('Thumbnail regenerated', 'success');
+          // Refresh the right list
+          if (contextMenuAssetType === 'pdf') {
+            loadAssets();
+          } else {
+            loadModels();
+          }
+        } else {
+          showNotification(data.message || 'Thumbnail generation failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Thumbnail generation failed', 'error');
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BREADCRUMB CONTEXT MENU FUNCTIONS (for info panel breadcrumbs)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    let breadcrumbContextPath = null;
+    
+    function showBreadcrumbContextMenu(e, folderPath) {
+      e.preventDefault();
+      e.stopPropagation();
+      breadcrumbContextPath = folderPath;
+      // Use clientX/clientY for viewport-relative positioning (works in modals)
+      showContextMenu('breadcrumbContextMenu', e.clientX, e.clientY);
+    }
+    
+    function breadcrumbContextNavigate() {
+      document.getElementById('breadcrumbContextMenu').style.display = 'none';
+      if (breadcrumbContextPath) {
+        closeModal();
+        navigateToFolder(breadcrumbContextPath);
+      }
+    }
+    
+    async function breadcrumbContextForceIndex() {
+      document.getElementById('breadcrumbContextMenu').style.display = 'none';
+      if (!breadcrumbContextPath) {
+        showNotification('No folder selected', 'error');
+        return;
+      }
+      
+      showNotification('Starting index of folder...', 'info');
+      
+      try {
+        const res = await fetch('/api/index/directory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: breadcrumbContextPath, force: true, recursive: true })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(`Indexed: ${data.new || 0} new, ${data.updated || 0} updated`, 'success');
+        } else {
+          showNotification(data.error || 'Index failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Index failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function breadcrumbContextForceThumbs() {
+      document.getElementById('breadcrumbContextMenu').style.display = 'none';
+      if (!breadcrumbContextPath) {
+        showNotification('No folder selected', 'error');
+        return;
+      }
+      
+      showNotification('Queuing thumbnail regeneration...', 'info');
+      
+      try {
+        const res = await fetch('/api/thumbnails/render/folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder: breadcrumbContextPath, force: true })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(`Queued: ${data.queued || data.rendered || 0} thumbnails`, 'success');
+        } else {
+          showNotification(data.error || 'Failed to queue thumbnails', 'error');
+        }
+      } catch (e) {
+        showNotification('Failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function breadcrumbContextShowStatus() {
+      document.getElementById('breadcrumbContextMenu').style.display = 'none';
+      // Reuse existing status modal
+      contextMenuShowStatus();
+    }
+    
+    function showNotification(message, type = 'info') {
+      // Simple notification - could be enhanced with a toast system
+      const colors = { info: '#4dabf7', success: '#40c057', error: '#ff6b6b' };
+      const existing = document.querySelector('.notification-toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'notification-toast';
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: ${colors[type]};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10001;
+        animation: slideIn 0.3s ease;
+      `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 4000);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MODAL ACTION FUNCTIONS (called from info panel buttons)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    async function reindexModel(modelId) {
+      showNotification('Re-indexing model...', 'info');
+      try {
+        const res = await fetch(`/api/models/${modelId}/reindex`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: true })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showNotification(`Re-indexed: ${data.status}`, 'success');
+        } else {
+          showNotification(data.error || 'Re-index failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Re-index failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function regenerateThumbnail(modelId) {
+      showNotification('Regenerating thumbnail...', 'info');
+      try {
+        const res = await fetch(`/api/models/${modelId}/regenerate-thumbnail`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: true })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'rendered') {
+          showNotification('Thumbnail regenerated', 'success');
+          // Refresh the modal image
+          const img = document.querySelector('.model-thumb-img');
+          if (img) img.src = `/api/models/${modelId}/preview?t=${Date.now()}`;
+        } else {
+          showNotification(data.message || 'Thumbnail generation failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Thumbnail generation failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function reindexAsset(assetId) {
+      showNotification('Re-indexing PDF...', 'info');
+      try {
+        const res = await fetch(`/api/assets/${assetId}/reindex`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: true })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showNotification(`Re-indexed: ${data.status || 'success'}`, 'success');
+        } else {
+          showNotification(data.error || 'Re-index failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Re-index failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function regenerateAssetThumbnail(assetId) {
+      showNotification('Regenerating thumbnail...', 'info');
+      try {
+        const res = await fetch(`/api/assets/${assetId}/regenerate-thumbnail`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: true })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showNotification('Thumbnail regenerated', 'success');
+          // Refresh the modal image
+          const img = document.querySelector('#modalBody img');
+          if (img) img.src = `/api/assets/${assetId}/thumbnail?t=${Date.now()}`;
+        } else {
+          showNotification(data.message || 'Thumbnail generation failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Thumbnail generation failed: ' + e.message, 'error');
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // COLUMN BROWSER FOR INDEX DIRECTORY
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    let columnBrowserSelection = null;
+    let columnBrowserColumns = [];
+    
+    async function openIndexDirectoryPicker() {
+      // Get enabled asset locations
+      const enabledLocations = assetLocations.filter(l => l.enabled);
+      
+      if (enabledLocations.length === 0) {
+        showNotification('No asset locations configured. Add one first.', 'error');
+        return;
+      }
+      
+      // Reset state
+      columnBrowserSelection = null;
+      columnBrowserColumns = [];
+      document.getElementById('columnBrowserPath').textContent = 'Select an asset volume';
+      document.getElementById('columnBrowserSelectBtn').disabled = true;
+      document.getElementById('forceIndexCheckbox').checked = false;
+      document.getElementById('regenThumbnailsCheckbox').checked = false;
+      
+      // Build first column with asset volumes
+      const container = document.getElementById('columnBrowserColumns');
+      container.innerHTML = '';
+      
+      let html = '<div class="column-browser-column">';
+      html += '<div class="column-header">Asset Volumes</div>';
+      
+      enabledLocations.forEach((loc, idx) => {
+        const icon = loc.asset_type === 'documents' ? '📄' : '🎲';
+        html += `
+          <div class="column-item volume" onclick="selectColumnVolume(${idx}, '${escapeHtml(loc.path)}')" data-path="${escapeHtml(loc.path)}">
+            <span class="icon">${icon}</span>
+            <span class="name">${escapeHtml(loc.name)}</span>
+            <span class="arrow">▶</span>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      container.innerHTML = html;
+      columnBrowserColumns = [{ type: 'volumes', element: container.firstChild }];
+      
+      // Show modal
+      document.getElementById('columnBrowserModal').classList.add('active');
+    }
+    
+    async function selectColumnVolume(idx, path) {
+      // Clear selection from all items in first column
+      document.querySelectorAll('.column-browser-column:first-child .column-item').forEach(el => {
+        el.classList.remove('selected');
+      });
+      
+      // Select this item
+      event.currentTarget.classList.add('selected');
+      
+      // Remove columns after the first
+      const container = document.getElementById('columnBrowserColumns');
+      while (container.children.length > 1) {
+        container.removeChild(container.lastChild);
+      }
+      columnBrowserColumns = [columnBrowserColumns[0]];
+      
+      // Load subdirectories
+      await loadColumnDirectory(path, 1);
+    }
+    
+    async function loadColumnDirectory(path, columnIndex) {
+      columnBrowserSelection = path;
+      document.getElementById('columnBrowserPath').textContent = path;
+      document.getElementById('columnBrowserSelectBtn').disabled = false;
+      
+      try {
+        const res = await fetch(`/api/browse-directory?path=${encodeURIComponent(path)}`);
+        const data = await res.json();
+        
+        // Filter to only directories
+        const directories = (data.entries || []).filter(e => e.type === 'directory');
+        
+        if (directories.length === 0) {
+          // No subdirectories - that's fine, user can select this folder
+          return;
+        }
+        
+        // Create new column
+        const container = document.getElementById('columnBrowserColumns');
+        const column = document.createElement('div');
+        column.className = 'column-browser-column';
+        
+        let html = '<div class="column-header">Subdirectories</div>';
+        directories.forEach(dir => {
+          const safePath = dir.path.replace(/'/g, "\\'");
+          html += `
+            <div class="column-item" onclick="selectColumnItem(this, '${safePath}', ${columnIndex})" data-path="${escapeHtml(dir.path)}">
+              <span class="icon">📁</span>
+              <span class="name">${escapeHtml(dir.name)}</span>
+              <span class="arrow">▶</span>
+            </div>
+          `;
+        });
+        
+        column.innerHTML = html;
+        container.appendChild(column);
+        columnBrowserColumns.push({ path, element: column });
+        
+        // Scroll to show new column
+        container.scrollLeft = container.scrollWidth;
+        
+      } catch (e) {
+        console.error('Failed to load directory:', e);
+      }
+    }
+    
+    async function selectColumnItem(element, path, columnIndex) {
+      // Clear selection from siblings
+      element.parentElement.querySelectorAll('.column-item').forEach(el => {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      
+      // Remove columns after this one
+      const container = document.getElementById('columnBrowserColumns');
+      while (container.children.length > columnIndex + 1) {
+        container.removeChild(container.lastChild);
+        columnBrowserColumns.pop();
+      }
+      
+      // Load subdirectories
+      await loadColumnDirectory(path, columnIndex + 1);
+    }
+    
+    function closeColumnBrowser() {
+      document.getElementById('columnBrowserModal').classList.remove('active');
+      columnBrowserSelection = null;
+    }
+    
+    async function confirmColumnBrowserSelection() {
+      if (!columnBrowserSelection) {
+        showNotification('No directory selected', 'error');
+        return;
+      }
+      
+      const forceIndex = document.getElementById('forceIndexCheckbox').checked;
+      const regenThumbnails = document.getElementById('regenThumbnailsCheckbox').checked;
+      const path = columnBrowserSelection;
+      
+      closeColumnBrowser();
+      showNotification(`Starting index of ${path}...`, 'info');
+      
+      try {
+        // Run index
+        const res = await fetch('/api/index/directory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            path: path, 
+            force: forceIndex,
+            recursive: true 
+          })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(
+            `Indexed: ${data.new || 0} new, ${data.update || 0} updated, ${data.skip || 0} skipped`,
+            'success'
+          );
+          load3dFolders();
+          loadModels();
+          
+          // If thumbnail regen requested, queue it
+          if (regenThumbnails) {
+            showNotification('Queueing thumbnail regeneration...', 'info');
+            try {
+              const thumbRes = await fetch('/api/thumbnails/render/pending', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit: 500 })
+              });
+              const thumbData = await thumbRes.json();
+              if (thumbRes.ok) {
+                showNotification(
+                  `Thumbnails: ${thumbData.rendered || 0} rendered, ${thumbData.failed || 0} failed`,
+                  'success'
+                );
+              }
+            } catch (te) {
+              showNotification('Thumbnail render failed', 'error');
+            }
+          }
+        } else {
+          showNotification(data.error || 'Index failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Index failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function forceIndexLocation(locId, path) {
+      closeAllEditMenus();
+      showNotification(`Force indexing ${path}...`, 'info');
+      
+      try {
+        const res = await fetch('/api/index/directory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, force: true, recursive: true })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(
+            `Indexed: ${data.new || 0} new, ${data.update || 0} updated, ${data.skip || 0} skipped`,
+            'success'
+          );
+          load3dFolders();
+          loadModels();
+        } else {
+          showNotification(data.error || 'Index failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Index failed: ' + e.message, 'error');
+      }
+    }
+    
+    async function forceRegenThumbnails(locId, path) {
+      closeAllEditMenus();
+      showNotification('Queueing thumbnail regeneration...', 'info');
+      
+      try {
+        const res = await fetch('/api/thumbnails/render/pending', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ limit: 500 })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          showNotification(
+            `Thumbnails: ${data.rendered || 0} rendered, ${data.failed || 0} failed`,
+            'success'
+          );
+        } else {
+          showNotification('Thumbnail render failed', 'error');
+        }
+      } catch (e) {
+        showNotification('Thumbnail render failed', 'error');
+      }
+    }
+    
+    async function showLocationStatus(locId) {
+      closeAllEditMenus();
+      contextMenuShowStatus();  // Reuse the existing function
+    }
   </script>
 
 

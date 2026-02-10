@@ -151,6 +151,14 @@ class ModelsIndexer:
                 if base in previews:
                     preview = previews[base]
                 
+                # Handle bad ZIP dates (some have month=0)
+                try:
+                    dt = datetime(*info.date_time)
+                    iso_date = dt.isoformat()
+                except (ValueError, TypeError):
+                    # Fall back to current time if ZIP date is corrupted
+                    iso_date = datetime.now().isoformat()
+                
                 model = {
                     'file_path': f"{zip_path}:{name}",
                     'filename': filename,
@@ -168,8 +176,8 @@ class ModelsIndexer:
                     'has_supports': 1 if 'support' in name.lower() else 0,
                     'preview_image': preview,
                     'has_thumbnail': 1 if preview else 0,
-                    'created_at': datetime(*info.date_time).isoformat(),
-                    'modified_at': datetime(*info.date_time).isoformat()
+                    'created_at': iso_date,
+                    'modified_at': iso_date
                 }
                 
                 models.append(model)

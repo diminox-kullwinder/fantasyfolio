@@ -362,25 +362,52 @@ def api_model_download(model_id: int):
 
 @models_bp.route('/models/thumbnail-stats')
 def api_thumbnail_stats():
-    """Get thumbnail cache statistics."""
+    """Get thumbnail cache statistics for current models."""
     config = get_config()
     thumbnail_dir = Path(config.THUMBNAIL_DIR) / "3d"
     
     with get_connection() as conn:
-        # Count total models
-        total = conn.execute("SELECT COUNT(*) as cnt FROM models").fetchone()['cnt']
+        # Get all model IDs (for 3D formats)
+        model_rows = conn.execute("""
+            SELECT id FROM models 
+            WHERE format IN ('stl', 'obj', '3mf')
+        """).fetchall()
+    
+    total = len(model_rows)
+    model_ids = set(row['id'] for row in model_rows)
+    
+    # Count which models have cached thumbnails
+    cached = 0
+    if thumbnail_dir.exists():
+        for png in thumbnail_dir.glob("*.png"):
+            try:
+                model_id = int(png.stem)
+                if model_id in model_ids:
+                    cached += 1
+            except ValueError:
+                pass
+    
+    # Also get new storage type counts
+    with get_connection() as conn:
+        storage_rows = conn.execute("""
+            SELECT thumb_storage, COUNT(*) as count
+            FROM models
+            WHERE thumb_storage IS NOT NULL
+            GROUP BY thumb_storage
+        """).fetchall()
+        by_storage = {row['thumb_storage']: row['count'] for row in storage_rows}
         
-        # Count cached thumbnails
-        if thumbnail_dir.exists():
-            cached = len(list(thumbnail_dir.glob("*.png")))
-        else:
-            cached = 0
+        new_style_count = conn.execute(
+            "SELECT COUNT(*) FROM models WHERE thumb_storage IS NOT NULL"
+        ).fetchone()[0]
     
     return jsonify({
         'total': total,
-        'cached': cached,
-        'missing': total - cached,
-        'percent': round((cached / total * 100) if total > 0 else 0, 1)
+        'cached': cached,  # Old-style central cache
+        'new_style': new_style_count,  # New sidecar/archive storage
+        'missing': total - max(cached, new_style_count),
+        'percent': round((max(cached, new_style_count) / total * 100) if total > 0 else 0, 1),
+        'by_storage': by_storage
     })
 
 
@@ -501,3 +528,547 @@ def api_render_thumbnails():
         'already_cached': cached_count,
         'total_models': len(models)
     }), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EFFICIENT INDEXING API (Phase 4)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@models_bp.route('/models/<int:model_id>/reindex', methods=['POST'])
+def api_reindex_model(model_id):
+    """
+    Re-index a single model.
+    
+    POST body:
+        force: bool - If true, reprocess regardless of cache
+        include_thumbnail: bool - If true, also regenerate thumbnail
+    """
+    from dam.core.scanner import reindex_single_asset
+    
+    data = request.get_json() or {}
+    force = data.get('force', False)
+    include_thumbnail = data.get('include_thumbnail', True)
+    
+    with get_connection() as conn:
+        result = reindex_single_asset(conn, model_id, force=force)
+    
+    # TODO: If include_thumbnail and result['status'] == 'indexed', queue thumbnail render
+    
+    return jsonify(result)
+
+
+@models_bp.route('/models/missing')
+def api_get_missing_models():
+    """
+    Get list of missing models.
+    
+    Query params:
+        volume_id: Filter by volume
+        missing_before: ISO date - only show missing since before this date
+        limit: Max results (default 100)
+    """
+    volume_id = request.args.get('volume_id')
+    missing_before = request.args.get('missing_before')
+    limit = int(request.args.get('limit', 100))
+    
+    with get_connection() as conn:
+        conditions = ["index_status = 'missing'"]
+        params = []
+        
+        if volume_id:
+            conditions.append("volume_id = ?")
+            params.append(volume_id)
+        
+        if missing_before:
+            conditions.append("missing_since < ?")
+            params.append(missing_before)
+        
+        where_clause = ' AND '.join(conditions)
+        
+        # Get count
+        total = conn.execute(
+            f"SELECT COUNT(*) FROM models WHERE {where_clause}",
+            params
+        ).fetchone()[0]
+        
+        # Get models
+        params.append(limit)
+        rows = conn.execute(f"""
+            SELECT id, filename, file_path, archive_path, archive_member,
+                   missing_since, last_seen_at, volume_id
+            FROM models 
+            WHERE {where_clause}
+            ORDER BY missing_since ASC
+            LIMIT ?
+        """, params).fetchall()
+        
+        return jsonify({
+            'models': [dict(row) for row in rows],
+            'total_count': total
+        })
+
+
+@models_bp.route('/models/purge-missing', methods=['POST'])
+def api_purge_missing_models():
+    """
+    Permanently delete missing models from database.
+    
+    REQUIRES explicit confirmation.
+    
+    POST body:
+        model_ids: List of specific IDs to purge, OR
+        volume_id: Purge all missing on this volume, OR
+        missing_before: ISO date - purge missing since before this date
+        confirm: REQUIRED - must be true
+    """
+    data = request.get_json() or {}
+    
+    model_ids = data.get('model_ids')
+    volume_id = data.get('volume_id')
+    missing_before = data.get('missing_before')
+    confirm = data.get('confirm', False)
+    
+    if not confirm:
+        return jsonify({
+            'error': 'Confirmation required',
+            'message': 'Set confirm=true to permanently delete missing assets'
+        }), 400
+    
+    with get_connection() as conn:
+        conditions = ["index_status = 'missing'"]
+        params = []
+        
+        if model_ids:
+            placeholders = ','.join('?' * len(model_ids))
+            conditions.append(f"id IN ({placeholders})")
+            params.extend(model_ids)
+        
+        if volume_id:
+            conditions.append("volume_id = ?")
+            params.append(volume_id)
+        
+        if missing_before:
+            conditions.append("missing_since < ?")
+            params.append(missing_before)
+        
+        where_clause = ' AND '.join(conditions)
+        
+        # Count before delete
+        count = conn.execute(
+            f"SELECT COUNT(*) FROM models WHERE {where_clause}",
+            params
+        ).fetchone()[0]
+        
+        if count == 0:
+            return jsonify({'purged': 0, 'message': 'No matching assets to purge'})
+        
+        # Delete
+        conn.execute(f"DELETE FROM models WHERE {where_clause}", params)
+        conn.commit()
+        
+        return jsonify({'purged': count})
+
+
+@models_bp.route('/models/index-stats')
+def api_index_stats():
+    """Get indexing statistics."""
+    with get_connection() as conn:
+        stats = {}
+        
+        # Total counts
+        stats['total'] = conn.execute("SELECT COUNT(*) FROM models").fetchone()[0]
+        
+        # By status
+        rows = conn.execute("""
+            SELECT index_status, COUNT(*) as count 
+            FROM models 
+            GROUP BY index_status
+        """).fetchall()
+        stats['by_status'] = {row['index_status'] or 'null': row['count'] for row in rows}
+        
+        # Hash coverage
+        stats['with_hash'] = conn.execute(
+            "SELECT COUNT(*) FROM models WHERE partial_hash IS NOT NULL"
+        ).fetchone()[0]
+        
+        # Thumbnail stats
+        stats['with_thumbnail'] = conn.execute(
+            "SELECT COUNT(*) FROM models WHERE thumb_storage IS NOT NULL"
+        ).fetchone()[0]
+        
+        # Missing count
+        stats['missing_count'] = conn.execute(
+            "SELECT COUNT(*) FROM models WHERE index_status = 'missing'"
+        ).fetchone()[0]
+        
+        # Offline count
+        stats['offline_count'] = conn.execute(
+            "SELECT COUNT(*) FROM models WHERE index_status = 'offline'"
+        ).fetchone()[0]
+        
+        return jsonify(stats)
+
+
+@models_bp.route('/volumes')
+def api_list_volumes():
+    """List all registered volumes."""
+    with get_connection() as conn:
+        volumes = conn.execute("""
+            SELECT v.*,
+                   (SELECT COUNT(*) FROM models WHERE volume_id = v.id) as model_count,
+                   (SELECT COUNT(*) FROM models WHERE volume_id = v.id AND index_status = 'missing') as missing_count,
+                   (SELECT COUNT(*) FROM assets WHERE volume_id = v.id) as asset_count
+            FROM volumes v
+            ORDER BY v.label
+        """).fetchall()
+        
+        return jsonify([dict(v) for v in volumes])
+
+
+@models_bp.route('/volumes/<volume_id>/check', methods=['POST'])
+def api_check_volume(volume_id):
+    """Check if a volume is online and update status."""
+    from pathlib import Path
+    from datetime import datetime
+    
+    with get_connection() as conn:
+        volume = conn.execute(
+            "SELECT * FROM volumes WHERE id = ?",
+            (volume_id,)
+        ).fetchone()
+        
+        if not volume:
+            return jsonify({'error': 'Volume not found'}), 404
+        
+        volume = dict(volume)
+        mount_path = Path(volume['mount_path'])
+        
+        was_online = volume['status'] == 'online'
+        is_online = mount_path.exists() and mount_path.is_dir()
+        
+        # Update status
+        new_status = 'online' if is_online else 'offline'
+        conn.execute("""
+            UPDATE volumes SET 
+                status = ?,
+                last_seen_at = CASE WHEN ? THEN ? ELSE last_seen_at END
+            WHERE id = ?
+        """, (
+            new_status,
+            is_online,
+            datetime.now().isoformat(),
+            volume_id
+        ))
+        
+        # If status changed, update assets
+        if was_online and not is_online:
+            # Volume went offline
+            affected = conn.execute("""
+                UPDATE models SET index_status = 'offline'
+                WHERE volume_id = ? AND index_status = 'indexed'
+            """, (volume_id,)).rowcount
+        elif not was_online and is_online:
+            # Volume came online - queue verification
+            affected = conn.execute("""
+                SELECT COUNT(*) FROM models 
+                WHERE volume_id = ? AND index_status IN ('offline', 'missing')
+            """, (volume_id,)).fetchone()[0]
+        else:
+            affected = 0
+        
+        conn.commit()
+        
+        return jsonify({
+            'status': new_status,
+            'was_online': was_online,
+            'is_online': is_online,
+            'assets_affected': affected
+        })
+
+
+@models_bp.route('/volumes/<volume_id>/verify', methods=['POST'])
+def api_verify_volume(volume_id):
+    """Verify all assets on a volume exist."""
+    from dam.core.scanner import verify_assets_on_volume
+    
+    with get_connection() as conn:
+        # Check volume exists and is online
+        volume = conn.execute(
+            "SELECT * FROM volumes WHERE id = ?",
+            (volume_id,)
+        ).fetchone()
+        
+        if not volume:
+            return jsonify({'error': 'Volume not found'}), 404
+        
+        if volume['status'] != 'online':
+            return jsonify({'error': 'Volume is offline'}), 400
+        
+        stats = verify_assets_on_volume(conn, volume_id)
+        
+        return jsonify(stats)
+
+
+@models_bp.route('/index/directory', methods=['POST'])
+def api_index_directory():
+    """
+    Index a directory using the efficient scanner.
+    
+    POST body:
+        path: Required - directory path to scan
+        recursive: bool - include subdirectories (default true)
+        force: bool - force re-index (default false)
+    
+    Returns scan statistics.
+    """
+    from pathlib import Path
+    from dam.core.scanner import scan_directory, ScanAction
+    
+    data = request.get_json() or {}
+    path = data.get('path')
+    recursive = data.get('recursive', True)
+    force = data.get('force', False)
+    
+    if not path:
+        return jsonify({'error': 'path is required'}), 400
+    
+    scan_path = Path(path).resolve()
+    if not scan_path.exists():
+        return jsonify({'error': f'Path does not exist: {path}'}), 404
+    
+    with get_connection() as conn:
+        # Auto-detect volume
+        volume = conn.execute("""
+            SELECT * FROM volumes 
+            WHERE ? LIKE mount_path || '%'
+            ORDER BY length(mount_path) DESC
+            LIMIT 1
+        """, (str(scan_path),)).fetchone()
+        
+        if not volume:
+            return jsonify({'error': 'No volume found for path'}), 400
+        
+        volume = dict(volume)
+        
+        stats = {
+            'new': 0, 'update': 0, 'skip': 0,
+            'moved': 0, 'missing': 0, 'error': 0
+        }
+        
+        for result in scan_directory(conn, scan_path, volume, force=force, recursive=recursive):
+            stats[result.action.value] += 1
+            
+            # Apply changes
+            if result.action in (ScanAction.NEW, ScanAction.UPDATE, ScanAction.MOVED):
+                model = result.model
+                
+                if result.action == ScanAction.NEW:
+                    columns = ', '.join(model.keys())
+                    placeholders = ', '.join(['?' for _ in model])
+                    conn.execute(
+                        f"INSERT INTO models ({columns}) VALUES ({placeholders})",
+                        list(model.values())
+                    )
+                else:
+                    model_id = model.pop('id', None)
+                    if model_id:
+                        sets = ', '.join([f"{k} = ?" for k in model.keys()])
+                        conn.execute(
+                            f"UPDATE models SET {sets} WHERE id = ?",
+                            list(model.values()) + [model_id]
+                        )
+        
+        conn.commit()
+        
+        stats['total'] = sum(stats.values())
+        stats['volume_id'] = volume['id']
+        stats['path'] = str(scan_path)
+        
+        return jsonify(stats)
+
+
+@models_bp.route('/volumes/<volume_id>/index', methods=['POST'])
+def api_index_volume(volume_id):
+    """
+    Index an entire volume.
+    
+    POST body:
+        force: bool - force re-index (default false)
+    """
+    data = request.get_json() or {}
+    force = data.get('force', False)
+    
+    with get_connection() as conn:
+        volume = conn.execute(
+            "SELECT * FROM volumes WHERE id = ?",
+            (volume_id,)
+        ).fetchone()
+        
+        if not volume:
+            return jsonify({'error': 'Volume not found'}), 404
+        
+        volume = dict(volume)
+        
+        if volume['status'] != 'online':
+            return jsonify({'error': 'Volume is offline'}), 400
+    
+    # Delegate to directory index
+    return api_index_directory_internal(volume['mount_path'], force=force)
+
+
+@models_bp.route('/models/<int:model_id>/regenerate-thumbnail', methods=['POST'])
+def api_regenerate_thumbnail(model_id):
+    """
+    Regenerate thumbnail for a single model.
+    
+    POST body:
+        force: bool - Force regenerate even if exists
+    """
+    from pathlib import Path
+    from dam.core.thumbnails import render_thumbnail
+    
+    data = request.get_json() or {}
+    force = data.get('force', True)
+    
+    config = get_config()
+    central_dir = Path(config.DATA_DIR) / 'thumbnails'
+    
+    with get_connection() as conn:
+        model = conn.execute(
+            "SELECT m.*, v.mount_path, v.is_readonly FROM models m LEFT JOIN volumes v ON m.volume_id = v.id WHERE m.id = ?",
+            (model_id,)
+        ).fetchone()
+        
+        if not model:
+            return jsonify({'error': 'Model not found'}), 404
+        
+        model = dict(model)
+        volume = {
+            'id': model.get('volume_id'),
+            'mount_path': model.get('mount_path'),
+            'is_readonly': model.get('is_readonly', 1)
+        }
+        
+        result = render_thumbnail(model, volume, central_dir, force=force)
+        
+        if result:
+            conn.execute("""
+                UPDATE models SET
+                    thumb_storage = ?,
+                    thumb_path = ?,
+                    thumb_rendered_at = ?,
+                    thumb_source_mtime = ?
+                WHERE id = ?
+            """, (
+                result['thumb_storage'],
+                result['thumb_path'],
+                result['thumb_rendered_at'],
+                result['thumb_source_mtime'],
+                model_id
+            ))
+            conn.commit()
+            return jsonify({
+                'status': 'rendered',
+                **result
+            })
+        else:
+            return jsonify({'status': 'failed', 'message': 'Could not render thumbnail'}), 500
+
+
+@models_bp.route('/thumbnails/render/pending', methods=['POST'])
+def api_render_pending_thumbnails():
+    """
+    Render thumbnails for models that don't have them.
+    
+    POST body:
+        limit: int - Max to render (default 100)
+    """
+    from pathlib import Path
+    from dam.core.thumbnails import render_pending_thumbnails
+    
+    data = request.get_json() or {}
+    limit = data.get('limit', 100)
+    
+    config = get_config()
+    central_dir = Path(config.DATA_DIR) / 'thumbnails'
+    
+    with get_connection() as conn:
+        stats = render_pending_thumbnails(conn, central_dir, limit=limit)
+    
+    return jsonify(stats)
+
+
+@models_bp.route('/thumbnails/migrate', methods=['POST'])
+def api_migrate_thumbnails():
+    """
+    Migrate central thumbnails to sidecar locations.
+    
+    POST body:
+        limit: int - Max to migrate (default all)
+    """
+    from pathlib import Path
+    from dam.core.thumbnails import migrate_thumbnails_to_sidecars
+    
+    data = request.get_json() or {}
+    limit = data.get('limit')
+    
+    config = get_config()
+    central_dir = Path(config.DATA_DIR) / 'thumbnails'
+    
+    with get_connection() as conn:
+        stats = migrate_thumbnails_to_sidecars(conn, central_dir, limit=limit)
+    
+    return jsonify(stats)
+
+
+def api_index_directory_internal(path: str, force: bool = False):
+    """Internal helper for indexing."""
+    from pathlib import Path
+    from dam.core.scanner import scan_directory, ScanAction
+    
+    scan_path = Path(path).resolve()
+    
+    with get_connection() as conn:
+        volume = conn.execute("""
+            SELECT * FROM volumes 
+            WHERE ? LIKE mount_path || '%'
+            ORDER BY length(mount_path) DESC
+            LIMIT 1
+        """, (str(scan_path),)).fetchone()
+        
+        if not volume:
+            return jsonify({'error': 'No volume found'}), 400
+        
+        volume = dict(volume)
+        
+        stats = {
+            'new': 0, 'update': 0, 'skip': 0,
+            'moved': 0, 'missing': 0, 'error': 0
+        }
+        
+        for result in scan_directory(conn, scan_path, volume, force=force, recursive=True):
+            stats[result.action.value] += 1
+            
+            if result.action in (ScanAction.NEW, ScanAction.UPDATE, ScanAction.MOVED):
+                model = result.model
+                
+                if result.action == ScanAction.NEW:
+                    columns = ', '.join(model.keys())
+                    placeholders = ', '.join(['?' for _ in model])
+                    conn.execute(
+                        f"INSERT INTO models ({columns}) VALUES ({placeholders})",
+                        list(model.values())
+                    )
+                else:
+                    model_id = model.pop('id', None)
+                    if model_id:
+                        sets = ', '.join([f"{k} = ?" for k in model.keys()])
+                        conn.execute(
+                            f"UPDATE models SET {sets} WHERE id = ?",
+                            list(model.values()) + [model_id]
+                        )
+        
+        conn.commit()
+        
+        stats['total'] = sum(stats.values())
+        return jsonify(stats)

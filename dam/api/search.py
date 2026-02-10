@@ -287,75 +287,108 @@ def api_search_advanced():
         }
     
     terms = data.get('terms', '')
-    folder = data.get('folder')
+    folder = data.get('folder') or request.args.get('folder')
     publisher = data.get('publisher')
     game_system = data.get('game_system')
+    format_filter = data.get('format') or request.args.get('format')
     search_titles = data.get('search_titles', True)
     search_content = data.get('search_content', True)
     limit = int(data.get('limit', 50))
     
-    results = {'assets': [], 'pages': []}
+    results = {'assets': [], 'pages': [], 'models': []}
     fts_terms = fts_query(terms) if terms else ''
     
+    # Determine if searching 3D models or PDFs
+    is_3d_search = format_filter in ('stl', 'obj', '3mf')
+    
     with get_connection() as conn:
-        # Search assets (titles/metadata)
-        if search_titles and terms:
-            sql = """
-                SELECT a.*, snippet(assets_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
-                FROM assets a
-                JOIN assets_fts ON a.id = assets_fts.rowid
-                WHERE assets_fts MATCH ?
-            """
-            params = [fts_terms]
+        if is_3d_search:
+            # Search 3D models
+            if terms:
+                sql = """
+                    SELECT m.* FROM models m
+                    JOIN models_fts ON m.id = models_fts.rowid
+                    WHERE models_fts MATCH ?
+                """
+                params = [fts_terms]
+            else:
+                sql = "SELECT * FROM models WHERE 1=1"
+                params = []
             
             if folder:
-                sql += " AND a.folder_path LIKE ?"
+                sql += " AND folder_path LIKE ?"
                 params.append(folder + '%')
-            if publisher:
-                sql += " AND a.publisher = ?"
-                params.append(publisher)
-            if game_system:
-                sql += " AND a.game_system = ?"
-                params.append(game_system)
+            if format_filter:
+                sql += " AND format = ?"
+                params.append(format_filter)
             
-            sql += " ORDER BY rank LIMIT ?"
+            sql += " ORDER BY collection, filename LIMIT ?"
             params.append(limit)
             
             try:
                 rows = conn.execute(sql, params).fetchall()
-                results['assets'] = [dict(row) for row in rows]
+                results['models'] = [dict(row) for row in rows]
             except Exception as e:
-                logger.error(f"Advanced search assets error: {e}")
-        
-        # Search page content
-        if search_content and terms:
-            sql = """
-                SELECT p.asset_id, p.page_num, a.filename, a.title, a.folder_path,
-                       snippet(pages_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
-                FROM asset_pages p
-                JOIN pages_fts ON p.id = pages_fts.rowid
-                JOIN assets a ON p.asset_id = a.id
-                WHERE pages_fts MATCH ?
-            """
-            params = [fts_terms]
+                logger.error(f"Advanced search models error: {e}")
+        else:
+            # Search PDFs (assets/pages)
+            if search_titles and terms:
+                sql = """
+                    SELECT a.*, snippet(assets_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
+                    FROM assets a
+                    JOIN assets_fts ON a.id = assets_fts.rowid
+                    WHERE assets_fts MATCH ?
+                """
+                params = [fts_terms]
+                
+                if folder:
+                    sql += " AND a.folder_path LIKE ?"
+                    params.append(folder + '%')
+                if publisher:
+                    sql += " AND a.publisher = ?"
+                    params.append(publisher)
+                if game_system:
+                    sql += " AND a.game_system = ?"
+                    params.append(game_system)
+                
+                sql += " ORDER BY rank LIMIT ?"
+                params.append(limit)
+                
+                try:
+                    rows = conn.execute(sql, params).fetchall()
+                    results['assets'] = [dict(row) for row in rows]
+                except Exception as e:
+                    logger.error(f"Advanced search assets error: {e}")
             
-            if folder:
-                sql += " AND a.folder_path LIKE ?"
-                params.append(folder + '%')
-            if publisher:
-                sql += " AND a.publisher = ?"
-                params.append(publisher)
-            if game_system:
-                sql += " AND a.game_system = ?"
-                params.append(game_system)
-            
-            sql += " ORDER BY rank LIMIT ?"
-            params.append(limit)
-            
-            try:
-                rows = conn.execute(sql, params).fetchall()
-                results['pages'] = [dict(row) for row in rows]
-            except Exception as e:
-                logger.error(f"Advanced search pages error: {e}")
+            # Search page content
+            if search_content and terms:
+                sql = """
+                    SELECT p.asset_id, p.page_num, a.filename, a.title, a.folder_path,
+                           snippet(pages_fts, 0, '<mark>', '</mark>', '...', 32) as snippet
+                    FROM asset_pages p
+                    JOIN pages_fts ON p.id = pages_fts.rowid
+                    JOIN assets a ON p.asset_id = a.id
+                    WHERE pages_fts MATCH ?
+                """
+                params = [fts_terms]
+                
+                if folder:
+                    sql += " AND a.folder_path LIKE ?"
+                    params.append(folder + '%')
+                if publisher:
+                    sql += " AND a.publisher = ?"
+                    params.append(publisher)
+                if game_system:
+                    sql += " AND a.game_system = ?"
+                    params.append(game_system)
+                
+                sql += " ORDER BY rank LIMIT ?"
+                params.append(limit)
+                
+                try:
+                    rows = conn.execute(sql, params).fetchall()
+                    results['pages'] = [dict(row) for row in rows]
+                except Exception as e:
+                    logger.error(f"Advanced search pages error: {e}")
     
     return jsonify(results)

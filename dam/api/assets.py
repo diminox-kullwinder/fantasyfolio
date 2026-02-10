@@ -360,3 +360,98 @@ def api_extract_pages(asset_id: int):
     except Exception as e:
         logger.error(f"Page extraction failed: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@assets_bp.route('/assets/<int:asset_id>/reindex', methods=['POST'])
+def api_reindex_asset(asset_id: int):
+    """Re-index a single PDF asset (refresh metadata from file)."""
+    asset = get_asset_by_id(asset_id)
+    if not asset:
+        return jsonify({'error': 'Asset not found'}), 404
+    
+    file_path = Path(asset['file_path'])
+    if not file_path.exists():
+        # Mark as missing
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE assets SET index_status = 'missing', missing_since = CURRENT_TIMESTAMP WHERE id = ?",
+                (asset_id,)
+            )
+            conn.commit()
+        return jsonify({'status': 'missing', 'message': 'File not found'})
+    
+    try:
+        import pymupdf
+        doc = pymupdf.open(str(file_path))
+        metadata = doc.metadata or {}
+        page_count = len(doc)
+        doc.close()
+        
+        # Update file stats and metadata
+        stat = file_path.stat()
+        with get_connection() as conn:
+            conn.execute("""
+                UPDATE assets SET
+                    title = COALESCE(?, title),
+                    author = COALESCE(?, author),
+                    page_count = ?,
+                    file_size = ?,
+                    file_mtime = ?,
+                    last_indexed_at = CURRENT_TIMESTAMP,
+                    last_seen_at = CURRENT_TIMESTAMP,
+                    index_status = 'indexed',
+                    missing_since = NULL
+                WHERE id = ?
+            """, (
+                metadata.get('title') or None,
+                metadata.get('author') or None,
+                page_count,
+                stat.st_size,
+                int(stat.st_mtime),
+                asset_id
+            ))
+            conn.commit()
+        
+        return jsonify({'status': 'reindexed', 'page_count': page_count})
+    except Exception as e:
+        logger.error(f"Re-index failed for asset {asset_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@assets_bp.route('/assets/<int:asset_id>/regenerate-thumbnail', methods=['POST'])
+def api_regenerate_asset_thumbnail(asset_id: int):
+    """Regenerate thumbnail for a PDF asset."""
+    asset = get_asset_by_id(asset_id)
+    if not asset:
+        return jsonify({'error': 'Asset not found'}), 404
+    
+    file_path = Path(asset['file_path'])
+    if not file_path.exists():
+        return jsonify({'error': 'Source file not found', 'status': 'missing'}), 404
+    
+    try:
+        import pymupdf
+        # Render first page as thumbnail
+        doc = pymupdf.open(str(file_path))
+        page = doc[0]
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(0.5, 0.5))
+        
+        # Store in thumbnails directory
+        thumb_dir = Path(current_app.config.get('DATA_DIR', 'data')) / 'thumbnails' / 'pdf'
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        thumb_path = thumb_dir / f"{asset_id}.png"
+        pix.save(str(thumb_path))
+        doc.close()
+        
+        # Update database
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE assets SET thumbnail_path = ?, thumb_rendered_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (str(thumb_path), asset_id)
+            )
+            conn.commit()
+        
+        return jsonify({'status': 'rendered', 'path': str(thumb_path)})
+    except Exception as e:
+        logger.error(f"Thumbnail generation failed for asset {asset_id}: {e}")
+        return jsonify({'error': str(e), 'status': 'failed'}), 500
