@@ -49,11 +49,13 @@ COPY wsgi.py /app/
 # Create directories
 RUN mkdir -p /app/data /app/logs /app/thumbnails/pdf /app/thumbnails/3d
 
-# Copy schema for database initialization
-COPY data/schema.sql /app/data/schema.sql
+# Copy schema to safe location (outside /app/data which may be a volume mount)
+COPY data/schema.sql /app/schema.sql
 
-# Supervisor configuration
+# Copy entrypoint and supervisor config
+COPY docker/entrypoint.sh /app/entrypoint.sh
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN chmod +x /app/entrypoint.sh
 
 # Environment
 ENV FANTASYFOLIO_ENV=production
@@ -69,6 +71,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 # Expose ports
 EXPOSE 8888 22
+
+# Entrypoint handles schema.sql copy for volume mounts
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Start supervisor (manages Flask app + SSH)
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
