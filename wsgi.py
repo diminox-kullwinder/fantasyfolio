@@ -1,5 +1,5 @@
 """WSGI entry point for Gunicorn."""
-from dam.app import create_app
+from fantasyfolio.app import create_app
 
 app = create_app()
 

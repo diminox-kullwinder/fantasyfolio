@@ -1,8 +1,10 @@
-# Digital Asset Manager (DAM)
+# FantasyFolio
 
 A self-hosted web application for managing and browsing digital asset libraries, specifically designed for:
 - **RPG PDF collections** (rulebooks, adventures, supplements)
 - **3D printable miniatures** (STL, 3MF, OBJ files from Patreon packs)
+
+> **Note**: This project was formerly known as "DAM" (Digital Asset Manager). The `DAM_*` environment variables are still supported for backward compatibility.
 
 ## Features
 
@@ -23,58 +25,49 @@ A self-hosted web application for managing and browsing digital asset libraries,
 - 💾 Direct model file downloads
 
 ### 3D Thumbnail Rendering
-Automatic thumbnail generation for 3D models with a two-tier approach:
-
-**Primary: stl-thumb (OpenGL)**
-- Uses [stl-thumb](https://github.com/unlimitedbacon/stl-thumb) CLI for high-quality OpenGL renders
-- Supports STL, OBJ, and 3MF formats
-- Produces professional-looking isometric thumbnails
-- Install: `cargo install stl-thumb` or download from releases
-
-**Fallback: PIL Software Rendering**
-- Pure Python fallback when stl-thumb is unavailable
-- Custom parsers for STL, OBJ, and 3MF files
-- Isometric projection with depth-sorted triangles
-- Shaded blue material with lighting
-
-**Thumbnail Generation Flow:**
-1. Check for cached thumbnail (`thumbnails/3d/<id>.png`)
-2. Look for preview image in archive (skips texture files automatically)
-3. Queue background render via stl-thumb or PIL fallback
-4. Return SVG placeholder while rendering completes
-5. Client polls with cache-busting to pick up finished renders
+Automatic thumbnail generation with tiered processing:
+- **Fast lane**: Small files (<30MB) — 18+ parallel workers
+- **Slow lane**: Large files (>30MB) — dedicated workers with longer timeouts
+- Uses [stl-thumb](https://github.com/unlimitedbacon/stl-thumb) for high-quality OpenGL renders
+- PIL software fallback when stl-thumb is unavailable
 
 ### 3D Model Viewer (Three.js)
-- 🎮 **Interactive 3D preview** - View STL, OBJ, and 3MF models directly in the browser
-- 🔄 **Orbit controls** - Rotate, pan, and zoom with mouse/touch
-- 💡 **Professional lighting** - Ambient and directional lighting for best visualization
-- 📐 **Grid overlay** - Reference grid for scale context
-- 🎨 **Clean rendering** - Anti-aliased WebGL rendering
-- 📱 **Responsive** - Works on desktop and mobile browsers
-
-The viewer uses Three.js (r128) with STLLoader, OBJLoader, and 3MFLoader, loaded from CDN for fast startup.
+- 🎮 **Interactive 3D preview** — View STL, OBJ, and 3MF models in browser
+- 🔄 **Orbit controls** — Rotate, pan, and zoom with mouse/touch
+- 💡 **Professional lighting** — Ambient and directional lighting
+- 📱 **Responsive** — Works on desktop and mobile
 
 ### General
 - 🌐 Modern responsive web interface
 - 🚀 Fast SQLite database with FTS5 full-text search
 - ⚙️ Configurable content roots via web UI
-- 📊 Statistics and usage overview
 - 🔌 REST API for integrations
+- 🐳 Docker support with pre-built images
 
 ## Quick Start
 
-### Prerequisites
+### Docker (Recommended)
 
-- Python 3.10 or higher
-- 2GB+ RAM recommended
-- Sufficient storage for your asset library
+```bash
+# Pull and run
+docker pull ghcr.io/diminox-kullwinder/fantasyfolio:latest
 
-### Installation
+# Or use Docker Compose
+git clone https://github.com/diminox-kullwinder/fantasyfolio.git
+cd fantasyfolio
+cp .env.example .env
+# Edit .env with your paths
+docker compose up -d
+```
+
+Open http://localhost:8888 in your browser.
+
+### Manual Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/dam.git
-cd dam
+git clone https://github.com/diminox-kullwinder/fantasyfolio.git
+cd fantasyfolio
 
 # Create virtual environment
 python -m venv venv
@@ -83,39 +76,31 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Initialize the database
-python -m dam.cli init-db
-
 # Start the server
-python -m dam.cli run
+python -m fantasyfolio.cli run
 ```
 
-Open http://localhost:8888 in your browser.
+## Configuration
 
-### Configuration
-
-DAM can be configured via environment variables or a `.env` file:
+FantasyFolio can be configured via environment variables or a `.env` file:
 
 ```bash
-# Copy the example config
-cp config/.env.example .env
-
-# Edit with your settings
+cp .env.example .env
 nano .env
 ```
 
-Key configuration options:
-
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DAM_ENV` | Environment (development/production) | development |
-| `DAM_HOST` | Server bind address | 0.0.0.0 |
-| `DAM_PORT` | Server port | 8888 |
-| `DAM_DATABASE_PATH` | SQLite database location | data/dam.db |
-| `DAM_PDF_ROOT` | Default PDF library path | (none) |
-| `DAM_3D_ROOT` | Default 3D models path | (none) |
-| `DAM_SECRET_KEY` | Flask secret key | (auto-generated) |
-| `DAM_LOG_LEVEL` | Logging level | INFO |
+| `FANTASYFOLIO_ENV` | Environment (development/production) | development |
+| `FANTASYFOLIO_HOST` | Server bind address | 0.0.0.0 |
+| `FANTASYFOLIO_PORT` | Server port | 8888 |
+| `FANTASYFOLIO_DATABASE_PATH` | SQLite database location | data/fantasyfolio.db |
+| `FANTASYFOLIO_PDF_ROOT` | Default PDF library path | (none) |
+| `FANTASYFOLIO_3D_ROOT` | Default 3D models path | (none) |
+| `FANTASYFOLIO_SECRET_KEY` | Flask secret key | (auto-generated) |
+| `FANTASYFOLIO_LOG_LEVEL` | Logging level | INFO |
+
+> **Backward Compatibility**: `DAM_*` environment variables are still supported.
 
 ## Usage
 
@@ -129,173 +114,66 @@ Key configuration options:
 ### CLI Commands
 
 ```bash
-# Initialize database
-python -m dam.cli init-db
-
 # Start web server
-python -m dam.cli run
+python -m fantasyfolio.cli run
 
 # Index PDFs
-python -m dam.cli index-pdfs /path/to/pdfs
+python -m fantasyfolio.cli index-pdfs /path/to/pdfs
 
 # Index 3D models
-python -m dam.cli index-models /path/to/models
+python -m fantasyfolio.cli index-models /path/to/models
 
 # Show statistics
-python -m dam.cli stats
+python -m fantasyfolio.cli stats
+
+# Compute hashes for deduplication
+python -m fantasyfolio.cli compute-hashes
+
+# Detect duplicates
+python -m fantasyfolio.cli detect-duplicates
 ```
 
 ### API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/health` | GET | Health check |
+| `/api/system/health` | GET | Health check |
 | `/api/stats` | GET | Overall statistics |
 | `/api/assets` | GET | List PDF assets |
-| `/api/assets/<id>` | GET | Get asset details |
-| `/api/assets/<id>/thumbnail` | GET | Get PDF thumbnail |
-| `/api/assets/<id>/render/<page>` | GET | Render PDF page as image |
-| `/api/models` | GET | List 3D models (supports `?format=stl\|obj\|3mf`) |
-| `/api/models/<id>` | GET | Get model details |
-| `/api/models/<id>/preview` | GET | Get model preview image |
-| `/api/models/<id>/stl` | GET | **Get STL file for 3D viewer** |
-| `/api/models/<id>/download` | GET | Download model file |
+| `/api/models` | GET | List 3D models |
+| `/api/models/<id>/stl` | GET | Get STL file for 3D viewer |
 | `/api/search` | GET | Unified search |
 | `/api/settings` | GET/POST | Application settings |
-| `/api/index` | POST | Trigger indexing |
 
-#### 3D Viewer Integration
+## Project Structure
 
-The web UI includes an interactive Three.js-based STL viewer. When viewing a model:
-1. Click "3D Preview" to open the viewer modal
-2. The viewer fetches the STL from `/api/models/<id>/stl`
-3. Models inside ZIP archives are extracted on-the-fly
-4. Use mouse to rotate (drag), zoom (scroll), and pan (right-drag)
-
-See [API Documentation](docs/API.md) for full details.
-
-## Deployment
-
-### Docker (Recommended)
-
-```bash
-# Build the image
-docker build -t dam .
-
-# Run with Docker Compose
-docker-compose up -d
 ```
-
-### Manual Deployment
-
-For production deployments, use a production WSGI server:
-
-```bash
-# Install production dependencies
-pip install gunicorn
-
-# Run with Gunicorn
-gunicorn -w 4 -b 0.0.0.0:8888 "dam.app:create_app()"
-```
-
-### Nginx Reverse Proxy
-
-Example nginx configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name dam.example.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:8888;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
+fantasyfolio/
+├── fantasyfolio/          # Main Python package
+│   ├── api/               # API blueprints
+│   ├── core/              # Core business logic
+│   ├── indexer/           # Indexing services
+│   └── services/          # Background services
+├── scripts/               # Utility scripts
+│   └── thumbnail_daemon.py
+├── tests/                 # Test suite
+├── docs/                  # Documentation
+├── templates/             # Jinja templates
+└── docker-compose.yml     # Docker deployment
 ```
 
 ## Development
 
-### Project Structure
-
-```
-dam/
-├── dam/                    # Main Python package
-│   ├── api/               # API blueprints
-│   ├── core/              # Core business logic
-│   ├── indexer/           # Indexing services
-│   └── utils/             # Utilities
-├── tests/                 # Test suite
-├── docs/                  # Documentation
-├── static/                # Static files
-├── templates/             # Jinja templates
-├── data/                  # Database and schema
-├── logs/                  # Application logs
-├── thumbnails/            # Generated thumbnails
-└── config/                # Configuration templates
-```
-
-### Running Tests
-
 ```bash
 # Install test dependencies
-pip install -r requirements-dev.txt
+pip install pytest
 
 # Run tests
-pytest
+pytest tests/ -v
 
-# Run with coverage
-pytest --cov=dam
-```
-
-### Code Style
-
-This project uses:
-- `black` for code formatting
-- `flake8` for linting
-- `mypy` for type checking
-
-```bash
 # Format code
-black dam/
-
-# Run linters
-flake8 dam/
-mypy dam/
+black fantasyfolio/
 ```
-
-## Troubleshooting
-
-### Common Issues
-
-**Database locked error**
-- Ensure only one indexing process runs at a time
-- Check disk space and permissions
-
-**PDF thumbnails not generating**
-- Ensure PyMuPDF is installed correctly
-- Check that the PDF file is not corrupted
-
-**3D models not found in ZIPs**
-- Verify the archive is not corrupted
-- Check for supported file extensions (stl, 3mf, obj)
-
-### Logs
-
-Logs are stored in the `logs/` directory:
-- `dam.log` - Main application log
-- `index_pdf.log` - PDF indexer log
-- `index_3d.log` - 3D model indexer log
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linters
-5. Submit a pull request
 
 ## License
 
@@ -303,16 +181,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-### Backend
 - [Flask](https://flask.palletsprojects.com/) — Web framework
-- [PyMuPDF](https://pymupdf.readthedocs.io/) — PDF processing and rendering
+- [PyMuPDF](https://pymupdf.readthedocs.io/) — PDF processing
+- [stl-thumb](https://github.com/unlimitedbacon/stl-thumb) — 3D thumbnail rendering
+- [Three.js](https://threejs.org/) — In-browser 3D viewer
 - [SQLite](https://sqlite.org/) with FTS5 — Database and full-text search
-- [Click](https://click.palletsprojects.com/) — CLI framework
-- [Gunicorn](https://gunicorn.org/) — Production WSGI server
-
-### 3D Model Processing
-- [stl-thumb](https://github.com/unlimitedbacon/stl-thumb) — High-quality OpenGL thumbnail rendering (STL/OBJ/3MF)
-- [Three.js](https://threejs.org/) — In-browser 3D model viewer (STLLoader, OBJLoader, 3MFLoader, OrbitControls)
-- [numpy-stl](https://github.com/WoLpH/numpy-stl) — STL file parsing for fallback renderer
-- [Pillow (PIL)](https://pillow.readthedocs.io/) — Software rendering fallback for thumbnails
-- [NumPy](https://numpy.org/) — Numerical computing for 3D geometry operations

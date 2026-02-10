@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.0] - 2026-02-09
+
+### 🎉 Rebranded to FantasyFolio
+
+This release marks the official rebrand from "DAM" (Digital Asset Manager) to **FantasyFolio**.
+
+### Changed
+- **Package renamed**: `dam/` → `fantasyfolio/`
+- **All imports updated**: `from dam.` → `from fantasyfolio.`
+- **App name**: "Digital Asset Manager" → "FantasyFolio"
+- **Environment variables**: Now use `FANTASYFOLIO_*` prefix (e.g., `FANTASYFOLIO_DATABASE_PATH`)
+  - **Backward compatible**: `DAM_*` variables still work as fallback
+- **CLI**: `python -m fantasyfolio.cli run`
+- **UI**: Title and header now show "FantasyFolio"
+- **API health**: Returns `{"service": "FantasyFolio API", ...}`
+
+### Added
+- GitHub Container Registry support (`ghcr.io/diminox-kullwinder/fantasyfolio`)
+- GitHub Actions CI/CD for automated Docker builds
+- SSH access in container for remote debugging
+- Supervisor process management in container
+- Windows deployment documentation
+
+### Migrating from DAM
+1. Your existing database is fully compatible
+2. Update your `.env` file to use `FANTASYFOLIO_*` variables (optional — `DAM_*` still works)
+3. Update CLI commands: `python -m dam.cli` → `python -m fantasyfolio.cli`
+4. Update imports if you have custom scripts: `from dam.` → `from fantasyfolio.`
+
+---
+
 ## [0.3.1] - 2026-02-09
 
 ### Added

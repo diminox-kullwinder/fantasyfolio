@@ -28,8 +28,8 @@ env_local = Path(__file__).parent.parent / '.env.local'
 if env_local.exists():
     load_dotenv(env_local)
 
-from dam.config import get_config
-from dam.core.database import get_connection, get_model_by_id
+from fantasyfolio.config import get_config
+from fantasyfolio.core.database import get_connection, get_model_by_id
 
 # Logging
 log_file = Path(__file__).parent.parent / 'logs' / 'thumbnail_daemon.log'

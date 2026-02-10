@@ -26,7 +26,7 @@ class TestHashing:
     
     def test_partial_hash_consistency(self):
         """Hash of file should match hash of same bytes."""
-        from dam.core.hashing import compute_partial_hash, compute_partial_hash_from_bytes
+        from fantasyfolio.core.hashing import compute_partial_hash, compute_partial_hash_from_bytes
         
         # Create test file
         with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -43,7 +43,7 @@ class TestHashing:
     
     def test_partial_hash_small_file(self):
         """Small files should hash correctly."""
-        from dam.core.hashing import compute_partial_hash
+        from fantasyfolio.core.hashing import compute_partial_hash
         
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(b'Small file')
@@ -57,7 +57,7 @@ class TestHashing:
     
     def test_different_files_different_hashes(self):
         """Different files should have different hashes."""
-        from dam.core.hashing import compute_partial_hash_from_bytes
+        from fantasyfolio.core.hashing import compute_partial_hash_from_bytes
         
         hash1 = compute_partial_hash_from_bytes(b'Content A ' * 10000)
         hash2 = compute_partial_hash_from_bytes(b'Content B ' * 10000)
@@ -69,7 +69,7 @@ class TestThumbnails:
     
     def test_determine_thumb_location_sidecar(self):
         """Writable volume should use sidecar."""
-        from dam.core.thumbnails import determine_thumb_location, ThumbStorage
+        from fantasyfolio.core.thumbnails import determine_thumb_location, ThumbStorage
         
         model = {'file_path': '/test/path/model.stl', 'partial_hash': 'abc123'}
         volume = {'mount_path': '/test', 'is_readonly': False}
@@ -82,7 +82,7 @@ class TestThumbnails:
     
     def test_determine_thumb_location_readonly(self):
         """Read-only volume should use central cache."""
-        from dam.core.thumbnails import determine_thumb_location, ThumbStorage
+        from fantasyfolio.core.thumbnails import determine_thumb_location, ThumbStorage
         
         model = {'file_path': '/readonly/model.stl', 'partial_hash': 'abc123'}
         volume = {'mount_path': '/readonly', 'is_readonly': True}
@@ -93,7 +93,7 @@ class TestThumbnails:
     
     def test_determine_thumb_location_archive(self):
         """Archive member should use archive_sidecar or central."""
-        from dam.core.thumbnails import determine_thumb_location, ThumbStorage
+        from fantasyfolio.core.thumbnails import determine_thumb_location, ThumbStorage
         
         model = {
             'archive_path': '/test/archive.zip',
@@ -112,7 +112,7 @@ class TestScanner:
     
     def test_find_existing_asset_new(self):
         """New file should return 'new' match type."""
-        from dam.core.scanner import find_existing_asset
+        from fantasyfolio.core.scanner import find_existing_asset
         import sqlite3
         
         # Create in-memory database
@@ -143,7 +143,7 @@ class TestScanner:
     
     def test_find_existing_asset_unchanged(self):
         """File with same path/mtime/size should be unchanged."""
-        from dam.core.scanner import find_existing_asset
+        from fantasyfolio.core.scanner import find_existing_asset
         import sqlite3
         
         conn = sqlite3.connect(':memory:')
@@ -226,7 +226,7 @@ def run_basic_tests():
     # Test 1: Hashing
     print("\n[Test 1] Partial Hash Consistency...")
     try:
-        from dam.core.hashing import compute_partial_hash_from_bytes
+        from fantasyfolio.core.hashing import compute_partial_hash_from_bytes
         h1 = compute_partial_hash_from_bytes(b'test' * 10000)
         h2 = compute_partial_hash_from_bytes(b'test' * 10000)
         assert h1 == h2
@@ -239,7 +239,7 @@ def run_basic_tests():
     # Test 2: Different content
     print("\n[Test 2] Different Content -> Different Hash...")
     try:
-        from dam.core.hashing import compute_partial_hash_from_bytes
+        from fantasyfolio.core.hashing import compute_partial_hash_from_bytes
         h1 = compute_partial_hash_from_bytes(b'content A' * 10000)
         h2 = compute_partial_hash_from_bytes(b'content B' * 10000)
         assert h1 != h2
@@ -252,7 +252,7 @@ def run_basic_tests():
     # Test 3: Thumbnail storage
     print("\n[Test 3] Thumbnail Storage Decision...")
     try:
-        from dam.core.thumbnails import determine_thumb_location, ThumbStorage
+        from fantasyfolio.core.thumbnails import determine_thumb_location, ThumbStorage
         model = {'file_path': '/test.stl', 'partial_hash': 'abc'}
         volume = {'mount_path': '/', 'is_readonly': True}
         storage, _ = determine_thumb_location(model, volume, Path('/central'))
@@ -266,7 +266,7 @@ def run_basic_tests():
     # Test 4: Scanner identity
     print("\n[Test 4] Scanner Identity Resolution...")
     try:
-        from dam.core.scanner import find_existing_asset
+        from fantasyfolio.core.scanner import find_existing_asset
         import sqlite3
         conn = sqlite3.connect(':memory:')
         conn.row_factory = sqlite3.Row

@@ -111,7 +111,7 @@ def test_volume_monitor_service():
         project_root = Path(__file__).parent.parent
         sys.path.insert(0, str(project_root))
         
-        from dam.services.volume_monitor import (
+        from fantasyfolio.services.volume_monitor import (
             check_volume_available,
             get_all_volume_status,
             get_volume_for_path,
@@ -400,7 +400,7 @@ def test_download_availability():
     # (We can't easily test this without unmounting a volume, so we verify the code path exists)
     try:
         # Check that volume_monitor is importable
-        from dam.services.volume_monitor import check_volume_for_path
+        from fantasyfolio.services.volume_monitor import check_volume_for_path
         result = check_volume_for_path("/Volumes/NonExistentTestVolume/test.pdf")
         if not result['available']:
             log_pass("Volume check for invalid path", f"correctly unavailable: {result.get('reason', 'no reason')[:40]}")
@@ -436,7 +436,7 @@ def test_soft_delete():
     
     # Test 5.2: Database soft delete functions exist
     try:
-        from dam.core.database import (
+        from fantasyfolio.core.database import (
             soft_delete_asset, restore_asset, get_deleted_assets,
             soft_delete_model, restore_model, get_deleted_models
         )
