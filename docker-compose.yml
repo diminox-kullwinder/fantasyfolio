@@ -1,42 +1,66 @@
 version: '3.8'
 
+# FantasyFolio - Docker Compose Configuration
+# 
+# For Windows deployment with local asset storage.
+# Adjust volume paths in .env file.
+
 services:
-  dam:
-    build: .
-    container_name: dam
+  fantasyfolio:
+    # Use pre-built image from GitHub Container Registry
+    # To build locally instead, comment out 'image' and uncomment 'build'
+    image: ghcr.io/diminox-kullwinder/fantasyfolio:latest
+    # build: .
+    
+    container_name: fantasyfolio
     restart: unless-stopped
+    
     ports:
-      - "8888:8888"
+      - "8888:8888"   # Web UI
+      - "2222:22"     # SSH access for remote debugging
+    
     environment:
-      - DAM_ENV=production
-      - DAM_SECRET_KEY=${DAM_SECRET_KEY:-change-me-in-production}
-      - DAM_LOG_LEVEL=INFO
+      - FANTASYFOLIO_ENV=production
+      - FANTASYFOLIO_DATABASE_PATH=/app/data/fantasyfolio.db
+      - FANTASYFOLIO_SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - FANTASYFOLIO_LOG_LEVEL=INFO
+      # Thumbnail daemon settings
+      - ENABLE_THUMBNAIL_DAEMON=true
+      - CONTENT_ROOT=/content/models
+      - THUMBNAIL_DIR=/app/thumbnails/3d
+      - FAST_WORKERS=${FAST_WORKERS:-18}
+      - SLOW_WORKERS=${SLOW_WORKERS:-4}
+      - SIZE_THRESHOLD_MB=${SIZE_THRESHOLD_MB:-30}
+    
     volumes:
-      # Persistent data
-      - ./data:/app/data
-      - ./logs:/app/logs
-      - ./thumbnails:/app/thumbnails
+      # Persistent data (database, thumbnails, logs)
+      - fantasyfolio_data:/app/data
+      - fantasyfolio_thumbs:/app/thumbnails
+      - fantasyfolio_logs:/app/logs
       
-      # Mount your content libraries (read-write for uploads)
-      - ${PDF_LIBRARY:-/Volumes/d-mini/DROBO/D/PDF/Gathered}:/content/pdfs
-      - ${MODELS_LIBRARY:-/Volumes/d-mini/3D}:/content/models
+      # Asset directories - EDIT THESE PATHS for your system
+      # Windows example: D:\3D-Models:/content/models:ro
+      # Linux example: /mnt/storage/3d:/content/models:ro
+      - ${MODELS_PATH:-./sample-models}:/content/models:ro
+      - ${PDF_PATH:-./sample-pdfs}:/content/pdfs:ro
+      
+      # Optional: Mount code for development/hot-reloading
+      # Uncomment these to enable SSH-based code updates without rebuild
+      # - ./fantasyfolio:/app/fantasyfolio
+      # - ./scripts:/app/scripts
+      # - ./templates:/app/templates
+    
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8888/api/system/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 30s
 
-  # Optional: Nginx reverse proxy
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: dam-nginx
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./certs:/etc/nginx/certs:ro
-  #   depends_on:
-  #     - dam
+volumes:
+  fantasyfolio_data:
+    driver: local
+  fantasyfolio_thumbs:
+    driver: local
+  fantasyfolio_logs:
+    driver: local

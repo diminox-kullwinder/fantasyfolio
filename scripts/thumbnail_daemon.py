@@ -47,15 +47,17 @@ logger = logging.getLogger(__name__)
 
 shutdown = Event()
 
-# Configuration
-SIZE_THRESHOLD_MB = 30  # Files above this go to slow lane
-FAST_WORKERS = 12
-SLOW_WORKERS = 2
-FAST_BATCH = 100
-SLOW_BATCH = 10
-FAST_TIMEOUT = 120  # 2 min for small files
-SLOW_TIMEOUT = 600  # 10 min for large files
-CHECK_INTERVAL = 5  # seconds between batch checks
+# Configuration (from environment with defaults)
+SIZE_THRESHOLD_MB = int(os.environ.get('SIZE_THRESHOLD_MB', 30))
+FAST_WORKERS = int(os.environ.get('FAST_WORKERS', 18))
+SLOW_WORKERS = int(os.environ.get('SLOW_WORKERS', 4))
+FAST_BATCH = int(os.environ.get('FAST_BATCH', 100))
+SLOW_BATCH = int(os.environ.get('SLOW_BATCH', 10))
+FAST_TIMEOUT = int(os.environ.get('FAST_TIMEOUT', 120))  # 2 min for small files
+SLOW_TIMEOUT = int(os.environ.get('SLOW_TIMEOUT', 600))  # 10 min for large files
+CHECK_INTERVAL = int(os.environ.get('CHECK_INTERVAL', 5))  # seconds between batch checks
+CONTENT_ROOT = os.environ.get('CONTENT_ROOT', '')  # Optional path prefix for container
+THUMBNAIL_DIR = os.environ.get('THUMBNAIL_DIR', '')  # Optional override for thumbnails
 
 
 def signal_handler(sig, frame):
