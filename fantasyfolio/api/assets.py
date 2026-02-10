@@ -313,7 +313,7 @@ def api_serve_pdf(asset_id: int):
     )
 
 
-@assets_bp.route('/extract-pages/<int:asset_id>', methods=['POST'])
+@assets_bp.route('/extract-pages/<int:asset_id>', methods=['GET', 'POST'])
 def api_extract_pages(asset_id: int):
     """Extract a range of pages from a PDF as a new file."""
     asset = get_asset_by_id(asset_id)
@@ -321,12 +321,22 @@ def api_extract_pages(asset_id: int):
     if not asset:
         return jsonify({'error': 'Asset not found'}), 404
     
-    data = request.get_json(silent=True)
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
-    start_page = data.get('start', 1)
-    end_page = data.get('end')
+    # Support both GET (query params) and POST (JSON body)
+    if request.method == 'GET':
+        pages_param = request.args.get('pages', '')
+        if '-' in pages_param:
+            parts = pages_param.split('-')
+            start_page = int(parts[0]) if parts[0] else 1
+            end_page = int(parts[1]) if len(parts) > 1 and parts[1] else None
+        else:
+            start_page = int(pages_param) if pages_param else 1
+            end_page = start_page
+    else:
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        start_page = data.get('start', 1)
+        end_page = data.get('end')
     
     try:
         import pymupdf

@@ -22,6 +22,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     # Build tools for stl-thumb
     cargo \
+    # OpenGL software rendering (Mesa) for stl-thumb
+    libgl1 \
+    libgl1-mesa-dri \
+    libegl1 \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Install stl-thumb via cargo (simpler than multi-stage)

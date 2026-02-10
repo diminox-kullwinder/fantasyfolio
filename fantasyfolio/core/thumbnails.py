@@ -273,12 +273,22 @@ def render_thumbnail(
 
 
 def _render_with_stl_thumb(input_path: str, output_path: str, size: int = 512) -> bool:
-    """Render using stl-thumb CLI."""
+    """Render using stl-thumb CLI with virtual framebuffer for headless rendering."""
+    import shutil
+    
+    # Use xvfb-run if available (for headless OpenGL rendering in containers)
+    use_xvfb = shutil.which('xvfb-run') is not None
+    
+    if use_xvfb:
+        cmd = ['xvfb-run', '-a', 'stl-thumb', input_path, output_path, '-s', str(size)]
+    else:
+        cmd = ['stl-thumb', input_path, output_path, '-s', str(size)]
+    
     try:
         result = subprocess.run(
-            ['stl-thumb', input_path, output_path, '-s', str(size)],
+            cmd,
             capture_output=True,
-            timeout=60
+            timeout=120  # More time for xvfb startup
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):

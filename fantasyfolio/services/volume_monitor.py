@@ -26,41 +26,52 @@ def get_configured_volumes() -> Dict[str, str]:
     Get configured volume paths.
     
     Priority:
-    1. backup_config.yaml (if exists)
-    2. Environment variables (FANTASYFOLIO_PDF_ROOT, FANTASYFOLIO_3D_ROOT (or DAM_* for backward compat))
-    3. Default volumes
+    1. asset_locations table (preferred - UI configurable)
+    2. Environment variables (FANTASYFOLIO_PDF_ROOT, FANTASYFOLIO_3D_ROOT, or DAM_* for backward compat)
+    3. Default volumes (Mac paths - legacy fallback)
     
     Returns:
         Dict mapping volume name to path
     """
     volumes = {}
     
-    # Try to load from backup_config.yaml
+    # Priority 1: Read from asset_locations table
     try:
-        from fantasyfolio.services.backup_config import load_backup_config
-        config = load_backup_config()
-        if config and 'protection' in config:
-            vol_config = config.get('protection', {}).get('volume_check', {}).get('volumes', {})
-            if vol_config:
-                return vol_config
-    except (ImportError, FileNotFoundError):
-        pass  # backup_config not yet implemented or file doesn't exist
+        from fantasyfolio.services.asset_locations import get_all_locations
+        locations = get_all_locations()
+        if locations:
+            for loc in locations:
+                if loc.get('enabled'):
+                    asset_type = loc.get('asset_type', '')
+                    path = loc.get('path', '')
+                    if asset_type == 'pdf' and path:
+                        volumes['pdfs'] = path
+                    elif asset_type == '3d' and path:
+                        volumes['models'] = path
+            # If we got paths from asset_locations, return them
+            if volumes:
+                logger.debug(f"Using asset_locations paths: {volumes}")
+                return volumes
+    except Exception as e:
+        logger.debug(f"Could not read asset_locations: {e}")
     
-    # Fall back to environment variables
-    pdf_root = os.environ.get('DAM_PDF_ROOT', '')
-    models_root = os.environ.get('DAM_3D_ROOT', '')
+    # Priority 2: Environment variables
+    pdf_root = os.environ.get('FANTASYFOLIO_PDF_ROOT', os.environ.get('DAM_PDF_ROOT', ''))
+    models_root = os.environ.get('FANTASYFOLIO_3D_ROOT', os.environ.get('DAM_3D_ROOT', ''))
     
     if pdf_root:
         volumes['pdfs'] = pdf_root
-    else:
-        volumes['pdfs'] = DEFAULT_VOLUMES['pdfs']
-    
     if models_root:
         volumes['models'] = models_root
-    else:
-        volumes['models'] = DEFAULT_VOLUMES['models']
     
-    return volumes
+    # If we have env vars, return them
+    if volumes:
+        logger.debug(f"Using environment variable paths: {volumes}")
+        return volumes
+    
+    # Priority 3: Default volumes (legacy Mac paths)
+    logger.debug(f"Using default paths: {DEFAULT_VOLUMES}")
+    return DEFAULT_VOLUMES.copy()
 
 
 def check_volume_available(volume_path: str) -> Dict:

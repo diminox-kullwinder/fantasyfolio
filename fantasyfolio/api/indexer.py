@@ -92,10 +92,10 @@ def api_trigger_index():
             from fantasyfolio.services.snapshot import create_snapshot, list_snapshots
             
             # Only create if no snapshot in last hour (avoid spam)
+            from datetime import timedelta
             snapshots = list_snapshots()
             recent_snapshot = False
             if snapshots:
-                from datetime import datetime, timedelta
                 latest = datetime.fromisoformat(snapshots[0]['timestamp'])
                 if datetime.now() - latest < timedelta(hours=1):
                     recent_snapshot = True

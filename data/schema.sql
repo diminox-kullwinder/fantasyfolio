@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS assets (
     
     -- Thumbnails
     thumbnail_path TEXT,
-    has_thumbnail INTEGER DEFAULT 0
+    has_thumbnail INTEGER DEFAULT 0,
+    deleted_at TEXT
 );
 
 -- Full-text search table for asset metadata
