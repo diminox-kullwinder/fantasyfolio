@@ -207,3 +207,24 @@ CREATE TRIGGER IF NOT EXISTS models_ad AFTER DELETE ON models BEGIN
     INSERT INTO models_fts(models_fts, rowid, filename, title, collection, creator)
     VALUES ('delete', old.id, old.filename, old.title, old.collection, old.creator);
 END;
+
+-- Asset Locations table for configurable content paths
+CREATE TABLE IF NOT EXISTS asset_locations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    path TEXT NOT NULL,
+    enabled INTEGER DEFAULT 1,
+    is_primary INTEGER DEFAULT 0,
+    protocol TEXT DEFAULT 'local',
+    host TEXT,
+    port INTEGER,
+    username TEXT,
+    credentials TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for asset locations
+CREATE INDEX IF NOT EXISTS idx_asset_locations_type ON asset_locations(type);
+CREATE INDEX IF NOT EXISTS idx_asset_locations_enabled ON asset_locations(enabled);
