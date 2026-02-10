@@ -56,6 +56,7 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 ENV FANTASYFOLIO_ENV=production
 ENV FANTASYFOLIO_HOST=0.0.0.0
 ENV FANTASYFOLIO_PORT=8888
+ENV FANTASYFOLIO_SECRET_KEY=change-me-in-production
 ENV PYTHONUNBUFFERED=1
 ENV MPLCONFIGDIR=/tmp/matplotlib
 
