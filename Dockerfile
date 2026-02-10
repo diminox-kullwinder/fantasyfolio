@@ -49,6 +49,9 @@ COPY wsgi.py /app/
 # Create directories
 RUN mkdir -p /app/data /app/logs /app/thumbnails/pdf /app/thumbnails/3d
 
+# Copy schema for database initialization
+COPY data/schema.sql /app/data/schema.sql
+
 # Supervisor configuration
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
