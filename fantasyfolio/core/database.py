@@ -171,26 +171,36 @@ def get_asset_by_id(asset_id: int) -> Optional[Dict[str, Any]]:
     return get_db().fetchone("SELECT * FROM assets WHERE id = ?", (asset_id,))
 
 
-def list_assets(folder: Optional[str] = None, limit: int = 100, offset: int = 0, include_deleted: bool = False) -> List[Dict[str, Any]]:
-    """List assets with optional folder filter.
+def list_assets(folder: Optional[str] = None, limit: int = 100, offset: int = 0, include_deleted: bool = False, sort: str = 'filename', order: str = 'asc') -> List[Dict[str, Any]]:
+    """List assets with optional folder filter and sorting.
     
     Args:
         folder: Filter by folder path prefix
         limit: Maximum results
         offset: Pagination offset
         include_deleted: If True, include soft-deleted records
+        sort: Column to sort by
+        order: Sort order (asc or desc)
     """
+    # Validate sort column to prevent SQL injection
+    valid_sorts = {'filename', 'title', 'file_size', 'page_count', 'publisher', 'created_at', 'modified_at'}
+    if sort not in valid_sorts:
+        sort = 'filename'
+    
+    # Validate order
+    order_sql = 'DESC' if order.lower() == 'desc' else 'ASC'
+    
     db = get_db()
     deleted_filter = "deleted_at IS NULL" if not include_deleted else "1=1"
     with db.connection() as conn:
         if folder:
             rows = conn.execute(
-                f"SELECT * FROM assets WHERE folder_path LIKE ? AND {deleted_filter} ORDER BY filename LIMIT ? OFFSET ?",
+                f"SELECT * FROM assets WHERE folder_path LIKE ? AND {deleted_filter} ORDER BY {sort} {order_sql} LIMIT ? OFFSET ?",
                 (folder + '%', limit, offset)
             ).fetchall()
         else:
             rows = conn.execute(
-                f"SELECT * FROM assets WHERE {deleted_filter} ORDER BY filename LIMIT ? OFFSET ?",
+                f"SELECT * FROM assets WHERE {deleted_filter} ORDER BY {sort} {order_sql} LIMIT ? OFFSET ?",
                 (limit, offset)
             ).fetchall()
         return [dict(row) for row in rows]

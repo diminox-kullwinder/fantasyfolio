@@ -20,12 +20,13 @@ logger = logging.getLogger(__name__)
 
 def render_with_stl_thumb(data: bytes, format: str, output_path: str, size: int = 512) -> bytes:
     """
-    Render 3D model thumbnail using stl-thumb CLI (high quality OpenGL).
+    Render 3D model thumbnail using f3d (preferred) or stl-thumb CLI.
     Supports STL, OBJ, and 3MF formats.
-    Falls back to PIL if stl-thumb fails.
+    Falls back to PIL if both fail.
     """
     import subprocess
     import tempfile
+    import shutil
     
     # Write to temp file with correct extension
     suffix = f'.{format.lower()}'
@@ -34,7 +35,27 @@ def render_with_stl_thumb(data: bytes, format: str, output_path: str, size: int 
         model_path = f.name
     
     try:
-        # Run stl-thumb (timeout longer for 3MF)
+        # Try f3d first (works headless in containers with xvfb)
+        if shutil.which('f3d') and shutil.which('xvfb-run'):
+            try:
+                # Camera direction: front view, slightly from above (good for miniatures)
+                result = subprocess.run(
+                    ['xvfb-run', '-a', 'f3d', 
+                     '--output', output_path, 
+                     '--resolution', f'{size},{size}', 
+                     '--up', '+Z',
+                     '--camera-direction=0,-1,-0.3',  # Front view, slight downward angle
+                     model_path],
+                    capture_output=True,
+                    timeout=60
+                )
+                if result.returncode == 0 and Path(output_path).exists():
+                    with open(output_path, 'rb') as f:
+                        return f.read()
+            except Exception as e:
+                logger.debug(f"f3d failed, trying stl-thumb: {e}")
+        
+        # Fall back to stl-thumb
         timeout = 60 if format.lower() == '3mf' else 30
         result = subprocess.run(
             ['stl-thumb', '-s', str(size), model_path, output_path],
@@ -272,7 +293,7 @@ def render_3d_thumbnail(data: bytes, format: str, output_path: Optional[str] = N
     """
     format = format.lower()
     
-    if format not in ('stl', 'obj', '3mf'):
+    if format not in ('stl', 'obj', '3mf', 'glb', 'gltf'):
         raise ValueError(f"Unsupported format: {format}")
     
     # Try stl-thumb first (high quality OpenGL rendering)
@@ -289,13 +310,18 @@ def render_3d_thumbnail(data: bytes, format: str, output_path: Optional[str] = N
     except Exception as e:
         logger.warning(f"stl-thumb failed for {format}, falling back to PIL: {e}")
     
-    # Fallback to PIL rendering
+    # Fallback to PIL rendering (only for formats we can parse)
     if format == 'stl':
         triangles = parse_stl(data)
     elif format == 'obj':
         triangles = parse_obj(data)
     elif format == '3mf':
         triangles = parse_3mf(data)
+    elif format in ('glb', 'gltf'):
+        # GLB/glTF requires f3d - no PIL fallback available
+        raise RuntimeError(f"f3d failed and no PIL fallback available for {format}")
+    else:
+        raise ValueError(f"No parser available for format: {format}")
     
     return render_mesh_thumbnail(triangles, output_path, size)
 

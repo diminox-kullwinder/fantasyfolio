@@ -113,9 +113,9 @@ def api_trigger_index():
     scripts_dir = Path(__file__).parent.parent / "indexer"
     
     if content_type == 'pdf':
-        indexer_module = "dam.indexer.pdf"
+        indexer_module = "fantasyfolio.indexer.pdf"
     elif content_type in ('3d', 'smb'):
-        indexer_module = "dam.indexer.models3d"
+        indexer_module = "fantasyfolio.indexer.models3d"
     else:
         return jsonify({'error': f'Unknown content type: {content_type}'}), 400
     
@@ -131,6 +131,10 @@ def api_trigger_index():
                 log.write(f"Type: {content_type}, Paths: {paths}\n\n")
                 log.flush()
                 
+                # Pass database path to subprocess
+                env = os.environ.copy()
+                env['FANTASYFOLIO_DATABASE_PATH'] = str(config.DATABASE_PATH)
+                
                 for p in paths:
                     p = p.strip()
                     subprocess.Popen(
@@ -138,7 +142,8 @@ def api_trigger_index():
                         stdout=log,
                         stderr=subprocess.STDOUT,
                         start_new_session=True,
-                        cwd=str(config.BASE_DIR)
+                        cwd=str(config.BASE_DIR),
+                        env=env
                     )
             
             return jsonify({
@@ -150,12 +155,16 @@ def api_trigger_index():
             })
         else:
             # Run synchronously (blocking)
+            env = os.environ.copy()
+            env['FANTASYFOLIO_DATABASE_PATH'] = str(config.DATABASE_PATH)
+            
             result = subprocess.run(
                 ['python', '-m', indexer_module, path],
                 capture_output=True,
                 text=True,
                 timeout=3600,
-                cwd=str(config.BASE_DIR)
+                cwd=str(config.BASE_DIR),
+                env=env
             )
             
             if result.returncode == 0:
@@ -183,7 +192,7 @@ def api_index_status():
     # Check if indexer processes are running
     try:
         result = subprocess.run(
-            ['pgrep', '-f', 'dam.indexer'],
+            ['pgrep', '-f', 'fantasyfolio.indexer'],
             capture_output=True,
             text=True
         )

@@ -1,7 +1,7 @@
 """
 3D Models Indexer module.
 
-Scans directories for 3D model files (STL, 3MF, OBJ) including
+Scans directories for 3D model files (STL, 3MF, OBJ, GLB, glTF) including
 inside ZIP archives. Commonly used for Patreon miniature packs.
 """
 
@@ -20,7 +20,7 @@ from fantasyfolio.core.database import get_connection, insert_model
 logger = logging.getLogger(__name__)
 
 # Supported 3D file extensions
-MODEL_EXTENSIONS = {'.stl', '.3mf', '.obj'}
+MODEL_EXTENSIONS = {'.stl', '.3mf', '.obj', '.glb', '.gltf'}
 
 # Preview image extensions
 PREVIEW_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
@@ -245,23 +245,51 @@ class ModelsIndexer:
             return hashlib.md5(f.read(8192)).hexdigest()
     
     def _insert_models(self, models: List[Dict[str, Any]]):
-        """Insert models into database."""
+        """Insert models into database, preserving has_thumbnail if thumbnail exists."""
+        from fantasyfolio.config import get_config
+        config = get_config()
+        thumb_dir = config.THUMBNAIL_DIR / "3d"
+        
         with get_connection() as conn:
             for model in models:
                 try:
-                    conn.execute("""
-                        INSERT OR REPLACE INTO models (
-                            file_path, filename, title, format, file_size, file_hash,
-                            archive_path, archive_member, folder_path, collection, creator,
-                            vertex_count, face_count, has_supports, preview_image,
-                            has_thumbnail, created_at, modified_at
-                        ) VALUES (
-                            :file_path, :filename, :title, :format, :file_size, :file_hash,
-                            :archive_path, :archive_member, :folder_path, :collection, :creator,
-                            :vertex_count, :face_count, :has_supports, :preview_image,
-                            :has_thumbnail, :created_at, :modified_at
-                        )
-                    """, model)
+                    # Check if model exists and get its ID
+                    existing = conn.execute(
+                        "SELECT id, has_thumbnail FROM models WHERE file_path = ?",
+                        (model['file_path'],)
+                    ).fetchone()
+                    
+                    if existing:
+                        # Update existing - check if thumbnail file exists
+                        thumb_file = thumb_dir / f"{existing['id']}.png"
+                        has_thumb = 1 if thumb_file.exists() else existing['has_thumbnail']
+                        
+                        conn.execute("""
+                            UPDATE models SET
+                                filename=:filename, title=:title, format=:format, 
+                                file_size=:file_size, file_hash=:file_hash,
+                                archive_path=:archive_path, archive_member=:archive_member,
+                                folder_path=:folder_path, collection=:collection, creator=:creator,
+                                vertex_count=:vertex_count, face_count=:face_count,
+                                has_supports=:has_supports, preview_image=:preview_image,
+                                has_thumbnail=?, modified_at=:modified_at
+                            WHERE file_path=:file_path
+                        """, {**model, 'has_thumbnail': has_thumb})
+                    else:
+                        # Insert new
+                        conn.execute("""
+                            INSERT INTO models (
+                                file_path, filename, title, format, file_size, file_hash,
+                                archive_path, archive_member, folder_path, collection, creator,
+                                vertex_count, face_count, has_supports, preview_image,
+                                has_thumbnail, created_at, modified_at
+                            ) VALUES (
+                                :file_path, :filename, :title, :format, :file_size, :file_hash,
+                                :archive_path, :archive_member, :folder_path, :collection, :creator,
+                                :vertex_count, :face_count, :has_supports, :preview_image,
+                                :has_thumbnail, :created_at, :modified_at
+                            )
+                        """, model)
                     self.stats['models_indexed'] += 1
                 except Exception as e:
                     logger.error(f"Failed to insert model: {e}")

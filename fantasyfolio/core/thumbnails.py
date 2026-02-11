@@ -81,7 +81,7 @@ def _central_path(model: dict, central_dir: Path) -> Tuple[ThumbStorage, Path]:
     
     # Determine asset type subfolder
     fmt = (model.get('format') or '').lower()
-    if fmt in ('stl', 'obj', '3mf'):
+    if fmt in ('stl', 'obj', '3mf', 'glb', 'gltf'):
         asset_type = '3d'
     elif fmt == 'pdf':
         asset_type = 'pdf'
@@ -293,6 +293,7 @@ def _render_with_f3d(input_path: str, output_path: str, size: int = 1024) -> boo
         '--output', output_path,
         '--resolution', f'{size},{size}',
         '--up', '+Z',
+        '--camera-direction=0,-1,-0.3',  # Front view, slight downward angle (good for miniatures)
         input_path
     ]
     
@@ -502,7 +503,7 @@ def render_pending_thumbnails(
         FROM models m
         LEFT JOIN volumes v ON m.volume_id = v.id
         WHERE m.thumb_storage IS NULL
-        AND m.format IN ('stl', 'obj', '3mf')
+        AND m.format IN ('stl', 'obj', '3mf', 'glb', 'gltf')
         LIMIT ?
     """, (limit,)).fetchall()
     

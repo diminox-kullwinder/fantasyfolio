@@ -21,12 +21,22 @@ models_bp = Blueprint('models', __name__)
 
 @models_bp.route('/models')
 def api_models():
-    """List 3D models with optional filters."""
+    """List 3D models with optional filters and sorting."""
     folder = request.args.get('folder')
     collection = request.args.get('collection')
     format_filter = request.args.get('format')
     limit = int(request.args.get('limit', 100))
     offset = int(request.args.get('offset', 0))
+    sort = request.args.get('sort', 'filename')
+    order = request.args.get('order', 'asc')
+    
+    # Validate sort column to prevent SQL injection
+    valid_sorts = {'filename', 'title', 'file_size', 'format', 'collection', 'created_at'}
+    if sort not in valid_sorts:
+        sort = 'filename'
+    
+    # Validate order
+    order = 'DESC' if order.lower() == 'desc' else 'ASC'
     
     with get_connection() as conn:
         query = "SELECT * FROM models WHERE 1=1"
@@ -42,7 +52,7 @@ def api_models():
             query += " AND format = ?"
             params.append(format_filter)
         
-        query += " ORDER BY collection, filename LIMIT ? OFFSET ?"
+        query += f" ORDER BY {sort} {order} LIMIT ? OFFSET ?"
         params.extend([limit, offset])
         
         rows = conn.execute(query, params).fetchall()
@@ -387,27 +397,11 @@ def api_thumbnail_stats():
             except ValueError:
                 pass
     
-    # Also get new storage type counts
-    with get_connection() as conn:
-        storage_rows = conn.execute("""
-            SELECT thumb_storage, COUNT(*) as count
-            FROM models
-            WHERE thumb_storage IS NOT NULL
-            GROUP BY thumb_storage
-        """).fetchall()
-        by_storage = {row['thumb_storage']: row['count'] for row in storage_rows}
-        
-        new_style_count = conn.execute(
-            "SELECT COUNT(*) FROM models WHERE thumb_storage IS NOT NULL"
-        ).fetchone()[0]
-    
     return jsonify({
         'total': total,
-        'cached': cached,  # Old-style central cache
-        'new_style': new_style_count,  # New sidecar/archive storage
-        'missing': total - max(cached, new_style_count),
-        'percent': round((max(cached, new_style_count) / total * 100) if total > 0 else 0, 1),
-        'by_storage': by_storage
+        'cached': cached,
+        'missing': total - cached,
+        'percent': round((cached / total * 100) if total > 0 else 0, 1)
     })
 
 
@@ -501,6 +495,12 @@ def api_render_thumbnails():
                 
                 # Render thumbnail
                 render_3d_thumbnail(model_data, model_format, str(thumbnail_dir / f"{model['id']}.png"))
+                
+                # Update database flag
+                with get_connection() as conn:
+                    conn.execute("UPDATE models SET has_thumbnail = 1 WHERE id = ?", (model['id'],))
+                    conn.commit()
+                
                 _render_status['completed'] += 1
                 
                 if (i + 1) % 100 == 0:
@@ -931,11 +931,11 @@ def api_regenerate_thumbnail(model_id):
     force = data.get('force', True)
     
     config = get_config()
-    central_dir = Path(config.DATA_DIR) / 'thumbnails'
+    central_dir = Path(config.THUMBNAIL_DIR)
     
     with get_connection() as conn:
         model = conn.execute(
-            "SELECT m.*, v.mount_path, v.is_readonly FROM models m LEFT JOIN volumes v ON m.volume_id = v.id WHERE m.id = ?",
+            "SELECT * FROM models WHERE id = ?",
             (model_id,)
         ).fetchone()
         
@@ -943,29 +943,16 @@ def api_regenerate_thumbnail(model_id):
             return jsonify({'error': 'Model not found'}), 404
         
         model = dict(model)
-        volume = {
-            'id': model.get('volume_id'),
-            'mount_path': model.get('mount_path'),
-            'is_readonly': model.get('is_readonly', 1)
-        }
+        # No volume relationship in this schema - pass empty volume
+        volume = {'id': None, 'mount_path': None, 'is_readonly': True}
         
         result = render_thumbnail(model, volume, central_dir, force=force)
         
         if result:
-            conn.execute("""
-                UPDATE models SET
-                    thumb_storage = ?,
-                    thumb_path = ?,
-                    thumb_rendered_at = ?,
-                    thumb_source_mtime = ?
-                WHERE id = ?
-            """, (
-                result['thumb_storage'],
-                result['thumb_path'],
-                result['thumb_rendered_at'],
-                result['thumb_source_mtime'],
-                model_id
-            ))
+            conn.execute(
+                "UPDATE models SET has_thumbnail = 1 WHERE id = ?",
+                (model_id,)
+            )
             conn.commit()
             return jsonify({
                 'status': 'rendered',

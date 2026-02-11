@@ -44,9 +44,10 @@ def get_configured_volumes() -> Dict[str, str]:
                 if loc.get('enabled'):
                     asset_type = loc.get('asset_type', '')
                     path = loc.get('path', '')
-                    if asset_type == 'pdf' and path:
+                    # UI stores 'documents'/'models', map to volume keys
+                    if asset_type in ('pdf', 'documents') and path:
                         volumes['pdfs'] = path
-                    elif asset_type == '3d' and path:
+                    elif asset_type in ('3d', 'models') and path:
                         volumes['models'] = path
             # If we got paths from asset_locations, return them
             if volumes:

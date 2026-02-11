@@ -20,19 +20,21 @@ A self-hosted web application for managing and browsing digital asset libraries,
 - 🎲 Index 3D models including files inside ZIP archives
 - 🖼️ Preview images extracted from Patreon packs (when available)
 - 🔎 Search by collection, creator, or filename
-- 📦 Support for STL, 3MF, and OBJ formats
-- 🎛️ Filter by file format (STL/OBJ/3MF dropdown)
+- 📦 Support for **STL, 3MF, OBJ, GLB, and glTF** formats
+- 🎛️ Filter by file format dropdown
 - 💾 Direct model file downloads
+- 🔄 Sort by name, size, format, or collection
 
 ### 3D Thumbnail Rendering
 Automatic thumbnail generation with tiered processing:
 - **Fast lane**: Small files (<30MB) — 18+ parallel workers
 - **Slow lane**: Large files (>30MB) — dedicated workers with longer timeouts
-- Uses [stl-thumb](https://github.com/unlimitedbacon/stl-thumb) for high-quality OpenGL renders
-- PIL software fallback when stl-thumb is unavailable
+- Uses [f3d](https://f3d.app/) for high-quality headless rendering (supports all formats)
+- Optimized camera angle for miniature models (front view, slight downward angle)
+- Fallback to stl-thumb or PIL software renderer when needed
 
 ### 3D Model Viewer (Three.js)
-- 🎮 **Interactive 3D preview** — View STL, OBJ, and 3MF models in browser
+- 🎮 **Interactive 3D preview** — View STL, OBJ, 3MF, and GLB models in browser
 - 🔄 **Orbit controls** — Rotate, pan, and zoom with mouse/touch
 - 💡 **Professional lighting** — Ambient and directional lighting
 - 📱 **Responsive** — Works on desktop and mobile

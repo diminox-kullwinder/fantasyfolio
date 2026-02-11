@@ -23,14 +23,14 @@ class Config:
     
     # Application
     APP_NAME = "FantasyFolio"
-    APP_VERSION = "0.4.0"
+    APP_VERSION = "0.4.9"
     SECRET_KEY = get_env("FANTASYFOLIO_SECRET_KEY", "DAM_SECRET_KEY", "dev-secret-key-change-in-production")
     
     # Paths
     BASE_DIR = Path(__file__).parent.parent
     DATA_DIR = Path(get_env("FANTASYFOLIO_DATA_DIR", "DAM_DATA_DIR", "") or BASE_DIR / "data")
     LOG_DIR = Path(get_env("FANTASYFOLIO_LOG_DIR", "DAM_LOG_DIR", "") or BASE_DIR / "logs")
-    THUMBNAIL_DIR = Path(get_env("FANTASYFOLIO_THUMBNAIL_DIR", "DAM_THUMBNAIL_DIR", "") or BASE_DIR / "thumbnails")
+    THUMBNAIL_DIR = Path(get_env("FANTASYFOLIO_THUMBNAIL_DIR", "DAM_THUMBNAIL_DIR", "") or DATA_DIR / "thumbnails")
     STATIC_DIR = BASE_DIR / "static"
     TEMPLATE_DIR = BASE_DIR / "templates"
     

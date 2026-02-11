@@ -212,23 +212,24 @@ END;
 
 -- Asset Locations table for configurable content paths
 CREATE TABLE IF NOT EXISTS asset_locations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    type TEXT NOT NULL,
+    asset_type TEXT NOT NULL,
+    location_type TEXT NOT NULL DEFAULT 'local',
     path TEXT NOT NULL,
+    ssh_host TEXT,
+    ssh_key_path TEXT,
+    ssh_user TEXT,
+    ssh_port INTEGER DEFAULT 22,
+    mount_check_path TEXT,
     enabled INTEGER DEFAULT 1,
     is_primary INTEGER DEFAULT 0,
-    protocol TEXT DEFAULT 'local',
-    host TEXT,
-    port INTEGER,
-    username TEXT,
-    credentials TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Index for asset locations
-CREATE INDEX IF NOT EXISTS idx_asset_locations_type ON asset_locations(type);
+CREATE INDEX IF NOT EXISTS idx_asset_locations_asset_type ON asset_locations(asset_type);
 CREATE INDEX IF NOT EXISTS idx_asset_locations_enabled ON asset_locations(enabled);
 
 -- Volumes table for volume/mount tracking

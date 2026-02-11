@@ -28,12 +28,14 @@ def api_stats():
 
 @assets_bp.route('/assets')
 def api_assets():
-    """List assets with optional filters."""
+    """List assets with optional filters and sorting."""
     folder = request.args.get('folder')
     limit = int(request.args.get('limit', 100))
     offset = int(request.args.get('offset', 0))
+    sort = request.args.get('sort', 'filename')
+    order = request.args.get('order', 'asc')
     
-    assets = list_assets(folder=folder, limit=limit, offset=offset)
+    assets = list_assets(folder=folder, limit=limit, offset=offset, sort=sort, order=order)
     return jsonify(assets)
 
 

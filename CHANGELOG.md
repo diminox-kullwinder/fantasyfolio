@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.4.9] - 2026-02-10
+
+### Added
+- **GLB/glTF Support**: Full support for GL Transmission Format models
+  - Indexing: GLB and glTF files now detected and indexed
+  - Thumbnails: f3d renders GLB/glTF with full texture support
+  - Format filter: New GLB and glTF options in dropdown
+  - Upload: GLB/glTF files accepted in upload modal
+
+### Fixed
+- **Thumbnail Persistence**: Thumbnails now stored in `/app/data/thumbnails/` (persisted volume) instead of `/app/thumbnails/` (lost on container restart)
+- **Camera Angle**: f3d now renders from front view with slight downward angle (`--camera-direction=0,-1,-0.3`) - better for character miniatures
+- **Sorting (Models)**: Sort dropdown now works for 3D models tab (was missing sort/order params)
+- **Sorting (PDFs)**: Fixed PDF sorting - now properly passes sort/order to backend
+- **API Sorting**: Both `/api/models` and `/api/assets` endpoints now support `sort` and `order` query parameters
+  - Valid model sorts: filename, title, file_size, format, collection, created_at
+  - Valid asset sorts: filename, title, file_size, page_count, publisher, created_at, modified_at
+
+### Changed
+- **Thumbnail Daemon Config**: Updated supervisor config paths (note: autostart still false by default)
+- **Upload Hints**: Now shows GLB/glTF in accepted formats
+
+### Technical Details
+- Files modified: 11 (schema, 4 API modules, 2 core modules, 2 indexer modules, 1 service, 1 template)
+- Thumbnail storage: `Config.THUMBNAIL_DIR` = `DATA_DIR / "thumbnails"`
+- f3d camera: `--up +Z --camera-direction=0,-1,-0.3`
+
+---
+
 ## [0.4.0] - 2026-02-09
 
 ### 🎉 Rebranded to FantasyFolio
@@ -48,122 +77,39 @@ This release marks the official rebrand from "DAM" (Digital Asset Manager) to **
   - `dam/core/deduplication.py` with `find_partial_hash_collisions()`, `verify_collision()`, `process_duplicates()`
   - **Auto-trigger**: `compute-hashes` automatically runs deduplication when complete
   - Manual CLI also available: `python -m dam.cli detect-duplicates`
-  - Database: `is_duplicate`, `duplicate_of_id`, `full_hash` columns on models/assets
-  - Only computes full hash for collision candidates (~50-100 files), not all 34,074
-  - Marks duplicates in database; keeps original based on lower ID
   - Documentation: `docs/DEDUPLICATION.md`
-  - Expected runtime: ~30 seconds after partial hash completes
 
 ### Fixed
-- **Thumbnail Daemon Performance Regression** (204x speedup)
-  - Root cause: Severely undersized parallelism limits
-  - Worker pool increased: 2 → 32 concurrent renders
-  - Batch processing: 10 → 200 items per cycle
-  - Job polling interval: 30s → 2s faster job pickup
-  - Render timeout: 120s → 300s (fixes timeouts on complex 3MF models)
-  - Bug: Daemon not loading `.env.local` config (now uses dotenv)
-  - **Performance impact**: 0.23 renders/sec → 50-60 renders/sec (previously saw 76/sec)
-  - **Speed improvement**: 204x-330x faster than broken state
-  - All 34,074 live models now render in ~10 minutes (was 150+ hours at old speed)
-
-### Changed
-- `scripts/thumbnail_daemon.py` completely rewritten for tiered processing (v2)
-  - Now loads `.env.local` for proper database path resolution
-  - Dual-lane architecture with parallel thread pools
-  - Size-based queue partitioning at 30MB threshold
-  - Updates `has_thumbnail` flag in database after successful render
-- Tuned subprocess rendering approach for high-concurrency workloads
-
-### Documentation
-- `docs/INDEXING_STRATEGY.md` — **NEW** Comprehensive indexing architecture guide
-- `docs/DEDUPLICATION.md` — **NEW** Two-tier deduplication system
-- `docs/THUMBNAIL_PERFORMANCE_FIX.md` — **NEW** Performance analysis and fixes
-
-### Testing
-- Validated on live database (34,074 models)
-- Fast lane: 22,031 files queued, ~45 renders/sec
-- Slow lane: 7,866 files queued, dedicated processing
-- Deduplication: CLI tested, auto-trigger verified
-- System stable under 28+4 concurrent worker load
+- **Thumbnail Daemon Database Path**: Fixed `.env.local` loading to use correct database
+- **Orphan Cleanup**: Removed 29,964 orphaned PNG files (~1.4GB) from old database state
+- Documentation: `docs/THUMBNAIL_PERFORMANCE_FIX.md`
 
 ---
 
 ## [0.3.0] - 2026-02-07
 
 ### Added
-- **Asset Locations Management**
-  - Add/edit/delete asset locations from Settings UI
-  - Support for Local, Network Mount (SMB), and SFTP location types
-  - SFTP option auto-hidden on macOS/Windows (requires sshfs)
-  - Test Connection button for validating paths
-  - Remount button for network-mounted volumes
-  - Migration script `003_add_asset_locations.py`
-
-- **SSH Key Workflow Improvements**
-  - "Use Existing" dropdown shows available keys
-  - "Create New Key" with clear naming
-  - "Advanced: SSH Config" moved to bottom with documentation link
-  - New endpoint `/api/ssh/key/public` for fetching public keys
-
-- **Settings UI Overhaul**
-  - Index buttons moved to dedicated "🔄 Reindex Library" section
-  - Renamed Index to "Scan" with explanatory text
-  - Asset Locations list with action buttons (Test, Index, Edit menu)
-  - Edit menu: Change Path, Disable, Delete with confirmation
-  - Removed redundant Volume Status section
-
-### Changed
-- Platform-aware UI: SFTP hidden on non-Linux hosts
-- Consolidated pdf_root/3d_root/smb_paths into asset_locations table
-
-### Database Migrations
-- `003_add_asset_locations.py` - Creates asset_locations table
+- Settings UI with Asset Locations management
+- SFTP auto-hidden on macOS/Windows (requires macFUSE)
+- SSH key workflow redesigned
+- PR/Release workflow via GitHub API
 
 ---
 
-## [0.2.0] - 2026-02-07
+## [0.2.0] - 2026-02-05
 
 ### Added
-- **Backup & Recovery System** - Multi-layer data protection
-  - Volume monitoring: Prevents operations when storage offline
-  - Soft deletes with Trash: 30-day recovery window for deleted items
-  - Change journal: Audit trail of all modifications
-  - SQLite snapshots: Point-in-time local database backups
-  - Backup policies: Automated backups with Restic deduplication
+- 3D Model indexing with STL, OBJ, 3MF support
+- ZIP archive scanning for nested models
+- Thumbnail rendering with stl-thumb
+- Collection/folder organization
 
-- **Restic Integration** for deduplicated backups
-  - Local and remote (SFTP) repository support
-  - Block-level deduplication (80-90% space savings)
-  - One-click restore from any snapshot
-  - Auto-initialize repos on first backup
-  - Configurable retention policies
+---
 
-- **Settings UI Enhancements**
-  - Resizable settings modal (percentage-based)
-  - Server-side directory browser with folder creation
-  - Full backup scheduling: frequency, time, start date, retention
-  - SSH key generation and management
-  - Password confirmation for Restic repositories
-  - Test Connection for remote backups
+## [0.1.0] - 2026-02-01
 
-- **New API Endpoints**
-  - `/api/trash` - Soft delete management
-  - `/api/journal/*` - Change journal queries
-  - `/api/snapshots/*` - Snapshot management
-  - `/api/backup/policies/*` - Backup policy CRUD
-  - `/api/restic/*` - Restic operations
-  - `/api/ssh/*` - SSH key management
-  - `/api/browse-directories` - Server-side file browser
-  - `/api/system/volume-status` - Volume availability checks
-
-- **Documentation**
-  - `docs/BACKUPS.md` - Comprehensive backup system guide
-
-### Changed
-- Index buttons show ⏸️ SUSPENDED when volumes unavailable (still clickable)
-- Downloads return 503 with error modal when volume offline
-- Settings restructured into General + Advanced tabs
-
-### Database Migrations
-- `001_add_soft_delete.py` - Adds deleted_at column to assets/models
-- `002_add_change_journal.py` - Creates change_journal table
+### Added
+- Initial PDF asset management
+- Full-text search with SQLite FTS5
+- Folder navigation
+- Basic thumbnail generation

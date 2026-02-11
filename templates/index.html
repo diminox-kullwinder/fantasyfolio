@@ -18,10 +18,16 @@
       --border: rgba(255,255,255,0.1);
     }
     
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-      min-height: 100vh;
       color: var(--text-primary);
     }
     
@@ -29,13 +35,14 @@
     .app {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      height: 100%;
     }
     
     .app-body {
       display: flex;
       flex: 1;
       overflow: hidden;
+      height: 0; /* Force flex to calculate height */
     }
     
     /* Header */
@@ -47,6 +54,9 @@
       gap: 24px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
     
     .logo {
@@ -495,14 +505,26 @@
     /* Main Content */
     .main {
       padding: 24px;
-      overflow: auto;
+      padding-bottom: 0;
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     
     .view-controls {
       display: flex;
       gap: 12px;
       margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+    
+    .main-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 24px;
+      min-height: 0; /* Required for flex child to scroll */
     }
     
     .view-btn {
@@ -2371,6 +2393,17 @@
       display: flex;
     }
     
+    /* Directory browser needs higher z-index when opened from other modals */
+    #dirBrowserModal {
+      z-index: 3600 !important;
+    }
+    
+    /* Settings modals get lower z-index so directory browser appears above */
+    #addLocationModal,
+    #sshKeyHelpModal {
+      z-index: 3400 !important;
+    }
+    
     .dir-browser-modal {
       background: var(--bg-secondary);
       border-radius: 12px;
@@ -3361,6 +3394,8 @@
             <option value="stl">STL</option>
             <option value="obj">OBJ</option>
             <option value="3mf">3MF</option>
+            <option value="glb">GLB</option>
+            <option value="gltf">glTF</option>
           </select>
           <select id="sortSelect">
             <option value="filename:asc">Name (A-Z)</option>
@@ -3378,9 +3413,11 @@
         </div>
       </div>
       
-      <div class="content-results" id="contentResults" style="display:none;"></div>
-      <div class="asset-grid" id="assetGrid"></div>
-      <div class="asset-list" id="assetList"></div>
+      <div class="main-scroll">
+        <div class="content-results" id="contentResults" style="display:none;"></div>
+        <div class="asset-grid" id="assetGrid"></div>
+        <div class="asset-list" id="assetList"></div>
+      </div>
     </main>
   </div>
   </div>
@@ -4463,7 +4500,7 @@
     }
     
     async function load3dModels() {
-      let url = '/api/models?limit=100';
+      let url = `/api/models?limit=100&sort=${currentSort}&order=${currentOrder}`;
       if (currentCollection) {
         url += `&collection=${encodeURIComponent(currentCollection)}`;
       }
@@ -6934,8 +6971,8 @@
       if (uploadContentType === '3d') {
         icon.textContent = '🎲';
         label.textContent = '3D Models';
-        hint.textContent = 'Accepted: .stl, .obj, .3mf, .zip, .rar, .7z';
-        document.getElementById('uploadFileInput').accept = '.stl,.obj,.3mf,.zip,.rar,.7z';
+        hint.textContent = 'Accepted: .stl, .obj, .3mf, .glb, .gltf, .zip, .rar, .7z';
+        document.getElementById('uploadFileInput').accept = '.stl,.obj,.3mf,.glb,.gltf,.zip,.rar,.7z';
       } else {
         icon.textContent = '📄';
         label.textContent = 'PDFs';
@@ -7052,7 +7089,7 @@
     function addUploadFiles(files) {
       // Filter by content type
       const allowedExts = uploadContentType === '3d' 
-        ? ['.stl', '.obj', '.3mf', '.zip', '.rar', '.7z']
+        ? ['.stl', '.obj', '.3mf', '.glb', '.gltf', '.zip', '.rar', '.7z']
         : ['.pdf'];
       
       files.forEach(file => {
@@ -8688,7 +8725,7 @@
         filterFolder(contextMenuPath);
       } else {
         load3dFolders();
-        loadModels();
+        load3dModels();
       }
     }
     
@@ -8713,7 +8750,7 @@
         if (res.ok) {
           showNotification(`Indexed: ${data.new} new, ${data.update} updated, ${data.skip} skipped`, 'success');
           load3dFolders();
-          loadModels();
+          load3dModels();
         } else {
           showNotification(data.error || 'Index failed', 'error');
         }
@@ -8846,12 +8883,15 @@
       
       try {
         const endpoint = contextMenuAssetType === 'pdf' ? 'assets' : 'models';
+        console.log('Context menu regen:', endpoint, contextMenuAssetId);
         const res = await fetch(`/api/${endpoint}/${contextMenuAssetId}/regenerate-thumbnail`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ force: true })
         });
+        console.log('Context menu response status:', res.status);
         const data = await res.json();
+        console.log('Context menu response data:', data);
         
         if (res.ok && (data.status === 'rendered' || data.status === 'reindexed')) {
           showNotification('Thumbnail regenerated', 'success');
@@ -8859,12 +8899,14 @@
           if (contextMenuAssetType === 'pdf') {
             loadAssets();
           } else {
-            loadModels();
+            load3dModels();
           }
         } else {
+          console.error('Context menu regen failed:', res.status, data);
           showNotification(data.message || 'Thumbnail generation failed', 'error');
         }
       } catch (e) {
+        console.error('Context menu regen exception:', e);
         showNotification('Thumbnail generation failed', 'error');
       }
     }
@@ -9008,16 +9050,20 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ force: true })
         });
+        console.log('Regenerate response status:', res.status);
         const data = await res.json();
+        console.log('Regenerate response data:', data);
         if (res.ok && data.status === 'rendered') {
           showNotification('Thumbnail regenerated', 'success');
           // Refresh the modal image
           const img = document.querySelector('.model-thumb-img');
           if (img) img.src = `/api/models/${modelId}/preview?t=${Date.now()}`;
         } else {
+          console.error('Regenerate failed:', res.status, data);
           showNotification(data.message || 'Thumbnail generation failed', 'error');
         }
       } catch (e) {
+        console.error('Regenerate exception:', e);
         showNotification('Thumbnail generation failed: ' + e.message, 'error');
       }
     }
@@ -9234,7 +9280,7 @@
             'success'
           );
           load3dFolders();
-          loadModels();
+          load3dModels();
           
           // If thumbnail regen requested, queue it
           if (regenThumbnails) {
@@ -9282,7 +9328,7 @@
             'success'
           );
           load3dFolders();
-          loadModels();
+          load3dModels();
         } else {
           showNotification(data.error || 'Index failed', 'error');
         }
