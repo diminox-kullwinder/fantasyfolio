@@ -3362,7 +3362,7 @@
             <option value="obj">OBJ</option>
             <option value="3mf">3MF</option>
           </select>
-          <select id="sortSelect" onchange="changeSort()">
+          <select id="sortSelect">
             <option value="filename:asc">Name (A-Z)</option>
             <option value="filename:desc">Name (Z-A)</option>
             <option value="title:asc">Title (A-Z)</option>
@@ -4279,6 +4279,9 @@
       document.getElementById('pagePreview').addEventListener('click', (e) => {
         if (e.target.id === 'pagePreview') closePagePreview();
       });
+      
+      // Sort dropdown
+      document.getElementById('sortSelect').addEventListener('change', changeSort);
     });
     
     async function loadStats() {

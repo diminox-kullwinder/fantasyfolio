@@ -68,7 +68,27 @@ def api_browse_directory():
     Browse server directories for path selection.
     Used by the settings UI for selecting content roots.
     """
-    path = request.args.get('path', '/Volumes')
+    import sys
+    from pathlib import Path
+    
+    requested_path = request.args.get('path', '')
+    
+    if not requested_path:
+        # Choose sensible default based on platform
+        if sys.platform == 'darwin':
+            path = '/Volumes'
+        elif sys.platform == 'linux':
+            # Linux/Container: prefer /content (our mount convention), else /mnt, else /
+            if Path('/content').exists():
+                path = '/content'
+            elif Path('/mnt').exists() and any(Path('/mnt').iterdir()):
+                path = '/mnt'
+            else:
+                path = '/'
+        else:
+            path = '/'
+    else:
+        path = requested_path
     
     if not os.path.isdir(path):
         return jsonify({'error': 'Not a directory'}), 400

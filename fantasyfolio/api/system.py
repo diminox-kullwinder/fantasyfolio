@@ -1160,12 +1160,26 @@ def api_browse_directories():
     from flask import request
     
     try:
-        # Get requested path, default to home directory
+        # Get requested path, default to sensible location per platform
         requested_path = request.args.get('path', '')
         
         if not requested_path:
-            # Start at home directory
-            base_path = Path.home()
+            import sys
+            # Choose sensible default based on platform
+            if sys.platform == 'darwin':
+                # macOS: start at /Volumes for mounted drives
+                base_path = Path('/Volumes')
+            elif sys.platform == 'linux':
+                # Linux/Container: prefer /content (our mount convention), else /mnt, else home
+                if Path('/content').exists():
+                    base_path = Path('/content')
+                elif Path('/mnt').exists() and any(Path('/mnt').iterdir()):
+                    base_path = Path('/mnt')
+                else:
+                    base_path = Path.home()
+            else:
+                # Windows or other: home directory
+                base_path = Path.home()
         else:
             base_path = Path(requested_path)
         

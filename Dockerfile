@@ -27,6 +27,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-dri \
     libegl1 \
     xvfb \
+    xauth \
+    # X11 libraries for stl-thumb windowing
+    libxcursor1 \
+    libxrandr2 \
+    libxi6 \
+    libxinerama1 \
+    # Backup tool
+    restic \
+    # SFTP filesystem mount (Linux only)
+    sshfs \
+    # 3D model thumbnail renderer (container-friendly, supports STL/OBJ/3MF/GLTF)
+    f3d \
     && rm -rf /var/lib/apt/lists/*
 
 # Install stl-thumb via cargo (simpler than multi-stage)

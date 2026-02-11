@@ -179,7 +179,8 @@ CREATE TABLE IF NOT EXISTS models (
     -- Timestamps
     created_at TEXT,
     modified_at TEXT,
-    indexed_at TEXT DEFAULT CURRENT_TIMESTAMP
+    indexed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TEXT
 );
 
 -- Index for fast lookups
@@ -229,3 +230,18 @@ CREATE TABLE IF NOT EXISTS asset_locations (
 -- Index for asset locations
 CREATE INDEX IF NOT EXISTS idx_asset_locations_type ON asset_locations(type);
 CREATE INDEX IF NOT EXISTS idx_asset_locations_enabled ON asset_locations(enabled);
+
+-- Volumes table for volume/mount tracking
+CREATE TABLE IF NOT EXISTS volumes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL,
+    volume_type TEXT DEFAULT 'local',
+    enabled INTEGER DEFAULT 1,
+    last_seen TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_volumes_path ON volumes(path);
+CREATE INDEX IF NOT EXISTS idx_volumes_enabled ON volumes(enabled);

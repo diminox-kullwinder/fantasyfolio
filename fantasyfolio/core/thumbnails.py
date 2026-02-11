@@ -235,7 +235,7 @@ def render_thumbnail(
                 tmp.write(data)
                 tmp_path = tmp.name
             
-            success = _render_with_stl_thumb(tmp_path, str(output_path), size)
+            success = _render_3d_thumbnail(tmp_path, str(output_path), size)
             os.unlink(tmp_path)
             
         except Exception:
@@ -248,7 +248,7 @@ def render_thumbnail(
             return None
         
         source_mtime = int(file_path.stat().st_mtime)
-        success = _render_with_stl_thumb(str(file_path), str(output_path), size)
+        success = _render_3d_thumbnail(str(file_path), str(output_path), size)
     
     if success and output_path.exists():
         # Compute relative path for storage
@@ -272,27 +272,113 @@ def render_thumbnail(
     return None
 
 
-def _render_with_stl_thumb(input_path: str, output_path: str, size: int = 512) -> bool:
-    """Render using stl-thumb CLI with virtual framebuffer for headless rendering."""
+def _render_with_f3d(input_path: str, output_path: str, size: int = 1024) -> bool:
+    """Render using f3d CLI - works in containers with Xvfb.
+    
+    f3d supports: STL, OBJ, 3MF, GLTF, PLY, FBX, and many more via assimp.
+    
+    Settings:
+    - --up +Z: STL/OBJ files typically use Z-up
+    - Resolution: square thumbnail at specified size
+    - Uses xvfb-run for headless rendering in containers
+    """
     import shutil
+    import os
+    
+    if not shutil.which('f3d'):
+        return False
+    
+    base_cmd = [
+        'f3d',
+        '--output', output_path,
+        '--resolution', f'{size},{size}',
+        '--up', '+Z',
+        input_path
+    ]
+    
+    # Use xvfb-run if available (for headless rendering in containers)
+    use_xvfb = shutil.which('xvfb-run') is not None
+    
+    if use_xvfb:
+        cmd = ['xvfb-run', '-a'] + base_cmd
+    else:
+        cmd = base_cmd
+    
+    try:
+        # Set DISPLAY if not set (for non-xvfb-run cases)
+        env = os.environ.copy()
+        if 'DISPLAY' not in env:
+            env['DISPLAY'] = ':0'
+        
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=120,
+            env=env
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+def _render_with_stl_thumb(input_path: str, output_path: str, size: int = 1024) -> bool:
+    """Fallback: render using stl-thumb CLI (may not work in containers).
+    
+    Enhanced quality settings:
+    - 1024px size for crisp thumbnails
+    - Silver/grey material colors for realistic 3D print look
+    - Dark grey background for better contrast
+    """
+    import shutil
+    
+    if not shutil.which('stl-thumb'):
+        return False
     
     # Use xvfb-run if available (for headless OpenGL rendering in containers)
     use_xvfb = shutil.which('xvfb-run') is not None
     
+    # Material colors (ambient, diffuse, specular) - silver/grey for 3D print look
+    material_ambient = 'c0c0c0'
+    material_diffuse = 'd8d8d8'
+    material_specular = 'ffffff'
+    
+    # Background: dark grey, matches UI dark theme
+    background = '2a2a2aff'
+    
+    base_cmd = [
+        'stl-thumb', input_path, output_path,
+        '-s', str(size),
+        '-m', material_ambient, material_diffuse, material_specular,
+        '-b', background
+    ]
+    
     if use_xvfb:
-        cmd = ['xvfb-run', '-a', 'stl-thumb', input_path, output_path, '-s', str(size)]
+        cmd = ['xvfb-run', '-a'] + base_cmd
     else:
-        cmd = ['stl-thumb', input_path, output_path, '-s', str(size)]
+        cmd = base_cmd
     
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
-            timeout=120  # More time for xvfb startup
+            timeout=120
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return False
+
+
+def _render_3d_thumbnail(input_path: str, output_path: str, size: int = 1024) -> bool:
+    """Render 3D model thumbnail using best available renderer.
+    
+    Tries f3d first (container-friendly), falls back to stl-thumb.
+    """
+    # Try f3d first - works in containers
+    if _render_with_f3d(input_path, output_path, size):
+        return True
+    
+    # Fallback to stl-thumb (works on Mac/desktop)
+    return _render_with_stl_thumb(input_path, output_path, size)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
