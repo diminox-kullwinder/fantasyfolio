@@ -8859,8 +8859,14 @@
         
         if (res.ok) {
           showNotification(`Indexed: ${data.new} new, ${data.update} updated, ${data.skip} skipped`, 'success');
-          load3dFolders();
-          load3dModels();
+          // Refresh the appropriate content type
+          if (contentType === 'pdf') {
+            loadPdfFolders();
+            loadPdfs();
+          } else {
+            load3dFolders();
+            load3dModels();
+          }
         } else {
           showNotification(data.error || 'Index failed', 'error');
         }
@@ -9069,7 +9075,15 @@
         const data = await res.json();
         
         if (res.ok) {
-          showNotification(`Indexed: ${data.new || 0} new, ${data.updated || 0} updated`, 'success');
+          showNotification(`Indexed: ${data.new || 0} new, ${data.update || data.updated || 0} updated`, 'success');
+          // Refresh the appropriate content type
+          if (contentType === 'pdf') {
+            loadPdfFolders();
+            loadPdfs();
+          } else {
+            load3dFolders();
+            load3dModels();
+          }
         } else {
           showNotification(data.error || 'Index failed', 'error');
         }
