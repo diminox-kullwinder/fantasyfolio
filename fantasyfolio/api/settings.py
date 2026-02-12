@@ -234,9 +234,21 @@ def api_upload_browse():
     # Get the root path for this content type
     settings = get_all_settings()
     if content_type == '3d':
-        root = settings.get('3d_root', '/content/models')
+        root = settings.get('3d_root') or '/content/3d-models'
     else:
-        root = settings.get('pdf_root', '/content/pdfs')
+        root = settings.get('pdf_root') or '/content/pdfs'
+    
+    # Fallback if path doesn't exist - try common alternatives
+    if not os.path.exists(root):
+        if content_type == '3d':
+            alternatives = ['/content/3d-models', '/content/models', '/app/uploads/3d']
+        else:
+            alternatives = ['/content/pdfs', '/app/uploads/pdf']
+        
+        for alt in alternatives:
+            if os.path.exists(alt):
+                root = alt
+                break
     
     # If no path specified, start at the root
     if not path:
