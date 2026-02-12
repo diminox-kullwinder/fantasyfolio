@@ -210,6 +210,13 @@ CREATE TRIGGER IF NOT EXISTS models_ad AFTER DELETE ON models BEGIN
     VALUES ('delete', old.id, old.filename, old.title, old.collection, old.creator);
 END;
 
+CREATE TRIGGER IF NOT EXISTS models_au AFTER UPDATE ON models BEGIN
+    INSERT INTO models_fts(models_fts, rowid, filename, title, collection, creator)
+    VALUES ('delete', old.id, old.filename, old.title, old.collection, old.creator);
+    INSERT INTO models_fts(rowid, filename, title, collection, creator)
+    VALUES (new.id, new.filename, new.title, new.collection, new.creator);
+END;
+
 -- Asset Locations table for configurable content paths
 CREATE TABLE IF NOT EXISTS asset_locations (
     id TEXT PRIMARY KEY,
