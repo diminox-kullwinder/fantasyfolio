@@ -7,6 +7,7 @@ thumbnails, preview rendering, and file serving.
 
 import io
 import os
+import tempfile
 import zipfile
 import logging
 from pathlib import Path
@@ -226,27 +227,39 @@ def api_model_preview(model_id: int):
         
         def render_in_background():
             try:
-                from fantasyfolio.indexer.thumbnails import render_3d_thumbnail
+                from fantasyfolio.core.thumbnails import _render_3d_thumbnail
                 
-                # Get model data
+                # Get model file path
+                model_path = None
                 if model.get('archive_path') and model.get('archive_member'):
+                    # Extract from archive to temp file
                     with zipfile.ZipFile(model['archive_path'], 'r') as zf:
                         model_data = zf.read(model['archive_member'])
+                    with tempfile.NamedTemporaryFile(suffix=f".{model_format}", delete=False) as tmp:
+                        tmp.write(model_data)
+                        model_path = tmp.name
                 elif os.path.exists(model.get('file_path', '')):
-                    with open(model['file_path'], 'rb') as f:
-                        model_data = f.read()
+                    model_path = model['file_path']
                 else:
                     logger.warning(f"Model file not found for {model_id}")
                     return
                 
-                render_3d_thumbnail(model_data, model_format, str(cached_thumb))
+                # Render using new path (f3d with correct camera)
+                success = _render_3d_thumbnail(model_path, str(cached_thumb))
                 
-                # Update database flag
-                with get_connection() as conn:
-                    conn.execute("UPDATE models SET has_thumbnail = 1 WHERE id = ?", (model_id,))
-                    conn.commit()
+                # Clean up temp file if created
+                if model.get('archive_path') and model_path:
+                    os.unlink(model_path)
                 
-                logger.info(f"Background render complete for model {model_id} ({model_format})")
+                if success:
+                    # Update database flag
+                    with get_connection() as conn:
+                        conn.execute("UPDATE models SET has_thumbnail = 1 WHERE id = ?", (model_id,))
+                        conn.commit()
+                    logger.info(f"Background render complete for model {model_id} ({model_format})")
+                else:
+                    logger.warning(f"Background render failed for model {model_id}")
+                    
             except Exception as e:
                 logger.error(f"Background thumbnail render error for model {model_id}: {e}")
         
@@ -500,8 +513,20 @@ def api_render_thumbnails():
                     _render_status['completed'] += 1
                     continue
                 
-                # Render thumbnail
-                render_3d_thumbnail(model_data, model_format, str(thumbnail_dir / f"{model['id']}.png"))
+                # Render thumbnail using new path-based rendering
+                # Write to temp file for rendering
+                with tempfile.NamedTemporaryFile(suffix=f".{model_format}", delete=False) as tmp:
+                    tmp.write(model_data)
+                    tmp_path = tmp.name
+                
+                from fantasyfolio.core.thumbnails import _render_3d_thumbnail
+                success = _render_3d_thumbnail(tmp_path, str(thumbnail_dir / f"{model['id']}.png"))
+                os.unlink(tmp_path)
+                
+                if not success:
+                    _render_status['errors'] += 1
+                    _render_status['completed'] += 1
+                    continue
                 
                 # Update database flag
                 with get_connection() as conn:
