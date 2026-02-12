@@ -316,9 +316,24 @@ def api_upload_mkdir():
     if not folder_name or folder_name.startswith('.'):
         return jsonify({'error': 'Invalid folder name'}), 400
     
-    # Get root for security check
+    # Get root for security check (same logic as browse endpoint)
     settings = get_all_settings()
-    root = settings.get('3d_root' if content_type == '3d' else 'pdf_root', '/content/pdfs')
+    if content_type == '3d':
+        root = settings.get('3d_root') or '/content/3d-models'
+    else:
+        root = settings.get('pdf_root') or '/content/pdfs'
+    
+    # Fallback if path doesn't exist - try common alternatives
+    if not os.path.exists(root):
+        if content_type == '3d':
+            alternatives = ['/content/3d-models', '/content/models', '/app/uploads/3d']
+        else:
+            alternatives = ['/content/pdfs', '/app/uploads/pdf']
+        
+        for alt in alternatives:
+            if os.path.exists(alt):
+                root = alt
+                break
     
     # Security: ensure parent is within root
     try:
@@ -326,7 +341,8 @@ def api_upload_mkdir():
         resolved_root = os.path.realpath(root)
         if not resolved_parent.startswith(resolved_root):
             return jsonify({'error': 'Path outside content root'}), 403
-    except Exception:
+    except Exception as e:
+        logger.error(f"Path resolution error: {e}, parent={parent_path}, root={root}")
         return jsonify({'error': 'Invalid path'}), 400
     
     new_path = os.path.join(parent_path, folder_name)
