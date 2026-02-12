@@ -458,12 +458,12 @@ def api_regenerate_asset_thumbnail(asset_id: int):
         # Update database
         with get_connection() as conn:
             conn.execute(
-                "UPDATE assets SET thumbnail_path = ?, thumb_rendered_at = CURRENT_TIMESTAMP WHERE id = ?",
+                "UPDATE assets SET thumbnail_path = ?, has_thumbnail = 1 WHERE id = ?",
                 (str(thumb_path), asset_id)
             )
             conn.commit()
         
-        return jsonify({'status': 'rendered', 'path': str(thumb_path)})
+        return jsonify({'status': 'rendered', 'thumb_path': str(thumb_path)})
     except Exception as e:
         logger.error(f"Thumbnail generation failed for asset {asset_id}: {e}")
         return jsonify({'error': str(e), 'status': 'failed'}), 500
