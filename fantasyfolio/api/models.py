@@ -885,8 +885,14 @@ def api_index_directory():
     if is_pdf:
         try:
             from fantasyfolio.indexer.pdf import PDFIndexer
-            logger.info(f"Using PDF indexer for {scan_path}")
-            indexer = PDFIndexer(str(scan_path))
+            from fantasyfolio.config import get_config
+            
+            # Use configured PDF_ROOT for relative path calculation, scan_path for actual scanning
+            config = get_config()
+            root_path = config.PDF_ROOT or '/content/pdfs'  # Default if not configured
+            
+            logger.info(f"Using PDF indexer for {scan_path} (root: {root_path})")
+            indexer = PDFIndexer(root_path=root_path, scan_path=str(scan_path))
             result = indexer.run(extract_text=True, generate_thumbnails=False)
             return jsonify({
                 'new': result.get('indexed', 0),

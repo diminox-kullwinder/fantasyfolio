@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 class PDFIndexer:
     """PDF file indexer."""
     
-    def __init__(self, root_path: Optional[str] = None):
+    def __init__(self, root_path: Optional[str] = None, scan_path: Optional[str] = None):
         self.config = get_config()
         self.root_path = Path(root_path) if root_path else Path(self.config.PDF_ROOT)
+        self.scan_path = Path(scan_path) if scan_path else self.root_path
         self.stats = {
             'scanned': 0,
             'indexed': 0,
@@ -34,13 +35,13 @@ class PDFIndexer:
     
     def run(self, extract_text: bool = True, generate_thumbnails: bool = True):
         """Run the PDF indexer."""
-        if not self.root_path.exists():
-            logger.error(f"Root path does not exist: {self.root_path}")
+        if not self.scan_path.exists():
+            logger.error(f"Scan path does not exist: {self.scan_path}")
             return self.stats
         
-        logger.info(f"Starting PDF scan of: {self.root_path}")
+        logger.info(f"Starting PDF scan of: {self.scan_path} (root: {self.root_path})")
         
-        for pdf_path in self.root_path.rglob("*.pdf"):
+        for pdf_path in self.scan_path.rglob("*.pdf"):
             try:
                 self._process_pdf(pdf_path, extract_text, generate_thumbnails)
                 self.stats['scanned'] += 1
@@ -67,8 +68,12 @@ class PDFIndexer:
         # Calculate relative folder path
         try:
             folder_path = str(pdf_path.parent.relative_to(self.root_path))
-        except ValueError:
+            if folder_path == '.':
+                folder_path = ''  # Empty string for files at root level
+            logger.debug(f"Folder path for {pdf_path.name}: '{folder_path}' (root: {self.root_path})")
+        except ValueError as e:
             folder_path = str(pdf_path.parent)
+            logger.warning(f"Failed to calculate relative path for {pdf_path}: {e}, using absolute: {folder_path}")
         
         # Open and extract metadata
         doc = pymupdf.open(str(pdf_path))
