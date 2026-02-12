@@ -4277,6 +4277,9 @@
       loadAssets();
       // Pre-load 3D nav for quick switching
       load3dCollections();
+      
+      // Check if thumbnail rendering is already in progress
+      checkThumbnailRenderStatus();
       load3dFolders();
       
       // Search
@@ -6795,6 +6798,8 @@
     
     // ==================== 3D THUMBNAIL RENDERING ====================
     
+    let thumbnailPollInterval = null;
+    
     async function renderAllThumbnails() {
       const statusEl = document.getElementById('renderThumbStatus');
       const btn = document.getElementById('renderThumbBtn');
@@ -6814,6 +6819,12 @@
         if (res.ok) {
           statusEl.className = 'index-status success';
           statusEl.textContent = `✅ ${data.message} (${data.models_queued} queued, ${data.already_cached} cached)`;
+          
+          // Start polling to refresh grid as thumbnails complete
+          if (data.models_queued > 0) {
+            startThumbnailPolling();
+          }
+          
           loadStats();
         } else {
           statusEl.className = 'index-status error';
@@ -6824,6 +6835,57 @@
         statusEl.textContent = `❌ Error: ${e.message}`;
       } finally {
         btn.disabled = false;
+      }
+    }
+    
+    function startThumbnailPolling() {
+      if (thumbnailPollInterval) return; // Already polling
+      
+      console.log('Starting thumbnail polling...');
+      
+      thumbnailPollInterval = setInterval(async () => {
+        // Refresh all grid thumbnails with cache-busting
+        const timestamp = Date.now();
+        document.querySelectorAll('img[data-model-id]').forEach(img => {
+          const modelId = img.getAttribute('data-model-id');
+          img.src = `/api/models/${modelId}/preview?t=${timestamp}`;
+        });
+        
+        // Check if rendering is complete
+        try {
+          const res = await fetch('/api/models/render-thumbnails/status');
+          const data = await res.json();
+          
+          if (!data.active) {
+            console.log('Thumbnail rendering complete, stopping poll');
+            stopThumbnailPolling();
+            loadStats();
+          }
+        } catch (e) {
+          console.error('Poll error:', e);
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+    
+    function stopThumbnailPolling() {
+      if (thumbnailPollInterval) {
+        clearInterval(thumbnailPollInterval);
+        thumbnailPollInterval = null;
+        console.log('Stopped thumbnail polling');
+      }
+    }
+    
+    async function checkThumbnailRenderStatus() {
+      try {
+        const res = await fetch('/api/models/render-thumbnails/status');
+        const data = await res.json();
+        
+        if (data.active) {
+          console.log('Thumbnail rendering already in progress, starting polling');
+          startThumbnailPolling();
+        }
+      } catch (e) {
+        console.error('Error checking thumbnail render status:', e);
       }
     }
     
