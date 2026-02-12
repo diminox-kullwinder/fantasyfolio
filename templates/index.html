@@ -4547,8 +4547,8 @@
         return;
       }
       
-      // Grid view with preview thumbnails (cache-bust every 10s for pending renders)
-      const cacheBust = Math.floor(Date.now() / 10000);
+      // Grid view with preview thumbnails (fresh timestamp for immediate updates)
+      const cacheBust = Date.now();
       grid.innerHTML = models.map(m => `
         <div class="asset-card" data-id="${m.id}" data-type="model" onclick="show3dDetail(${m.id})" title="ID: ${m.id}">
           <img class="asset-thumb model-grid-thumb" data-model-id="${m.id}" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
@@ -5475,10 +5475,11 @@
         return;
       }
       
-      // Grid view
+      // Grid view (with cache-busting for fresh thumbnails)
+      const cacheBust = Date.now();
       grid.innerHTML = assets.map(a => `
         <div class="asset-card" data-id="${a.id}" data-type="pdf" onclick="showDetail(${a.id})">
-          <img class="asset-thumb" src="/api/thumbnail/${a.id}" alt="" loading="lazy" />
+          <img class="asset-thumb" src="/api/thumbnail/${a.id}?t=${cacheBust}" alt="" loading="lazy" />
           <div class="asset-info">
             <div class="asset-title" title="${escapeHtml(a.title || a.filename)}">${escapeHtml(a.title || a.filename)}</div>
             <div class="asset-meta">${a.page_count || '?'} pages</div>
@@ -5489,7 +5490,7 @@
       // List view
       list.innerHTML = assets.map(a => `
         <div class="asset-row" data-id="${a.id}" data-type="pdf" onclick="showDetail(${a.id})">
-          <img src="/api/thumbnail/${a.id}" alt="" loading="lazy" />
+          <img src="/api/thumbnail/${a.id}?t=${cacheBust}" alt="" loading="lazy" />
           <div>
             <div class="title">${escapeHtml(a.title || a.filename)}</div>
             <div class="publisher">${escapeHtml(a.publisher || '')}</div>
