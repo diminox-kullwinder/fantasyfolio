@@ -5239,15 +5239,13 @@
       document.getElementById('searchInput').value = queryDisplay;
       lastSearchQuery = queryDisplay;
       
-      // Render results based on type
-      if (results.models && results.models.length > 0) {
-        // 3D model results
-        setContentType('3d');
-        render3dModels(results.models);
+      // Render results based on CURRENT content type (don't auto-switch tabs)
+      if (contentType === '3d') {
+        // Show 3D model results only
+        render3dModels(results.models || []);
         document.getElementById('contentResults').style.display = 'none';
       } else {
-        // PDF results (API uses 'assets'/'pages', fallback to 'metadata'/'content')
-        setContentType('pdf');
+        // Show PDF results only (assets + pages)
         renderAssets(results.assets || results.metadata || []);
         renderContentResults(results.pages || results.content || [], queryDisplay);
       }

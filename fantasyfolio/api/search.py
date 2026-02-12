@@ -278,7 +278,7 @@ def api_search_advanced():
         data = request.get_json(silent=True) or {}
     else:
         data = {
-            'terms': request.args.get('q', '').strip(),
+            'terms': request.args.get('terms', request.args.get('q', '')),
             'folder': request.args.get('folder'),
             'publisher': request.args.get('publisher'),
             'game_system': request.args.get('game_system'),
@@ -286,7 +286,19 @@ def api_search_advanced():
             'search_content': request.args.get('content', 'true').lower() == 'true',
         }
     
-    terms = data.get('terms', '')
+    # Handle terms: can be JSON array from advanced search or plain string
+    terms_raw = data.get('terms', '')
+    if isinstance(terms_raw, str) and terms_raw.startswith('['):
+        # JSON array from advanced search UI
+        import json
+        try:
+            terms_array = json.loads(terms_raw)
+            # Extract just the term text from array of objects
+            terms = ' '.join(t.get('term', '') for t in terms_array if isinstance(t, dict))
+        except:
+            terms = terms_raw
+    else:
+        terms = terms_raw if isinstance(terms_raw, str) else str(terms_raw)
     folder = data.get('folder') or request.args.get('folder')
     publisher = data.get('publisher')
     game_system = data.get('game_system')
