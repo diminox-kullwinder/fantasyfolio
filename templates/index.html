@@ -7208,6 +7208,11 @@
     async function submitUpload() {
       if (uploadFiles.length === 0) return;
       
+      if (!uploadCurrentPath) {
+        alert('Error: No destination folder selected');
+        return;
+      }
+      
       const btn = document.getElementById('uploadSubmitBtn');
       const progress = document.getElementById('uploadProgress');
       const progressFill = document.getElementById('uploadProgressFill');
@@ -7219,23 +7224,35 @@
       progressFill.style.width = '0%';
       progressText.textContent = 'Starting upload...';
       
+      console.log('Preparing upload to:', uploadCurrentPath, 'type:', uploadContentType);
+      
       const formData = new FormData();
       formData.append('destination', uploadCurrentPath);
       formData.append('type', uploadContentType);
       uploadFiles.forEach(file => formData.append('files', file));
       
+      console.log('FormData prepared, total files:', uploadFiles.length);
+      
       try {
         const xhr = new XMLHttpRequest();
+        
+        console.log('Upload starting:', uploadFiles.length, 'files to', uploadCurrentPath);
         
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
             const pct = Math.round((e.loaded / e.total) * 100);
             progressFill.style.width = pct + '%';
             progressText.textContent = `Uploading... ${pct}%`;
+            console.log('Upload progress:', pct + '%');
           }
         });
         
+        xhr.addEventListener('readystatechange', () => {
+          console.log('XHR state:', xhr.readyState, 'status:', xhr.status);
+        });
+        
         xhr.addEventListener('load', () => {
+          console.log('XHR load event, status:', xhr.status, 'response:', xhr.responseText);
           if (xhr.status === 200) {
             const data = JSON.parse(xhr.responseText);
             progressFill.style.width = '100%';
