@@ -385,9 +385,24 @@ def api_upload_files():
     if not os.path.isdir(destination):
         return jsonify({'error': 'Destination directory does not exist'}), 400
     
-    # Get root for folder_path calculation
+    # Get root for folder_path calculation (same logic as browse/mkdir)
     settings = get_all_settings()
-    root = settings.get('3d_root' if content_type == '3d' else 'pdf_root', '/content/pdfs')
+    if content_type == '3d':
+        root = settings.get('3d_root') or '/content/3d-models'
+    else:
+        root = settings.get('pdf_root') or '/content/pdfs'
+    
+    # Fallback if path doesn't exist - try common alternatives
+    if not os.path.exists(root):
+        if content_type == '3d':
+            alternatives = ['/content/3d-models', '/content/models', '/app/uploads/3d']
+        else:
+            alternatives = ['/content/pdfs', '/app/uploads/pdf']
+        
+        for alt in alternatives:
+            if os.path.exists(alt):
+                root = alt
+                break
     
     # Security: ensure destination is within root
     try:
@@ -395,7 +410,8 @@ def api_upload_files():
         resolved_root = os.path.realpath(root)
         if not resolved_dest.startswith(resolved_root):
             return jsonify({'error': 'Destination outside content root'}), 403
-    except Exception:
+    except Exception as e:
+        logger.error(f"Upload path validation error: {e}, dest={destination}, root={root}")
         return jsonify({'error': 'Invalid destination'}), 400
     
     # Validate file types
