@@ -7276,7 +7276,15 @@
           btn.textContent = '⬆️ Upload';
         });
         
+        xhr.addEventListener('timeout', () => {
+          progressText.textContent = 'Upload timed out (slow storage - file may still be processing)';
+          progressFill.style.background = '#f39c12';
+          btn.disabled = false;
+          btn.textContent = '⬆️ Upload';
+        });
+        
         xhr.open('POST', '/api/upload');
+        xhr.timeout = 300000;  // 5 minute timeout for slow storage
         xhr.send(formData);
       } catch (e) {
         progressText.textContent = 'Error: ' + e.message;
