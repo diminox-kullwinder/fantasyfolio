@@ -27,6 +27,7 @@ class PDFIndexer:
         self.stats = {
             'scanned': 0,
             'indexed': 0,
+            'updated': 0,
             'errors': 0,
             'skipped': 0
         }
@@ -53,6 +54,11 @@ class PDFIndexer:
     def _process_pdf(self, pdf_path: Path, extract_text: bool, generate_thumbnails: bool):
         """Process a single PDF file."""
         import pymupdf
+        from fantasyfolio.core.database import get_asset_by_path
+        
+        # Check if already indexed
+        existing = get_asset_by_path(str(pdf_path))
+        is_update = existing is not None
         
         # Get file info
         stat = pdf_path.stat()
@@ -106,8 +112,14 @@ class PDFIndexer:
             self._generate_thumbnail(doc, asset_id)
         
         doc.close()
-        self.stats['indexed'] += 1
-        logger.debug(f"Indexed: {pdf_path.name}")
+        
+        # Track stats
+        if is_update:
+            self.stats['updated'] += 1
+            logger.debug(f"Updated: {pdf_path.name}")
+        else:
+            self.stats['indexed'] += 1
+            logger.debug(f"Indexed: {pdf_path.name}")
     
     def _get_file_hash(self, path: Path, chunk_size: int = 8192) -> str:
         """Calculate MD5 hash of first chunk of file."""

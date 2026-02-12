@@ -890,7 +890,7 @@ def api_index_directory():
             result = indexer.run(extract_text=True, generate_thumbnails=False)
             return jsonify({
                 'new': result.get('indexed', 0),
-                'update': 0,
+                'update': result.get('updated', 0),
                 'skip': result.get('skipped', 0),
                 'error': result.get('errors', 0),
                 'total': result.get('scanned', 0),
