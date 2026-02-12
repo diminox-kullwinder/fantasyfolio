@@ -5281,7 +5281,15 @@
       
       // Different search for 3D models vs PDFs
       if (contentType === '3d') {
-        const res = await fetch(`/api/models/search?q=${encodeURIComponent(query)}`);
+        const adv = getAdvancedFilters();
+        let searchUrl = `/api/models/search?q=${encodeURIComponent(query)}`;
+        
+        // Scope search to current folder if selected
+        if (adv.scope === 'current' && currentFolder) {
+          searchUrl += `&folder=${encodeURIComponent(currentFolder)}`;
+        }
+        
+        const res = await fetch(searchUrl);
         const models = await res.json();
         document.getElementById('contentResults').style.display = 'none';
         render3dModels(models);

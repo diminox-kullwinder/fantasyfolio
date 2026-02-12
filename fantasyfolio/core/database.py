@@ -284,13 +284,14 @@ def get_models_stats(include_deleted: bool = False) -> Dict[str, Any]:
         }
 
 
-def search_models(query: str, limit: int = 50, include_deleted: bool = False) -> List[Dict[str, Any]]:
+def search_models(query: str, limit: int = 50, include_deleted: bool = False, folder: str = None) -> List[Dict[str, Any]]:
     """Search 3D models using full-text search with prefix matching.
     
     Args:
         query: Search query
         limit: Maximum results
         include_deleted: If True, include soft-deleted records
+        folder: Optional folder path to restrict search (with LIKE matching for subfolders)
     """
     db = get_db()
     # Add wildcard for prefix matching (e.g., "robo" matches "robot")
@@ -298,6 +299,12 @@ def search_models(query: str, limit: int = 50, include_deleted: bool = False) ->
     fts_query = ' '.join(f'{term}*' for term in terms if term)
     
     deleted_filter = "AND m.deleted_at IS NULL" if not include_deleted else ""
+    folder_filter = "AND m.folder_path LIKE ?" if folder else ""
+    
+    params = [fts_query]
+    if folder:
+        params.append(folder + '%')
+    params.append(limit)
     
     with db.connection() as conn:
         rows = conn.execute(f"""
@@ -305,8 +312,9 @@ def search_models(query: str, limit: int = 50, include_deleted: bool = False) ->
             JOIN models_fts ON m.id = models_fts.rowid
             WHERE models_fts MATCH ?
             {deleted_filter}
+            {folder_filter}
             LIMIT ?
-        """, (fts_query, limit)).fetchall()
+        """, params).fetchall()
         return [dict(row) for row in rows]
 
 

@@ -162,15 +162,16 @@ def api_models_folder_tree():
 
 @models_bp.route('/models/search')
 def api_models_search():
-    """Search 3D models (legacy endpoint)."""
+    """Search 3D models with optional folder scope."""
     query = request.args.get('q', '').strip()
     limit = int(request.args.get('limit', 50))
+    folder = request.args.get('folder')
     
     if not query:
         return jsonify([])
     
     from fantasyfolio.core.database import search_models
-    return jsonify(search_models(query, limit=limit))
+    return jsonify(search_models(query, limit=limit, folder=folder))
 
 
 @models_bp.route('/models/<int:model_id>/preview')
