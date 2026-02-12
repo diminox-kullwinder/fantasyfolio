@@ -844,7 +844,7 @@ def api_verify_volume(volume_id):
 @models_bp.route('/index/directory', methods=['POST'])
 def api_index_directory():
     """
-    Index a directory using the efficient scanner.
+    Index a directory with automatic fallback to legacy indexers.
     
     POST body:
         path: Required - directory path to scan
@@ -854,7 +854,7 @@ def api_index_directory():
     Returns scan statistics.
     """
     from pathlib import Path
-    from fantasyfolio.core.scanner import scan_directory, ScanAction
+    import sqlite3
     
     data = request.get_json() or {}
     path = data.get('path')
@@ -868,55 +868,124 @@ def api_index_directory():
     if not scan_path.exists():
         return jsonify({'error': f'Path does not exist: {path}'}), 404
     
-    with get_connection() as conn:
-        # Auto-detect volume
-        volume = conn.execute("""
-            SELECT * FROM volumes 
-            WHERE ? LIKE mount_path || '%'
-            ORDER BY length(mount_path) DESC
-            LIMIT 1
-        """, (str(scan_path),)).fetchone()
+    # Detect content type from path
+    path_str = str(scan_path).lower()
+    is_pdf = 'pdf' in path_str
+    is_3d = any(ext in path_str for ext in ['3d', 'model', 'stl', 'obj', '3mf'])
+    
+    # If we can't determine from path, check for files
+    if not is_pdf and not is_3d:
+        has_pdf = any(scan_path.glob('*.pdf')) or any(scan_path.glob('*/*.pdf'))
+        has_3d = any(scan_path.glob('*.stl')) or any(scan_path.glob('*.obj')) or \
+                 any(scan_path.glob('*.3mf')) or any(scan_path.glob('*/*.stl'))
+        is_pdf = has_pdf and not has_3d
+        is_3d = has_3d and not has_pdf
+    
+    # PDF content? Use legacy PDF indexer (efficient scanner only handles 3D models)
+    if is_pdf:
+        try:
+            from fantasyfolio.indexer.pdf import PDFIndexer
+            logger.info(f"Using PDF indexer for {scan_path}")
+            indexer = PDFIndexer(str(scan_path))
+            result = indexer.run(extract_text=True, generate_thumbnails=False)
+            return jsonify({
+                'new': result.get('indexed', 0),
+                'update': 0,
+                'skip': result.get('skipped', 0),
+                'error': result.get('errors', 0),
+                'total': result.get('scanned', 0),
+                'path': str(scan_path),
+                'method': 'pdf_indexer'
+            })
+        except Exception as e:
+            logger.error(f"PDF indexer failed: {e}")
+            return jsonify({'error': f'PDF indexing failed: {str(e)}'}), 500
+    
+    # 3D content - Try new efficient scanner first (v0.4.9+ with volumes table)
+    try:
+        from fantasyfolio.core.scanner import scan_directory, ScanAction
         
-        if not volume:
-            return jsonify({'error': 'No volume found for path'}), 400
-        
-        volume = dict(volume)
-        
-        stats = {
-            'new': 0, 'update': 0, 'skip': 0,
-            'moved': 0, 'missing': 0, 'error': 0
-        }
-        
-        for result in scan_directory(conn, scan_path, volume, force=force, recursive=recursive):
-            stats[result.action.value] += 1
+        with get_connection() as conn:
+            # Auto-detect volume
+            volume = conn.execute("""
+                SELECT * FROM volumes 
+                WHERE ? LIKE mount_path || '%'
+                ORDER BY length(mount_path) DESC
+                LIMIT 1
+            """, (str(scan_path),)).fetchone()
             
-            # Apply changes
-            if result.action in (ScanAction.NEW, ScanAction.UPDATE, ScanAction.MOVED):
-                model = result.model
+            if not volume:
+                raise Exception('No volume found - falling back to legacy indexer')
+            
+            volume = dict(volume)
+            
+            stats = {
+                'new': 0, 'update': 0, 'skip': 0,
+                'moved': 0, 'missing': 0, 'error': 0
+            }
+            
+            for result in scan_directory(conn, scan_path, volume, force=force, recursive=recursive):
+                stats[result.action.value] += 1
                 
-                if result.action == ScanAction.NEW:
-                    columns = ', '.join(model.keys())
-                    placeholders = ', '.join(['?' for _ in model])
-                    conn.execute(
-                        f"INSERT INTO models ({columns}) VALUES ({placeholders})",
-                        list(model.values())
-                    )
-                else:
-                    model_id = model.pop('id', None)
-                    if model_id:
-                        sets = ', '.join([f"{k} = ?" for k in model.keys()])
+                # Apply changes
+                if result.action in (ScanAction.NEW, ScanAction.UPDATE, ScanAction.MOVED):
+                    model = result.model
+                    
+                    if result.action == ScanAction.NEW:
+                        columns = ', '.join(model.keys())
+                        placeholders = ', '.join(['?' for _ in model])
                         conn.execute(
-                            f"UPDATE models SET {sets} WHERE id = ?",
-                            list(model.values()) + [model_id]
+                            f"INSERT INTO models ({columns}) VALUES ({placeholders})",
+                            list(model.values())
                         )
+                    else:
+                        model_id = model.pop('id', None)
+                        if model_id:
+                            sets = ', '.join([f"{k} = ?" for k in model.keys()])
+                            conn.execute(
+                                f"UPDATE models SET {sets} WHERE id = ?",
+                                list(model.values()) + [model_id]
+                            )
+            
+            conn.commit()
+            
+            stats['total'] = sum(stats.values())
+            stats['volume_id'] = volume['id']
+            stats['path'] = str(scan_path)
+            stats['method'] = 'efficient_scanner'
+            
+            return jsonify(stats)
+    
+    except (sqlite3.OperationalError, Exception) as e:
+        logger.warning(f"Efficient scanner failed ({e}), falling back to legacy 3D indexer")
         
-        conn.commit()
-        
-        stats['total'] = sum(stats.values())
-        stats['volume_id'] = volume['id']
-        stats['path'] = str(scan_path)
-        
-        return jsonify(stats)
+        # Fallback to legacy 3D indexer for older schemas
+        try:
+            from fantasyfolio.indexer import models3d
+            # Legacy 3D indexer is CLI-only, run via subprocess
+            import subprocess
+            result = subprocess.run(
+                ['python', '-m', 'fantasyfolio.indexer.models3d', str(scan_path)],
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            if result.returncode == 0:
+                # Parse output for stats (basic fallback)
+                return jsonify({
+                    'new': 0,  # Can't determine from CLI output
+                    'update': 0,
+                    'skip': 0,
+                    'total': 0,
+                    'message': 'Legacy 3D indexer completed (check logs for details)',
+                    'path': str(scan_path),
+                    'method': 'legacy_3d_indexer'
+                })
+            else:
+                return jsonify({'error': f'Legacy indexer failed: {result.stderr}'}), 500
+        except Exception as fallback_error:
+            logger.error(f"Legacy indexer also failed: {fallback_error}")
+            return jsonify({'error': f'All indexers failed. Scanner: {str(e)}, Fallback: {str(fallback_error)}'}), 500
 
 
 @models_bp.route('/volumes/<volume_id>/index', methods=['POST'])
