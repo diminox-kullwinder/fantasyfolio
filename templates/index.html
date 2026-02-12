@@ -8832,12 +8832,21 @@
     
     async function contextMenuForceIndex() {
       document.getElementById('folderContextMenu').style.display = 'none';
-      const path = contextMenuPath || currentFolder;
+      let path = contextMenuPath || currentFolder;
       if (!path) {
         showNotification('No folder selected', 'error');
         return;
       }
       
+      // Convert relative folder path to absolute system path
+      // contextMenuPath is relative like "Upload-test1" but backend needs "/content/3d-models/Upload-test1"
+      if (!path.startsWith('/')) {
+        // Get root path based on content type
+        const root = contentType === '3d' ? '/content/3d-models' : '/content/pdfs';
+        path = root + '/' + path;
+      }
+      
+      console.log('Force index on path:', path);
       showNotification('Starting index...', 'info');
       
       try {
@@ -9041,13 +9050,21 @@
         return;
       }
       
+      // Convert relative folder path to absolute system path
+      let path = breadcrumbContextPath;
+      if (!path.startsWith('/')) {
+        const root = contentType === '3d' ? '/content/3d-models' : '/content/pdfs';
+        path = root + '/' + path;
+      }
+      
+      console.log('Breadcrumb force index on path:', path);
       showNotification('Starting index of folder...', 'info');
       
       try {
         const res = await fetch('/api/index/directory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: breadcrumbContextPath, force: true, recursive: true })
+          body: JSON.stringify({ path, force: true, recursive: true })
         });
         const data = await res.json();
         
