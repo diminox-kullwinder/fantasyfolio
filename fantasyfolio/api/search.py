@@ -303,6 +303,7 @@ def api_search_advanced():
     publisher = data.get('publisher')
     game_system = data.get('game_system')
     format_filter = data.get('format') or request.args.get('format')
+    content_type = data.get('content_type') or request.args.get('content_type')
     search_titles = data.get('search_titles', True)
     search_content = data.get('search_content', True)
     limit = int(data.get('limit', 50))
@@ -311,7 +312,8 @@ def api_search_advanced():
     fts_terms = fts_query(terms) if terms else ''
     
     # Determine if searching 3D models or PDFs
-    is_3d_search = format_filter in ('stl', 'obj', '3mf')
+    # Use content_type from UI if provided, otherwise infer from format
+    is_3d_search = (content_type == '3d') or (format_filter in ('stl', 'obj', '3mf'))
     
     with get_connection() as conn:
         if is_3d_search:

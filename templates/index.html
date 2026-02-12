@@ -5221,6 +5221,7 @@
       // Build search request
       const searchParams = new URLSearchParams();
       searchParams.set('terms', JSON.stringify(terms));
+      searchParams.set('content_type', contentType);  // Tell backend which tab we're on
       if (folder) searchParams.set('folder', folder);
       if (format) searchParams.set('format', format);
       
