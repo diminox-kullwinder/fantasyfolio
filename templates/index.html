@@ -8795,8 +8795,14 @@
       if (contextMenuPath) {
         filterFolder(contextMenuPath);
       } else {
-        load3dFolders();
-        load3dModels();
+        // Refresh based on current content type
+        if (contentType === '3d') {
+          load3dFolders();
+          load3dModels();
+        } else {
+          loadFolders();
+          loadAssets();
+        }
       }
     }
     
