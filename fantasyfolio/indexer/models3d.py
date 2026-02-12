@@ -272,7 +272,7 @@ class ModelsIndexer:
                                 folder_path=:folder_path, collection=:collection, creator=:creator,
                                 vertex_count=:vertex_count, face_count=:face_count,
                                 has_supports=:has_supports, preview_image=:preview_image,
-                                has_thumbnail=?, modified_at=:modified_at
+                                has_thumbnail=:has_thumbnail, modified_at=:modified_at
                             WHERE file_path=:file_path
                         """, {**model, 'has_thumbnail': has_thumb})
                     else:

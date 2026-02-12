@@ -293,7 +293,7 @@ def _render_with_f3d(input_path: str, output_path: str, size: int = 1024) -> boo
         '--output', output_path,
         '--resolution', f'{size},{size}',
         '--up', '+Z',
-        '--camera-direction=0,-1,-0.3',  # Front view, slight downward angle (good for miniatures)
+        '--camera-direction=0,1,-0.3',  # Front view, slight downward angle (good for miniatures)
         input_path
     ]
     

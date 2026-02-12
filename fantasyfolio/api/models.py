@@ -239,6 +239,12 @@ def api_model_preview(model_id: int):
                     return
                 
                 render_3d_thumbnail(model_data, model_format, str(cached_thumb))
+                
+                # Update database flag
+                with get_connection() as conn:
+                    conn.execute("UPDATE models SET has_thumbnail = 1 WHERE id = ?", (model_id,))
+                    conn.commit()
+                
                 logger.info(f"Background render complete for model {model_id} ({model_format})")
             except Exception as e:
                 logger.error(f"Background thumbnail render error for model {model_id}: {e}")
