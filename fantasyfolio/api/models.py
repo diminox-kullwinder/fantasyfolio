@@ -967,28 +967,26 @@ def api_index_directory():
         
         # Fallback to legacy 3D indexer for older schemas
         try:
-            from fantasyfolio.indexer import models3d
-            # Legacy 3D indexer is CLI-only, run via subprocess
-            import subprocess
-            result = subprocess.run(
-                ['python', '-m', 'fantasyfolio.indexer.models3d', str(scan_path)],
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
-            if result.returncode == 0:
-                # Parse output for stats (basic fallback)
-                return jsonify({
-                    'new': 0,  # Can't determine from CLI output
-                    'update': 0,
-                    'skip': 0,
-                    'total': 0,
-                    'message': 'Legacy 3D indexer completed (check logs for details)',
-                    'path': str(scan_path),
-                    'method': 'legacy_3d_indexer'
-                })
-            else:
-                return jsonify({'error': f'Legacy indexer failed: {result.stderr}'}), 500
+            from fantasyfolio.indexer.models3d import ModelsIndexer
+            from fantasyfolio.config import get_config
+            
+            # Use configured 3D_ROOT for relative path calculation, scan_path for actual scanning
+            config = get_config()
+            root_path = config.MODELS_3D_ROOT or '/content/3d-models'  # Default if not configured
+            
+            logger.info(f"Using legacy 3D indexer for {scan_path} (root: {root_path})")
+            indexer = ModelsIndexer(root_path=root_path, scan_path=str(scan_path))
+            result = indexer.run()
+            
+            return jsonify({
+                'new': result.get('models_indexed', 0),
+                'update': 0,  # Can't distinguish new vs updated in legacy indexer
+                'skip': result.get('models_found', 0) - result.get('models_indexed', 0),
+                'error': result.get('errors', 0),
+                'total': result.get('models_found', 0),
+                'path': str(scan_path),
+                'method': 'legacy_3d_indexer'
+            })
         except Exception as fallback_error:
             logger.error(f"Legacy indexer also failed: {fallback_error}")
             return jsonify({'error': f'All indexers failed. Scanner: {str(e)}, Fallback: {str(fallback_error)}'}), 500

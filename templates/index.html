@@ -8861,8 +8861,8 @@
           showNotification(`Indexed: ${data.new} new, ${data.update} updated, ${data.skip} skipped`, 'success');
           // Refresh the appropriate content type
           if (contentType === 'pdf') {
-            loadPdfFolders();
-            loadPdfs();
+            loadFolders();
+            loadAssets();
           } else {
             load3dFolders();
             load3dModels();
@@ -9078,8 +9078,8 @@
           showNotification(`Indexed: ${data.new || 0} new, ${data.update || data.updated || 0} updated`, 'success');
           // Refresh the appropriate content type
           if (contentType === 'pdf') {
-            loadPdfFolders();
-            loadPdfs();
+            loadFolders();
+            loadAssets();
           } else {
             load3dFolders();
             load3dModels();

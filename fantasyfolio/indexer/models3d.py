@@ -32,9 +32,10 @@ SKIP_PATTERNS = [r'__MACOSX', r'\.DS_Store', r'Thumbs\.db']
 class ModelsIndexer:
     """3D model file indexer."""
     
-    def __init__(self, root_path: Optional[str] = None):
+    def __init__(self, root_path: Optional[str] = None, scan_path: Optional[str] = None):
         self.config = get_config()
-        self.root_path = Path(root_path) if root_path else Path(self.config.MODELS_3D_ROOT)
+        self.root_path = Path(root_path) if root_path else Path(self.config.MODELS_3D_ROOT or '/content/3d-models')
+        self.scan_path = Path(scan_path) if scan_path else self.root_path
         self.stats = {
             'archives_scanned': 0,
             'standalone_files': 0,
@@ -45,20 +46,20 @@ class ModelsIndexer:
     
     def run(self):
         """Run the 3D models indexer."""
-        if not self.root_path.exists():
-            logger.error(f"Root path does not exist: {self.root_path}")
+        if not self.scan_path.exists():
+            logger.error(f"Scan path does not exist: {self.scan_path}")
             return self.stats
         
-        logger.info(f"Starting 3D scan of: {self.root_path}")
+        logger.info(f"Starting 3D scan of: {self.scan_path} (root: {self.root_path})")
         
         models = []
         
         # Walk directory
-        for root, dirs, files in os.walk(self.root_path):
+        for root, dirs, files in os.walk(self.scan_path):
             # Skip hidden directories
             dirs[:] = [d for d in dirs if not d.startswith('.')]
             
-            rel_dir = os.path.relpath(root, self.root_path)
+            rel_dir = os.path.relpath(root, self.scan_path)
             if rel_dir != '.':
                 logger.debug(f"Scanning: {rel_dir}")
             
@@ -115,6 +116,8 @@ class ModelsIndexer:
         
         try:
             folder_path = str(zip_path.parent.relative_to(self.root_path))
+            if folder_path == '.':
+                folder_path = ''  # Empty string for files at root level
         except ValueError:
             folder_path = str(zip_path.parent)
         
@@ -190,8 +193,12 @@ class ModelsIndexer:
         
         try:
             folder_path = str(file_path.parent.relative_to(self.root_path))
-        except ValueError:
+            if folder_path == '.':
+                folder_path = ''  # Empty string for files at root level
+            logger.debug(f"Folder path for {file_path.name}: '{folder_path}' (root: {self.root_path})")
+        except ValueError as e:
             folder_path = str(file_path.parent)
+            logger.warning(f"Failed to calculate relative path for {file_path}: {e}, using absolute: {folder_path}")
         
         return {
             'file_path': str(file_path),
