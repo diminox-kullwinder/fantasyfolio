@@ -456,12 +456,17 @@ def api_upload_files():
             else:
                 folder_path = rel_path
             
-            # Compute file hash
-            hasher = hashlib.md5()
-            with open(file_path, 'rb') as f:
-                for chunk in iter(lambda: f.read(8192), b''):
-                    hasher.update(chunk)
-            file_hash = hasher.hexdigest()
+            # Compute file hash (skip for large files on slow storage - compute during indexing instead)
+            # For files > 1MB, use a placeholder hash to speed up upload response
+            if file_size > 1024 * 1024:  # 1MB threshold
+                file_hash = f"pending_{os.path.basename(file_path)}_{file_size}"
+                logger.info(f"Skipping hash for large file {safe_filename} ({file_size} bytes), will compute during indexing")
+            else:
+                hasher = hashlib.md5()
+                with open(file_path, 'rb') as f:
+                    for chunk in iter(lambda: f.read(8192), b''):
+                        hasher.update(chunk)
+                file_hash = hasher.hexdigest()
             
             # Special handling for ZIP files in 3D context - extract and index contents
             if content_type == '3d' and ext == '.zip':
