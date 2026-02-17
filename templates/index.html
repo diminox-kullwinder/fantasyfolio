@@ -4585,18 +4585,32 @@
       const res = await fetch(`/api/models/${id}`);
       const model = await res.json();
       
+      // Determine if this is a 3D model or 2D asset (SVG)
+      const isSvg = (model.format || '').toLowerCase() === 'svg';
+      const is3d = !isSvg && ['stl', 'obj', '3mf', 'glb', 'gltf'].includes((model.format || '').toLowerCase());
+      
       // Use same structure as PDF modal for consistency
       document.getElementById('modalBody').innerHTML = `
         <div class="model-preview-area">
           <img class="model-thumb-img" src="/api/models/${id}/preview" alt="" 
                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="model-thumb-fallback" style="display:none;">🎲</div>
+          <div class="model-thumb-fallback" style="display:none;">${isSvg ? '🎨' : '🎲'}</div>
+          ${is3d ? `
           <div id="viewer3d" class="viewer-3d"></div>
           <div class="viewer-controls" id="viewerControls">
             <button onclick="resetViewer()" title="Reset view">⟲</button>
             <button onclick="toggleWireframe()" title="Toggle wireframe">◇</button>
             <button onclick="close3dViewer()" title="Close 3D view">✕</button>
           </div>
+          ` : ''}
+          ${isSvg ? `
+          <div id="svgViewer" class="viewer-3d" style="display:none; background:#fff; padding:20px;">
+            <img src="/api/models/${id}/file" style="max-width:100%; max-height:100%; object-fit:contain;" alt="SVG" />
+          </div>
+          <div class="viewer-controls" id="svgViewerControls" style="display:none;">
+            <button onclick="closeSvgViewer()" title="Close SVG view">✕</button>
+          </div>
+          ` : ''}
         </div>
         <div class="modal-details">
           <h2>${escapeHtml(model.title || model.filename)}</h2>
@@ -4617,10 +4631,12 @@
             <span class="detail-label">File Size</span>
             <span class="detail-value">${formatSize(model.file_size)}</span>
           </div>
+          ${!isSvg ? `
           <div class="detail-row">
             <span class="detail-label">Supports</span>
             <span class="detail-value">${model.has_supports ? '✓ Pre-supported' : 'No'}</span>
           </div>
+          ` : ''}
           ${model.folder_path ? `
           <div class="detail-row">
             <span class="detail-label">Location</span>
@@ -4635,9 +4651,16 @@
           ` : ''}
           
           <div class="modal-actions">
+            ${is3d ? `
             <button class="btn btn-secondary" onclick="open3dViewer(${id})" id="btn3dPreview">
               🎮 3D Preview
             </button>
+            ` : ''}
+            ${isSvg ? `
+            <button class="btn btn-secondary" onclick="openSvgViewer(${id})" id="btnSvgPreview">
+              🎨 View Full Size
+            </button>
+            ` : ''}
             <button class="btn btn-primary" onclick="downloadModel(${id}, '${model.filename?.replace(/'/g, "\\'")}')">
               ⬇ Download
             </button>
@@ -4705,6 +4728,35 @@
         console.error('Failed to load Three.js:', e);
         if (btn) btn.textContent = '❌ Load failed';
       }
+    }
+    
+    function openSvgViewer(modelId) {
+      const btn = document.getElementById('btnSvgPreview');
+      const previewImg = document.querySelector('.model-preview-area .model-thumb-img');
+      const fallback = document.querySelector('.model-preview-area .model-thumb-fallback');
+      const svgViewer = document.getElementById('svgViewer');
+      const svgControls = document.getElementById('svgViewerControls');
+      
+      // Hide thumbnail, show full SVG
+      if (previewImg) previewImg.style.display = 'none';
+      if (fallback) fallback.style.display = 'none';
+      if (svgViewer) svgViewer.style.display = 'flex';
+      if (svgControls) svgControls.style.display = 'flex';
+      if (btn) btn.style.display = 'none';
+    }
+    
+    function closeSvgViewer() {
+      const previewImg = document.querySelector('.model-preview-area .model-thumb-img');
+      const fallback = document.querySelector('.model-preview-area .model-thumb-fallback');
+      const svgViewer = document.getElementById('svgViewer');
+      const svgControls = document.getElementById('svgViewerControls');
+      const btn = document.getElementById('btnSvgPreview');
+      
+      if (svgViewer) svgViewer.style.display = 'none';
+      if (svgControls) svgControls.style.display = 'none';
+      if (previewImg) previewImg.style.display = 'block';
+      if (fallback && !previewImg) fallback.style.display = 'flex';
+      if (btn) btn.style.display = 'inline-block';
     }
     
     function close3dViewer() {
