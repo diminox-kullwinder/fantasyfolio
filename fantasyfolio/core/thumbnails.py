@@ -235,7 +235,12 @@ def render_thumbnail(
                 tmp.write(data)
                 tmp_path = tmp.name
             
-            success = _render_3d_thumbnail(tmp_path, str(output_path), size)
+            # Route to appropriate renderer based on format
+            file_format = model.get('format', '').lower()
+            if file_format == 'svg':
+                success = _render_svg_thumbnail(tmp_path, str(output_path), size)
+            else:
+                success = _render_3d_thumbnail(tmp_path, str(output_path), size)
             os.unlink(tmp_path)
             
         except Exception:
@@ -248,7 +253,13 @@ def render_thumbnail(
             return None
         
         source_mtime = int(file_path.stat().st_mtime)
-        success = _render_3d_thumbnail(str(file_path), str(output_path), size)
+        
+        # Route to appropriate renderer based on format
+        file_format = model.get('format', '').lower()
+        if file_format == 'svg':
+            success = _render_svg_thumbnail(str(file_path), str(output_path), size)
+        else:
+            success = _render_3d_thumbnail(str(file_path), str(output_path), size)
     
     if success and output_path.exists():
         # Compute relative path for storage
@@ -380,6 +391,42 @@ def _render_3d_thumbnail(input_path: str, output_path: str, size: int = 1024) ->
     
     # Fallback to stl-thumb (works on Mac/desktop)
     return _render_with_stl_thumb(input_path, output_path, size)
+
+
+def _render_svg_thumbnail(input_path: str, output_path: str, size: int = 1024) -> bool:
+    """Render SVG thumbnail using cairosvg.
+    
+    Args:
+        input_path: Path to SVG file
+        output_path: Path to output PNG
+        size: Max dimension for output (preserves aspect ratio)
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        import cairosvg
+        from PIL import Image
+        import io
+        
+        # Convert SVG to PNG bytes
+        png_bytes = cairosvg.svg2png(
+            url=input_path,
+            output_width=size,
+            output_height=size
+        )
+        
+        # Open with PIL to resize if needed (preserving aspect ratio)
+        img = Image.open(io.BytesIO(png_bytes))
+        img.thumbnail((size, size), Image.Resampling.LANCZOS)
+        
+        # Save to output path
+        img.save(output_path, 'PNG', optimize=True)
+        return True
+        
+    except Exception as e:
+        print(f"SVG render failed for {input_path}: {e}")
+        return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

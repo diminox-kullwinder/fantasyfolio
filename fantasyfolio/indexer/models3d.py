@@ -19,8 +19,8 @@ from fantasyfolio.core.database import get_connection, insert_model
 
 logger = logging.getLogger(__name__)
 
-# Supported 3D file extensions
-MODEL_EXTENSIONS = {'.stl', '.3mf', '.obj', '.glb', '.gltf'}
+# Supported file extensions (3D models + 2D assets like SVG)
+MODEL_EXTENSIONS = {'.stl', '.3mf', '.obj', '.glb', '.gltf', '.svg'}
 
 # Preview image extensions
 PREVIEW_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}

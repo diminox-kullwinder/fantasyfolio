@@ -416,7 +416,7 @@ def api_upload_files():
     
     # Validate file types
     if content_type == '3d':
-        allowed_extensions = {'.stl', '.obj', '.3mf', '.zip', '.rar', '.7z'}
+        allowed_extensions = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg', '.zip', '.rar', '.7z'}
     else:
         allowed_extensions = {'.pdf'}
     
@@ -586,7 +586,7 @@ def _scan_and_index_zip(zip_path: Path, root: str, archive_file_path: str) -> in
     import zipfile
     from fantasyfolio.core.database import insert_model
     
-    MODEL_EXTENSIONS = {'.stl', '.3mf', '.obj'}
+    MODEL_EXTENSIONS = {'.stl', '.3mf', '.obj', '.glb', '.gltf', '.svg'}
     PREVIEW_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
     SKIP_PATTERNS = [r'__MACOSX', r'\.DS_Store', r'Thumbs\.db', r'^\.']
     

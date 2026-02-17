@@ -266,7 +266,7 @@ def scan_archive(
     
     Yields ScanResult for each model found.
     """
-    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf'}
+    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg'}
     
     try:
         archive_mtime = int(archive_path.stat().st_mtime)
@@ -445,7 +445,7 @@ def scan_directory(
     
     Yields ScanResult for each file/archive member found.
     """
-    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf'}
+    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg'}
     ARCHIVE_EXTENSIONS = {'.zip'}
     
     pattern = '**/*' if recursive else '*'
