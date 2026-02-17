@@ -4675,7 +4675,7 @@
     let threeJsLoaded = false;
     
     // Three.js viewer functions
-    let loadedLoaders = { stl: false, obj: false, '3mf': false };
+    let loadedLoaders = { stl: false, obj: false, '3mf': false, glb: false, gltf: false };
     
     async function open3dViewer(modelId) {
       const btn = document.getElementById('btn3dPreview');
@@ -4707,6 +4707,10 @@
           // fflate already loaded with Three.js base
           await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/3MFLoader.js');
           loadedLoaders['3mf'] = true;
+        } else if ((format === 'glb' || format === 'gltf') && !loadedLoaders.glb) {
+          await loadScript('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js');
+          loadedLoaders.glb = true;
+          loadedLoaders.gltf = true;
         }
         
         // Hide static preview, show 3D viewer
@@ -4816,7 +4820,9 @@
       const loaderCheck = {
         'stl': () => typeof THREE.STLLoader !== 'undefined',
         'obj': () => typeof THREE.OBJLoader !== 'undefined',
-        '3mf': () => typeof THREE.ThreeMFLoader !== 'undefined'
+        '3mf': () => typeof THREE.ThreeMFLoader !== 'undefined',
+        'glb': () => typeof THREE.GLTFLoader !== 'undefined',
+        'gltf': () => typeof THREE.GLTFLoader !== 'undefined'
       };
       
       if (!loaderCheck[format] || !loaderCheck[format]()) {
@@ -4874,6 +4880,8 @@
         loader = new THREE.OBJLoader();
       } else if (format === '3mf') {
         loader = new THREE.ThreeMFLoader();
+      } else if (format === 'glb' || format === 'gltf') {
+        loader = new THREE.GLTFLoader();
       }
       
       // Material for the model
@@ -4895,6 +4903,15 @@
           if (format === 'stl') {
             // STLLoader returns geometry
             mesh = new THREE.Mesh(result, material);
+          } else if (format === 'glb' || format === 'gltf') {
+            // GLTFLoader returns { scene, animations, cameras, etc. }
+            mesh = result.scene;
+            // GLTF models have their own materials, optionally override
+            // mesh.traverse((child) => {
+            //   if (child.isMesh) {
+            //     child.material = material;
+            //   }
+            // });
           } else if (format === 'obj' || format === '3mf') {
             // OBJLoader and 3MFLoader return Object3D/Group
             mesh = result;

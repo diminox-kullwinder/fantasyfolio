@@ -220,9 +220,9 @@ def api_model_preview(model_id: int):
         return send_file(model['preview_image'])
     
     # Try to render 3D thumbnail in background (non-blocking)
-    # Supports STL, OBJ, and 3MF formats
+    # Supports STL, OBJ, 3MF, GLB, and GLTF formats
     model_format = model.get('format', '').lower()
-    if model_format in ('stl', 'obj', '3mf'):
+    if model_format in ('stl', 'obj', '3mf', 'glb', 'gltf'):
         import threading
         
         def render_in_background():
@@ -400,7 +400,7 @@ def api_thumbnail_stats():
         # Get all model IDs (for 3D formats)
         model_rows = conn.execute("""
             SELECT id FROM models 
-            WHERE format IN ('stl', 'obj', '3mf')
+            WHERE format IN ('stl', 'obj', '3mf', 'glb', 'gltf')
         """).fetchall()
     
     total = len(model_rows)
@@ -488,7 +488,7 @@ def api_render_thumbnails():
             
             try:
                 model_format = (model['format'] or 'stl').lower()
-                if model_format not in ('stl', 'obj', '3mf'):
+                if model_format not in ('stl', 'obj', '3mf', 'glb', 'gltf'):
                     _render_status['completed'] += 1
                     continue
                 
