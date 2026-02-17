@@ -4203,6 +4203,13 @@
     let currentCollection = null;
     let currentFormat = null;  // STL, OBJ, 3MF filter for 3D models
     
+    // Infinite scroll state for 3D models
+    let modelsOffset = 0;
+    let modelsLimit = 100;
+    let modelsHasMore = true;
+    let modelsLoading = false;
+    let allLoadedModels = [];
+    
     // Context menu state
     let contextMenuPath = null;
     let contextMenuAssetId = null;
@@ -4322,6 +4329,27 @@
       
       // Sort dropdown
       document.getElementById('sortSelect').addEventListener('change', changeSort);
+      
+      // Infinite scroll for 3D models
+      const contentSection = document.querySelector('.content-section');
+      if (contentSection) {
+        contentSection.addEventListener('scroll', () => {
+          // Only trigger for 3D models view
+          if (contentType !== '3d') return;
+          
+          // Check if near bottom (within 300px)
+          const scrollHeight = contentSection.scrollHeight;
+          const scrollTop = contentSection.scrollTop;
+          const clientHeight = contentSection.clientHeight;
+          
+          if (scrollHeight - scrollTop - clientHeight < 300) {
+            // Load more if available and not already loading
+            if (modelsHasMore && !modelsLoading) {
+              load3dModels(true); // append=true
+            }
+          }
+        });
+      }
     });
     
     async function loadStats() {
@@ -4502,8 +4530,20 @@
       load3dModels();
     }
     
-    async function load3dModels() {
-      let url = `/api/models?limit=100&sort=${currentSort}&order=${currentOrder}`;
+    async function load3dModels(append = false) {
+      if (modelsLoading) return;
+      if (append && !modelsHasMore) return;
+      
+      modelsLoading = true;
+      
+      // Reset state if not appending (new filter/sort)
+      if (!append) {
+        modelsOffset = 0;
+        modelsHasMore = true;
+        allLoadedModels = [];
+      }
+      
+      let url = `/api/models?limit=${modelsLimit}&offset=${modelsOffset}&sort=${currentSort}&order=${currentOrder}`;
       if (currentCollection) {
         url += `&collection=${encodeURIComponent(currentCollection)}`;
       }
@@ -4514,9 +4554,29 @@
         url += `&format=${encodeURIComponent(currentFormat)}`;
       }
       
-      const res = await fetch(url);
-      const models = await res.json();
-      render3dModels(models);
+      try {
+        const res = await fetch(url);
+        const models = await res.json();
+        
+        // Check if we got fewer results than requested (end of data)
+        if (models.length < modelsLimit) {
+          modelsHasMore = false;
+        }
+        
+        // Update offset for next load
+        modelsOffset += models.length;
+        
+        // Append to all loaded models
+        if (append) {
+          allLoadedModels = allLoadedModels.concat(models);
+        } else {
+          allLoadedModels = models;
+        }
+        
+        render3dModels(allLoadedModels, append);
+      } finally {
+        modelsLoading = false;
+      }
     }
     
     function changeFormatFilter() {
@@ -4532,11 +4592,11 @@
       load3dModels();
     }
     
-    function render3dModels(models) {
+    function render3dModels(models, append = false) {
       const grid = document.getElementById('assetGrid');
       const list = document.getElementById('assetList');
       
-      if (models.length === 0) {
+      if (models.length === 0 && !append) {
         grid.innerHTML = `
           <div class="empty-state">
             <h3>No 3D models found</h3>
@@ -4549,7 +4609,7 @@
       
       // Grid view with preview thumbnails (fresh timestamp for immediate updates)
       const cacheBust = Date.now();
-      grid.innerHTML = models.map(m => `
+      const gridHtml = models.map(m => `
         <div class="asset-card" data-id="${m.id}" data-type="model" onclick="show3dDetail(${m.id})" title="ID: ${m.id}">
           <img class="asset-thumb model-grid-thumb" data-model-id="${m.id}" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
                onerror="console.error('Thumb failed for model ${m.id}:', this.src); this.src='/static/placeholder-3d.svg';" />
@@ -4560,8 +4620,15 @@
         </div>
       `).join('');
       
+      // Append or replace grid content
+      if (append) {
+        grid.innerHTML += gridHtml;
+      } else {
+        grid.innerHTML = gridHtml;
+      }
+      
       // List view
-      list.innerHTML = models.map(m => `
+      const listHtml = models.map(m => `
         <div class="asset-row" data-id="${m.id}" data-type="model" onclick="show3dDetail(${m.id})">
           <img data-model-id="${m.id}" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
                onerror="this.outerHTML='<div class=\\'model-icon-small\\'>🎲</div>'" />
@@ -4574,6 +4641,13 @@
           <div class="size">${formatSize(m.file_size)}</div>
         </div>
       `).join('');
+      
+      // Append or replace list content
+      if (append) {
+        list.innerHTML += listHtml;
+      } else {
+        list.innerHTML = listHtml;
+      }
     }
     
     // Current model for 3D viewer
