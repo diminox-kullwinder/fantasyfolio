@@ -14,20 +14,28 @@
 - Schema.sql with all required columns
 - Automatic DB initialization on first run
 - Batch render endpoint uses new thumbnail system
-- Docker containerization
+- Docker containerization with named volumes (DB fully containerized)
 - Rebrand (DAM → FantasyFolio)
 
 **❌ Incomplete:**
 - GLB support in all code paths
+- SVG support (blocker for NAS QA testing)
 - Infinite scroll / pagination
 - Deduplication integration into indexing
 - On-demand preview DB column updates
 
 ---
 
-## v0.4.12 - Critical Bugfixes + UX
+## v0.4.12 - Critical Bugfixes + SVG Support
 **Target:** 2026-02-24  
-**Focus:** Fix rendering issues + implement planned UX features
+**Focus:** Fix rendering issues + enable NAS QA testing
+
+### QA Blockers (Required for NAS Testing)
+- [ ] **SVG support** - Add SVG thumbnail generation, format detection, and viewer
+  - Rendering: Add SVG to thumbnail pipeline (ImageMagick/Inkscape)
+  - Detection: Add `.svg` to supported formats list
+  - Viewer: Display SVG in preview modal
+  - **Why critical:** QA testers need to test with full asset libraries on NAS Docker deployments
 
 ### Critical Fixes (from v0.4.11 issues)
 - [ ] **GLB support in all code paths** - Add GLB/GLTF to 3 missing locations (lines 225, 403, 491)
@@ -47,7 +55,7 @@
 - [ ] Better error logging for failed renders
 - [ ] Thumbnail generation progress indicator
 
-**Estimated Effort:** 1 week
+**Estimated Effort:** 1-2 weeks
 
 ---
 
