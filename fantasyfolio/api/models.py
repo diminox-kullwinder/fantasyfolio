@@ -1218,3 +1218,41 @@ def api_index_directory_internal(path: str, force: bool = False):
         
         stats['total'] = sum(stats.values())
         return jsonify(stats)
+
+
+@models_bp.route('/models/detect-duplicates', methods=['POST'])
+def api_detect_duplicates():
+    """
+    Detect and mark duplicate models using two-tier hash verification.
+    
+    POST body:
+        auto_mark: bool - Automatically mark duplicates (default: true)
+    
+    Returns:
+        Results dict with statistics
+    """
+    from fantasyfolio.core.deduplication import process_duplicates
+    
+    data = request.get_json() or {}
+    auto_mark = data.get('auto_mark', True)
+    
+    config = get_config()
+    db_path = str(config.DATABASE_PATH)
+    
+    try:
+        results = process_duplicates(
+            db_path=db_path,
+            table='models',
+            callback=None
+        )
+        
+        return jsonify({
+            'status': 'complete',
+            'results': results
+        })
+    except Exception as e:
+        logger.error(f"Deduplication error: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
