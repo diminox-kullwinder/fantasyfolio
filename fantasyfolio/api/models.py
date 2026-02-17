@@ -219,46 +219,58 @@ def api_model_preview(model_id: int):
     if model.get('preview_image') and os.path.exists(model['preview_image']):
         return send_file(model['preview_image'])
     
-    # Try to render 3D thumbnail in background (non-blocking)
-    # Supports STL, OBJ, 3MF, GLB, and GLTF formats
+    # Try to render thumbnail in background (non-blocking)
+    # Supports STL, OBJ, 3MF, GLB, GLTF, and SVG formats
     model_format = model.get('format', '').lower()
-    if model_format in ('stl', 'obj', '3mf', 'glb', 'gltf'):
+    if model_format in ('stl', 'obj', '3mf', 'glb', 'gltf', 'svg'):
         import threading
         
         def render_in_background():
             try:
-                from fantasyfolio.core.thumbnails import _render_3d_thumbnail
+                from fantasyfolio.core.thumbnails import render_thumbnail
+                from fantasyfolio.core.database import get_connection
                 
-                # Get model file path
-                model_path = None
-                if model.get('archive_path') and model.get('archive_member'):
-                    # Extract from archive to temp file
-                    with zipfile.ZipFile(model['archive_path'], 'r') as zf:
-                        model_data = zf.read(model['archive_member'])
-                    with tempfile.NamedTemporaryFile(suffix=f".{model_format}", delete=False) as tmp:
-                        tmp.write(model_data)
-                        model_path = tmp.name
-                elif os.path.exists(model.get('file_path', '')):
-                    model_path = model['file_path']
-                else:
-                    logger.warning(f"Model file not found for {model_id}")
-                    return
+                # Get volume info
+                volume = None
+                with get_connection() as conn:
+                    volume_row = conn.execute(
+                        "SELECT * FROM volumes WHERE id = (SELECT volume_id FROM models WHERE id = ?)",
+                        (model_id,)
+                    ).fetchone()
+                    if volume_row:
+                        volume = dict(volume_row)
                 
-                # Render using new path (f3d with correct camera)
-                success = _render_3d_thumbnail(model_path, str(cached_thumb))
+                # Render using unified function (handles all formats, updates DB columns)
+                result = render_thumbnail(
+                    model=model,
+                    volume=volume,
+                    central_dir=config.THUMBNAIL_DIR / "3d",
+                    size=512,
+                    force=False
+                )
                 
-                # Clean up temp file if created
-                if model.get('archive_path') and model_path:
-                    os.unlink(model_path)
-                
-                if success:
-                    # Update database flag
+                if result:
+                    # Update database with thumbnail info
                     with get_connection() as conn:
-                        conn.execute("UPDATE models SET has_thumbnail = 1 WHERE id = ?", (model_id,))
+                        conn.execute("""
+                            UPDATE models 
+                            SET has_thumbnail = 1,
+                                thumb_storage = ?,
+                                thumb_path = ?,
+                                thumb_rendered_at = ?,
+                                thumb_source_mtime = ?
+                            WHERE id = ?
+                        """, (
+                            result['thumb_storage'],
+                            result['thumb_path'],
+                            result['thumb_rendered_at'],
+                            result.get('thumb_source_mtime'),
+                            model_id
+                        ))
                         conn.commit()
                     logger.info(f"Background render complete for model {model_id} ({model_format})")
                 else:
-                    logger.warning(f"Background render failed for model {model_id}")
+                    logger.debug(f"Thumbnail already exists or render failed for model {model_id}")
                     
             except Exception as e:
                 logger.error(f"Background thumbnail render error for model {model_id}: {e}")
@@ -1084,10 +1096,22 @@ def api_regenerate_thumbnail(model_id):
         result = render_thumbnail(model, volume, central_dir, force=force)
         
         if result:
-            conn.execute(
-                "UPDATE models SET has_thumbnail = 1 WHERE id = ?",
-                (model_id,)
-            )
+            # Update all thumbnail columns
+            conn.execute("""
+                UPDATE models 
+                SET has_thumbnail = 1,
+                    thumb_storage = ?,
+                    thumb_path = ?,
+                    thumb_rendered_at = ?,
+                    thumb_source_mtime = ?
+                WHERE id = ?
+            """, (
+                result['thumb_storage'],
+                result['thumb_path'],
+                result['thumb_rendered_at'],
+                result.get('thumb_source_mtime'),
+                model_id
+            ))
             conn.commit()
             return jsonify({
                 'status': 'rendered',
