@@ -5,6 +5,76 @@ All notable changes to FantasyFolio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.12] - 2026-02-17
+
+### Added - New Features
+
+#### SVG Support (QA Blocker)
+- **SVG file support** - Enable NAS appliance QA testing with full asset libraries
+  - Backend: cairosvg rendering, format detection in scanner/settings/indexers
+  - Frontend: SVG viewer with "View Full Size" button, inline display
+  - Thumbnails: PNG thumbnails generated from SVG files (512x512)
+  - Works in all modes: indexing, batch render, manual regenerate
+  - **Why critical:** QA testers need to test with complete asset libraries including vector graphics
+
+#### GLB/GLTF Support
+- **GLB and GLTF 3D model support** - Full support for modern 3D formats
+  - Added to all format checks (scanner, settings, API endpoints)
+  - Frontend: GLTFLoader integration, proper scene handling
+  - Preserves embedded materials and textures
+  - Works in all code paths: on-demand preview, batch render, manual regenerate
+
+#### Infinite Scroll
+- **Pagination with infinite scroll** - Performance optimization for large libraries
+  - Load 100 models initially, load more on scroll
+  - Automatic loading when within 300px of bottom
+  - Works with filters (collection, folder, format)
+  - Reduces initial page load time significantly
+
+#### Deduplication API
+- **Duplicate detection endpoint** - POST /api/models/detect-duplicates
+  - Uses existing two-tier hash system (partial + full)
+  - Marks duplicate models in database
+  - Returns statistics on duplicates found
+  - Integrates with existing partial_hash computation during indexing
+
+### Fixed - Architecture Improvements
+
+#### Unified Rendering Logic
+- **Consolidated three rendering code paths** - All paths now use render_thumbnail()
+  - Before: On-demand preview used `_render_3d_thumbnail()`, others used `render_thumbnail()`
+  - After: All three paths (on-demand, batch, manual) use unified `render_thumbnail()`
+  - **Benefits:**
+    - Consistent thumbnail quality across all operations
+    - All DB columns updated correctly (thumb_storage, thumb_path, thumb_rendered_at, thumb_source_mtime)
+    - SVG support works everywhere automatically
+    - Easier to maintain and debug
+
+#### Database Column Updates
+- **On-demand preview now updates all columns** - Was only updating has_thumbnail flag
+  - Now updates: thumb_storage, thumb_path, thumb_rendered_at, thumb_source_mtime
+  - Consistent with batch render behavior
+  - Required for sidecar thumbnail architecture
+
+### Improved
+
+#### Format Detection
+- **Comprehensive format coverage** - All file types supported everywhere
+  - Updated 8+ locations across codebase
+  - scanner.py (2 places), settings.py (2 places), models3d.py, models.py (3 places)
+  - **Learning:** When adding new formats, must update ALL locations or get silent failures
+
+### Dependencies
+- Added: `cairosvg>=2.7.0` - SVG to PNG conversion
+- Updated: `Pillow>=12.0.0` - Image processing for thumbnails
+
+### Notes for QA Testing
+This release enables NAS appliance QA testing with:
+- Full asset library support (STL, OBJ, 3MF, GLB, GLTF, SVG)
+- Optimized performance for 10K+ asset libraries (infinite scroll)
+- Duplicate detection for storage optimization
+- Consistent rendering across all operations
+
 ## [0.4.11] - 2026-02-17
 
 ### Fixed - Critical Deployment Issues
