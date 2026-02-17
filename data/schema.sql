@@ -180,6 +180,14 @@ CREATE TABLE IF NOT EXISTS models (
     created_at TEXT,
     modified_at TEXT,
     indexed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Thumbnail tracking (new system)
+    thumb_storage TEXT,
+    volume_id INTEGER,
+    thumb_path TEXT,
+    thumb_rendered_at TEXT,
+    thumb_source_mtime INTEGER,
+    
     deleted_at TEXT
 );
 
@@ -244,7 +252,9 @@ CREATE TABLE IF NOT EXISTS volumes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     path TEXT NOT NULL,
+    mount_path TEXT,
     volume_type TEXT DEFAULT 'local',
+    is_readonly INTEGER DEFAULT 0,
     enabled INTEGER DEFAULT 1,
     last_seen TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

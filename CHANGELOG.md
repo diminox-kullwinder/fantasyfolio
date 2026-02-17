@@ -5,6 +5,39 @@ All notable changes to FantasyFolio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.11] - 2026-02-17
+
+### Fixed - Critical Deployment Issues
+
+#### Database Schema
+- **Missing columns in schema.sql** - Fresh deployments failed due to schema/code mismatch
+  - Added 7 missing columns to schema.sql:
+    - `volumes.mount_path`, `volumes.is_readonly`
+    - `models.thumb_storage`, `models.volume_id`, `models.thumb_path`, `models.thumb_rendered_at`, `models.thumb_source_mtime`
+  - Fixes: 500 errors on thumbnail operations, thumbnail misalignment
+  - **Breaking:** Existing databases must be deleted and reindexed (pre-v1.0 only)
+
+#### Background Thumbnail Rendering
+- **Automatic indexing doesn't generate thumbnails** - Manual regenerate worked, but indexing didn't
+  - Root cause: Background render used old `_render_3d_thumbnail()` instead of new `render_thumbnail()`
+  - Only updated `has_thumbnail` flag, didn't populate new columns
+  - Fixed: Background indexing now uses proper render system with full metadata tracking
+  - All thumbnail columns now populated automatically during indexing
+
+#### Container Initialization
+- **No automatic database creation** - Fresh containers required manual DB setup
+  - Added entrypoint script (`docker/entrypoint.sh`)
+  - Automatically creates DB from schema.sql on first run
+  - Fresh deployments now work without manual intervention
+
+### Improved
+
+#### Deployment
+- **Clean slate deployment** - Stop → delete data → start = working system
+  - No more schema drift or stale caches
+  - Fresh pull from GitHub guaranteed to work
+  - Documented pre-v1.0 upgrade procedure: delete data directory and reindex
+
 ## [0.4.10] - 2026-02-12
 
 ### Fixed - Critical Bugs (3)

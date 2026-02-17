@@ -1,12 +1,16 @@
 #!/bin/bash
-# FantasyFolio Container Entrypoint
-# Ensures schema.sql is available even when /app/data is a volume mount
+set -e
 
-# Copy schema.sql to data directory if not present
-if [ ! -f /app/data/schema.sql ]; then
-    echo "Copying schema.sql to data directory..."
-    cp /app/schema.sql /app/data/schema.sql
+echo "[INIT] FantasyFolio starting..."
+
+# Initialize database if it doesn't exist
+if [ ! -f /app/data/fantasyfolio.db ]; then
+    echo "[INIT] No database found, creating from schema.sql..."
+    sqlite3 /app/data/fantasyfolio.db < /app/schema.sql
+    echo "[INIT] Database initialized successfully"
+else
+    echo "[INIT] Database exists, skipping initialization"
 fi
 
-# Execute the main command (supervisord)
+# Execute the main command
 exec "$@"

@@ -513,24 +513,54 @@ def api_render_thumbnails():
                     _render_status['completed'] += 1
                     continue
                 
-                # Render thumbnail using new path-based rendering
+                # Render thumbnail using new system (updates all columns)
+                from fantasyfolio.core.thumbnails import render_thumbnail
+                
                 # Write to temp file for rendering
                 with tempfile.NamedTemporaryFile(suffix=f".{model_format}", delete=False) as tmp:
                     tmp.write(model_data)
                     tmp_path = tmp.name
                 
-                from fantasyfolio.core.thumbnails import _render_3d_thumbnail
-                success = _render_3d_thumbnail(tmp_path, str(thumbnail_dir / f"{model['id']}.png"))
+                # Prepare model dict with temp path
+                model_dict = dict(model)
+                model_dict['file_path'] = tmp_path
+                model_dict['archive_path'] = None  # Using temp file, not archive
+                
+                # Get volume info if available
+                volume = None
+                if model_dict.get('volume_id'):
+                    with get_connection() as vol_conn:
+                        vol_row = vol_conn.execute("SELECT * FROM volumes WHERE id = ?", (model_dict['volume_id'],)).fetchone()
+                        if vol_row:
+                            volume = dict(vol_row)
+                
+                # Render with full metadata tracking
+                central_dir = Path(config.DATA_DIR) / 'thumbnails'
+                result = render_thumbnail(model_dict, volume, central_dir, force=True)
                 os.unlink(tmp_path)
                 
-                if not success:
+                if not result:
                     _render_status['errors'] += 1
                     _render_status['completed'] += 1
                     continue
                 
-                # Update database flag
+                # Update all thumbnail columns
                 with get_connection() as conn:
-                    conn.execute("UPDATE models SET has_thumbnail = 1 WHERE id = ?", (model['id'],))
+                    conn.execute("""
+                        UPDATE models SET
+                            has_thumbnail = 1,
+                            thumb_storage = ?,
+                            thumb_path = ?,
+                            thumb_rendered_at = ?,
+                            thumb_source_mtime = ?
+                        WHERE id = ?
+                    """, (
+                        result['thumb_storage'],
+                        result['thumb_path'],
+                        result['thumb_rendered_at'],
+                        result['thumb_source_mtime'],
+                        model['id']
+                    ))
                     conn.commit()
                 
                 _render_status['completed'] += 1
