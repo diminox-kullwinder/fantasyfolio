@@ -76,6 +76,13 @@ def create_app(config: Config = None) -> Flask:
         """Serve the main UI."""
         return render_template('index.html')
     
+    # Thumbnail serving route
+    @app.route('/thumbnails/<path:filename>')
+    def serve_thumbnail(filename):
+        """Serve thumbnail images from the thumbnail directory."""
+        from flask import send_from_directory
+        return send_from_directory(config.THUMBNAIL_DIR, filename)
+    
     app.logger.info(f"FantasyFolio initialized (env: {os.environ.get('FANTASYFOLIO_ENV', 'development')})")
     
     return app
