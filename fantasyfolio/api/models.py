@@ -193,7 +193,8 @@ def api_model_preview(model_id: int):
         thumb_path = Path(model['thumb_path'])
         # Handle relative paths (central cache)
         if not thumb_path.is_absolute():
-            thumb_path = config.THUMBNAIL_DIR / thumb_path
+            # thumb_path already includes subfolder (e.g., "3d/63.png"), resolve from DATA_DIR/thumbnails
+            thumb_path = config.DATA_DIR / "thumbnails" / thumb_path
         
         if thumb_path.exists():
             return send_file(thumb_path, mimetype='image/png')
@@ -279,7 +280,7 @@ def api_model_preview(model_id: int):
                 result = render_thumbnail(
                     model=model,
                     volume=volume,
-                    central_dir=config.THUMBNAIL_DIR / "3d",
+                    central_dir=config.THUMBNAIL_DIR,
                     size=512,
                     force=False
                 )
