@@ -5,6 +5,47 @@ All notable changes to FantasyFolio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.14] - 2026-02-18
+
+### Fixed - Critical Thumbnail Bugs (4 Issues)
+
+**Windows deployment testing revealed thumbnails not rendering. Root cause analysis found 4 separate bugs:**
+
+#### Bug #1: Infinite Scroll Stops at ~100 Models
+- **Problem:** Scroll listener attached to `.content-section` (doesn't exist)
+- **Fix:** Changed selector to `.main-scroll` (actual scrollable container)
+- **Impact:** All 200+ models now load correctly when scrolling
+- **Commit:** c1ea6bc
+
+#### Bug #2: Flask Thumbnail Route Missing
+- **Problem:** Thumbnails rendered to `/app/thumbnails/3d/*.png` but Flask had no route to serve them
+- **Fix:** Added `send_from_directory` route for `/thumbnails/<path:filename>`
+- **Impact:** Thumbnails now display in web UI
+- **Commit:** 7d652d1
+
+#### Bug #3: Unlimited Thread Spawning
+- **Problem:** Each thumbnail preview spawned unlimited threads (272 models = 272 simultaneous renders = crash)
+- **Fix:** Added global `ThreadPoolExecutor(max_workers=4)` to queue renders
+- **Impact:** Prevents resource exhaustion, system remains responsive
+- **Commit:** 5d876f7
+
+#### Bug #4: Thumbnail Daemon Never Starts
+- **Problem #1:** `autostart=false` in supervisord.conf (daemon disabled at boot)
+- **Problem #2:** Missing `[rpcinterface:supervisor]` section (supervisorctl broken)
+- **Fix:** Changed to `autostart=true` and added RPC interface section
+- **Impact:** Thumbnails auto-generate during indexing
+- **Commit:** feed6b8
+
+### Testing Notes
+**All fixes validated on macOS local dev environment:**
+- Flask thumbnail route: HTTP 200 OK serving `/thumbnails/3d/1.png`
+- ThreadPoolExecutor: Limits concurrent renders to 4 workers
+- Supervisord config: Valid syntax, daemon auto-starts
+
+**Ready for Windows deployment testing.**
+
+---
+
 ## [0.4.13] - 2026-02-17
 
 ### Added - Duplicate Prevention System

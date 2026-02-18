@@ -34,22 +34,22 @@ const mainScroll = document.querySelector('.main-scroll');
 
 ---
 
-## Bug #2: No Thumbnails Rendering ⚠️ INVESTIGATING
+## Bug #2: No Thumbnails Rendering ✅ FIXED
 
 **Reported By:** Matthew  
-**Symptom:** Models indexed but thumbnails don't generate
+**Symptom:** Models indexed but thumbnails don't render during browsing
 
-**Possible Causes:**
-1. Fresh database has no `volume_id` set (background render fails)
-2. Thumbnail directory permissions issue
-3. `f3d` or `stl-thumb` not working in container
-4. Background rendering thread failing silently
+**Root Causes Found:**
+1. ❌ Flask `/thumbnails/` route missing (thumbnails rendered but not served)
+2. ❌ Thumbnail daemon `autostart=false` (never starts on boot)
+3. ❌ Unlimited thread spawning in preview endpoint (causes crashes)
+4. ❌ Missing `[rpcinterface:supervisor]` (supervisorctl broken)
 
-**Improvements Added:**
-- Fallback volume creation if no volume_id
-- Directory writability test before rendering
-- Detailed logging with ✓/✗ markers
-- Full exception stack traces
+**Fixes Applied:**
+1. ✅ Added Flask `send_from_directory` route for `/thumbnails/<path>`
+2. ✅ Changed `autostart=false` → `autostart=true` in supervisord.conf
+3. ✅ Added `ThreadPoolExecutor(max_workers=4)` to limit concurrent renders
+4. ✅ Added `[rpcinterface:supervisor]` section to supervisord.conf
 
 **Testing Steps for Matthew:**
 
@@ -200,8 +200,13 @@ docker-compose up -d
 
 **Status:** 
 - Bug #1 (Infinite scroll): ✅ FIXED
-- Bug #2 (Thumbnails): ⚠️ INVESTIGATING (debugging added)
+- Bug #2 (Thumbnails): ✅ FIXED (4 issues resolved)
 
 **Commits:**
-- `c1ea6bc` - Fix infinite scroll
-- `88c4a50` - Add thumbnail debugging
+- `c1ea6bc` - Fix infinite scroll (wrong container selector)
+- `88c4a50` - Add thumbnail debugging  
+- `7d652d1` - Add Flask `/thumbnails/` route
+- `5d876f7` - Add ThreadPoolExecutor concurrency control
+- `feed6b8` - Enable daemon autostart + RPC interface
+
+**Ready for Docker build and Windows testing.**
