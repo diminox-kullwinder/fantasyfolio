@@ -229,6 +229,7 @@ def api_model_preview(model_id: int):
             try:
                 from fantasyfolio.core.thumbnails import render_thumbnail
                 from fantasyfolio.core.database import get_connection
+                import os
                 
                 # Get volume info
                 volume = None
@@ -240,7 +241,25 @@ def api_model_preview(model_id: int):
                     if volume_row:
                         volume = dict(volume_row)
                 
+                # If no volume found, create a minimal one
+                if not volume:
+                    logger.warning(f"No volume found for model {model_id}, using defaults")
+                    volume = {'id': None, 'mount_path': None, 'is_readonly': False}
+                
+                # Ensure thumbnail directory exists and is writable
+                thumb_dir = config.THUMBNAIL_DIR / "3d"
+                try:
+                    thumb_dir.mkdir(parents=True, exist_ok=True)
+                    # Test write
+                    test_file = thumb_dir / f".write_test_{model_id}"
+                    test_file.touch()
+                    test_file.unlink()
+                except Exception as perm_err:
+                    logger.error(f"Thumbnail directory not writable: {thumb_dir} - {perm_err}")
+                    return
+                
                 # Render using unified function (handles all formats, updates DB columns)
+                logger.info(f"Starting background render for model {model_id} ({model_format})")
                 result = render_thumbnail(
                     model=model,
                     volume=volume,
@@ -268,12 +287,12 @@ def api_model_preview(model_id: int):
                             model_id
                         ))
                         conn.commit()
-                    logger.info(f"Background render complete for model {model_id} ({model_format})")
+                    logger.info(f"✓ Background render complete for model {model_id} ({model_format}) -> {result.get('thumb_path')}")
                 else:
-                    logger.debug(f"Thumbnail already exists or render failed for model {model_id}")
+                    logger.warning(f"✗ Thumbnail render returned None for model {model_id} (already exists or failed)")
                     
             except Exception as e:
-                logger.error(f"Background thumbnail render error for model {model_id}: {e}")
+                logger.error(f"✗ Background thumbnail render EXCEPTION for model {model_id}: {e}", exc_info=True)
         
         # Start background render, return placeholder immediately
         thread = threading.Thread(target=render_in_background, daemon=True)
