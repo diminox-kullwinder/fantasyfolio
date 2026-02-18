@@ -892,6 +892,10 @@ def api_index_directory():
         path: Required - directory path to scan
         recursive: bool - include subdirectories (default true)
         force: bool - force re-index (default false)
+        duplicate_policy: str - 'reject', 'warn', or 'merge' (default 'merge')
+            - reject: Skip duplicate files (same content, different path)
+            - warn: Create records but flag as duplicates
+            - merge: Update existing records to point to new location
     
     Returns scan statistics.
     """
@@ -902,6 +906,7 @@ def api_index_directory():
     path = data.get('path')
     recursive = data.get('recursive', True)
     force = data.get('force', False)
+    duplicate_policy = data.get('duplicate_policy', 'merge')
     
     if not path:
         return jsonify({'error': 'path is required'}), 400
@@ -969,13 +974,13 @@ def api_index_directory():
             
             stats = {
                 'new': 0, 'update': 0, 'skip': 0,
-                'moved': 0, 'missing': 0, 'error': 0
+                'moved': 0, 'missing': 0, 'error': 0, 'duplicate': 0
             }
             
-            for result in scan_directory(conn, scan_path, volume, force=force, recursive=recursive):
+            for result in scan_directory(conn, scan_path, volume, force=force, recursive=recursive, duplicate_policy=duplicate_policy):
                 stats[result.action.value] += 1
                 
-                # Apply changes
+                # Apply changes (skip DUPLICATE action if policy is 'reject')
                 if result.action in (ScanAction.NEW, ScanAction.UPDATE, ScanAction.MOVED):
                     model = result.model
                     

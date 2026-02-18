@@ -25,6 +25,7 @@ class ScanAction(Enum):
     MOVED = 'moved'
     MISSING = 'missing'
     ERROR = 'error'
+    DUPLICATE = 'duplicate'  # Same hash as existing file at different path
 
 
 @dataclass
@@ -113,7 +114,8 @@ def scan_file(
     conn: sqlite3.Connection,
     file_path: Path,
     volume: dict,
-    force: bool = False
+    force: bool = False,
+    duplicate_policy: Literal['reject', 'warn', 'merge'] = 'merge'
 ) -> ScanResult:
     """
     Scan a single standalone file.
@@ -123,6 +125,10 @@ def scan_file(
         file_path: Path to file
         volume: Volume record dict
         force: If True, reprocess regardless of cache
+        duplicate_policy: How to handle duplicate files (same hash, different path)
+            - 'reject': Skip duplicate, don't create new record
+            - 'warn': Create record but flag as duplicate
+            - 'merge': Update existing record to point to new location (default)
     
     Returns:
         ScanResult with action and model data
@@ -172,7 +178,67 @@ def scan_file(
     # Need hash for further checks
     partial_hash = compute_partial_hash(file_path)
     
-    # Re-check with hash
+    # Check for duplicate (same hash at different path) - ALWAYS CHECK
+    hash_match = conn.execute("""
+        SELECT * FROM models 
+        WHERE partial_hash = ? AND file_path != ?
+        ORDER BY last_seen_at DESC
+        LIMIT 1
+    """, (partial_hash, str(file_path))).fetchone()
+    
+    if hash_match and not existing:
+        # Same content, different path - handle based on policy
+        hash_match = dict(hash_match)
+        
+        if duplicate_policy == 'reject':
+            # Don't create duplicate - skip this file
+            return ScanResult(
+                ScanAction.DUPLICATE,
+                hash_match,
+                f"duplicate of {hash_match.get('file_path')} (rejected by policy)"
+            )
+        
+        elif duplicate_policy == 'warn':
+            # Create new record but flag as duplicate
+            return ScanResult(
+                ScanAction.NEW,
+                {
+                    'file_path': str(file_path),
+                    'filename': file_path.name,
+                    'relative_path': str(file_path.relative_to(volume['mount_path'])),
+                    'volume_id': volume['id'],
+                    'format': file_path.suffix[1:].lower(),
+                    'file_size_bytes': file_size,
+                    'file_mtime': file_mtime,
+                    'partial_hash': partial_hash,
+                    'index_status': 'indexed',
+                    'last_indexed_at': now,
+                    'last_seen_at': now,
+                    'is_duplicate': 1,
+                    'duplicate_of_id': hash_match['id'],
+                },
+                f"duplicate of {hash_match.get('file_path')} (flagged)"
+            )
+        
+        elif duplicate_policy == 'merge':
+            # Treat as moved file - update existing record
+            return ScanResult(
+                ScanAction.MOVED,
+                {
+                    **hash_match,
+                    'file_path': str(file_path),
+                    'relative_path': str(file_path.relative_to(volume['mount_path'])),
+                    'file_mtime': file_mtime,
+                    'file_size_bytes': file_size,
+                    'index_status': 'indexed',
+                    'missing_since': None,
+                    'last_verified_at': now,
+                    'last_seen_at': now,
+                },
+                f"merged with {hash_match.get('file_path')} (same content)"
+            )
+    
+    # Re-check with hash (existing file at this path)
     if existing and not force:
         if existing.get('partial_hash') == partial_hash:
             # mtime changed but content same
@@ -189,8 +255,8 @@ def scan_file(
                 'touched (content unchanged)'
             )
     
-    # Check for moved file (same hash, different path)
-    if not existing:
+    # Check for moved file (same hash, different path) - Legacy path
+    if not existing and not hash_match:
         _, moved = find_existing_asset(
             conn, 'models',
             partial_hash=partial_hash
@@ -259,10 +325,14 @@ def scan_archive(
     conn: sqlite3.Connection,
     archive_path: Path,
     volume: dict,
-    force: bool = False
+    force: bool = False,
+    duplicate_policy: Literal['reject', 'warn', 'merge'] = 'merge'
 ) -> Generator[ScanResult, None, None]:
     """
     Scan models inside a ZIP archive.
+    
+    Args:
+        duplicate_policy: How to handle duplicate files (same hash, different archive member)
     
     Yields ScanResult for each model found.
     """
@@ -354,6 +424,64 @@ def scan_archive_member(
             str(e)
         )
     
+    # Check for duplicate (same hash, different archive member) - ALWAYS CHECK
+    hash_match = conn.execute("""
+        SELECT * FROM models 
+        WHERE partial_hash = ? 
+        AND NOT (archive_path = ? AND archive_member = ?)
+        ORDER BY last_seen_at DESC
+        LIMIT 1
+    """, (partial_hash, str(archive_path), member)).fetchone()
+    
+    if hash_match and not existing:
+        # Same content, different location - handle based on policy
+        hash_match = dict(hash_match)
+        
+        if duplicate_policy == 'reject':
+            return ScanResult(
+                ScanAction.DUPLICATE,
+                hash_match,
+                f"duplicate of {hash_match.get('archive_path', hash_match.get('file_path'))} (rejected)"
+            )
+        
+        elif duplicate_policy == 'warn':
+            return ScanResult(
+                ScanAction.NEW,
+                {
+                    'archive_path': str(archive_path),
+                    'archive_member': member,
+                    'filename': Path(member).name,
+                    'volume_id': volume['id'],
+                    'format': Path(member).suffix[1:].lower(),
+                    'file_size_bytes': file_size,
+                    'file_mtime': archive_mtime,
+                    'partial_hash': partial_hash,
+                    'index_status': 'indexed',
+                    'last_indexed_at': now,
+                    'last_seen_at': now,
+                    'is_duplicate': 1,
+                    'duplicate_of_id': hash_match['id'],
+                },
+                f"duplicate (flagged)"
+            )
+        
+        elif duplicate_policy == 'merge':
+            return ScanResult(
+                ScanAction.MOVED,
+                {
+                    **hash_match,
+                    'archive_path': str(archive_path),
+                    'archive_member': member,
+                    'file_mtime': archive_mtime,
+                    'file_size_bytes': file_size,
+                    'last_verified_at': now,
+                    'last_seen_at': now,
+                    'index_status': 'indexed',
+                    'missing_since': None,
+                },
+                f"merged (same content)"
+            )
+    
     # Re-check with hash
     if existing and not force:
         if existing.get('partial_hash') == partial_hash:
@@ -438,10 +566,17 @@ def scan_directory(
     path: Path,
     volume: dict,
     force: bool = False,
-    recursive: bool = True
+    recursive: bool = True,
+    duplicate_policy: Literal['reject', 'warn', 'merge'] = 'merge'
 ) -> Generator[ScanResult, None, None]:
     """
     Scan directory for assets.
+    
+    Args:
+        duplicate_policy: How to handle duplicate files (same hash, different path)
+            - 'reject': Skip duplicates
+            - 'warn': Create records but flag as duplicates
+            - 'merge': Update existing records (default)
     
     Yields ScanResult for each file/archive member found.
     """
@@ -462,10 +597,10 @@ def scan_directory(
         
         if ext in ARCHIVE_EXTENSIONS:
             # Scan inside archive
-            yield from scan_archive(conn, file_path, volume, force)
+            yield from scan_archive(conn, file_path, volume, force, duplicate_policy)
         elif ext in MODEL_EXTENSIONS:
             # Standalone file
-            yield scan_file(conn, file_path, volume, force)
+            yield scan_file(conn, file_path, volume, force, duplicate_policy)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
