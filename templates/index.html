@@ -4331,24 +4331,27 @@
       document.getElementById('sortSelect').addEventListener('change', changeSort);
       
       // Infinite scroll for 3D models
-      const contentSection = document.querySelector('.content-section');
-      if (contentSection) {
-        contentSection.addEventListener('scroll', () => {
+      const mainScroll = document.querySelector('.main-scroll');
+      if (mainScroll) {
+        mainScroll.addEventListener('scroll', () => {
           // Only trigger for 3D models view
           if (contentType !== '3d') return;
           
           // Check if near bottom (within 300px)
-          const scrollHeight = contentSection.scrollHeight;
-          const scrollTop = contentSection.scrollTop;
-          const clientHeight = contentSection.clientHeight;
+          const scrollHeight = mainScroll.scrollHeight;
+          const scrollTop = mainScroll.scrollTop;
+          const clientHeight = mainScroll.clientHeight;
           
           if (scrollHeight - scrollTop - clientHeight < 300) {
             // Load more if available and not already loading
             if (modelsHasMore && !modelsLoading) {
+              console.log('Loading more models...', {offset: modelsOffset, hasMore: modelsHasMore});
               load3dModels(true); // append=true
             }
           }
         });
+      } else {
+        console.error('Infinite scroll: .main-scroll container not found');
       }
     });
     
