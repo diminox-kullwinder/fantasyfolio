@@ -6080,11 +6080,12 @@
         const sftpHint = document.getElementById('sftpDisabledHint');
         if (hostPlatform === 'darwin' || hostPlatform === 'win32') {
           sftpOption.style.display = 'none';
-          sftpHint.style.display = 'block';
+          // Hint will show only if user somehow has SFTP selected (shouldn't happen)
         } else {
           sftpOption.style.display = '';
-          sftpHint.style.display = 'none';
         }
+        // Always hide hint initially - it will show in toggleLocationFields() if needed
+        sftpHint.style.display = 'none';
       } catch (e) {
         console.error('Failed to check platform:', e);
       }
@@ -6352,6 +6353,14 @@
       document.getElementById('locSshHostRow').style.display = isRemote ? 'block' : 'none';
       document.getElementById('locSshKeyRow').style.display = isRemote ? 'block' : 'none';
       document.getElementById('locBrowseBtn').style.display = isRemote ? 'none' : 'inline-block';
+      
+      // Show SFTP warning only if SFTP selected on macOS/Windows
+      const sftpHint = document.getElementById('sftpDisabledHint');
+      if (isRemote && (hostPlatform === 'darwin' || hostPlatform === 'win32')) {
+        sftpHint.style.display = 'block';
+      } else {
+        sftpHint.style.display = 'none';
+      }
       
       // Reset SSH auth state
       if (isRemote) {

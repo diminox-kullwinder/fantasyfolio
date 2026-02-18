@@ -188,7 +188,19 @@ def api_model_preview(model_id: int):
     if not model:
         return jsonify({'error': 'Model not found'}), 404
     
-    # Check for cached thumbnail
+    # Check database for thumbnail path (sidecar or central)
+    if model.get('thumb_path') and model.get('has_thumbnail'):
+        thumb_path = Path(model['thumb_path'])
+        # Handle relative paths (central cache)
+        if not thumb_path.is_absolute():
+            thumb_path = config.THUMBNAIL_DIR / thumb_path
+        
+        if thumb_path.exists():
+            return send_file(thumb_path, mimetype='image/png')
+        else:
+            logger.warning(f"Thumbnail marked in DB but file missing: {thumb_path}")
+    
+    # Fallback: Check for cached thumbnail (legacy central path)
     cached_thumb = config.THUMBNAIL_DIR / "3d" / f"{model_id}.png"
     if cached_thumb.exists():
         return send_file(cached_thumb, mimetype='image/png')
@@ -203,8 +215,8 @@ def api_model_preview(model_id: int):
             if not is_texture:
                 with zipfile.ZipFile(model['archive_path'], 'r') as zf:
                     info = zf.getinfo(model['preview_image'])
-                    # Skip if file is too large (>2MB is probably a texture, not a preview)
-                    if info.file_size < 2 * 1024 * 1024:
+                    # Skip if file is too large (>20MB is probably a texture, not a preview)
+                    if info.file_size < 20 * 1024 * 1024:
                         img_data = zf.read(model['preview_image'])
                         ext = Path(model['preview_image']).suffix.lower()
                         mime = {

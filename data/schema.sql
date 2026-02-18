@@ -1,265 +1,369 @@
--- DAM Database Schema
--- Digital Asset Manager for RPG PDFs
-
--- Main assets table
-CREATE TABLE IF NOT EXISTS assets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    file_path TEXT UNIQUE NOT NULL,
-    filename TEXT NOT NULL,
-    title TEXT,
-    author TEXT,
-    publisher TEXT,
-    page_count INTEGER,
-    file_size INTEGER,
-    file_hash TEXT,
-    created_at TEXT,
-    modified_at TEXT,
-    indexed_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Extracted metadata
-    pdf_creator TEXT,
-    pdf_producer TEXT,
-    pdf_creation_date TEXT,
-    pdf_mod_date TEXT,
-    
-    -- Organization
-    folder_path TEXT,
-    game_system TEXT,
-    category TEXT,
-    tags TEXT,  -- JSON array
-    
-    -- Thumbnails
-    thumbnail_path TEXT,
-    has_thumbnail INTEGER DEFAULT 0,
-    deleted_at TEXT
+CREATE TABLE assets(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE NOT NULL,
+  filename TEXT NOT NULL,
+  title TEXT,
+  author TEXT,
+  publisher TEXT,
+  page_count INTEGER,
+  file_size INTEGER,
+  file_hash TEXT,
+  created_at TEXT,
+  modified_at TEXT,
+  indexed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  -- Extracted metadata
+  pdf_creator TEXT,
+  pdf_producer TEXT,
+  pdf_creation_date TEXT,
+  pdf_mod_date TEXT,
+  -- Organization
+  folder_path TEXT,
+  game_system TEXT,
+  category TEXT,
+  tags TEXT, -- JSON array
+  -- Thumbnails
+  thumbnail_path TEXT,
+  has_thumbnail INTEGER DEFAULT 0
+  ,
+  deleted_at TEXT DEFAULT NULL,
+  volume_id TEXT REFERENCES volumes(id),
+  relative_path TEXT,
+  file_size_bytes INTEGER,
+  file_mtime INTEGER,
+  partial_hash TEXT,
+  full_hash TEXT,
+  index_status TEXT DEFAULT 'indexed',
+  last_indexed_at TEXT,
+  last_verified_at TEXT,
+  last_seen_at TEXT,
+  missing_since TEXT,
+  thumb_storage TEXT,
+  thumb_rendered_at TEXT,
+  thumb_source_mtime INTEGER,
+  force_reindex INTEGER DEFAULT 0,
+  force_rerender INTEGER DEFAULT 0,
+  is_duplicate INTEGER DEFAULT 0,
+  duplicate_of_id INTEGER
 );
-
--- Full-text search table for asset metadata
--- Note: Page text is searchable via pages_fts table
-CREATE VIRTUAL TABLE IF NOT EXISTS assets_fts USING fts5(
-    title,
-    author,
-    publisher,
-    filename,
-    content='assets',
-    content_rowid='id'
-);
-
--- Triggers to keep FTS in sync
-CREATE TRIGGER IF NOT EXISTS assets_ai AFTER INSERT ON assets BEGIN
-    INSERT INTO assets_fts(rowid, title, author, publisher, filename)
-    VALUES (new.id, new.title, new.author, new.publisher, new.filename);
+CREATE VIRTUAL TABLE assets_fts USING fts5(
+  title,
+  author,
+  publisher,
+  filename,
+  text_content,
+  content='assets',
+  content_rowid='id'
+)
+/* assets_fts(
+  title,
+  author,
+  publisher,
+  filename,
+  text_content
+) */;
+CREATE TABLE IF NOT EXISTS 'assets_fts_data'(id INTEGER PRIMARY KEY, block BLOB);
+CREATE TABLE IF NOT EXISTS 'assets_fts_idx'(
+  segid,
+  term,
+  pgno,
+  PRIMARY KEY(segid, term)
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS 'assets_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
+CREATE TABLE IF NOT EXISTS 'assets_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID;
+CREATE TRIGGER assets_ai AFTER INSERT ON assets BEGIN
+    INSERT INTO assets_fts(rowid, title, author, publisher, filename, text_content)
+    VALUES (new.id, new.title, new.author, new.publisher, new.filename, '');
 END;
-
-CREATE TRIGGER IF NOT EXISTS assets_ad AFTER DELETE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename)
-    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename);
+CREATE TRIGGER assets_ad AFTER DELETE ON assets BEGIN
+    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename, text_content)
+    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename, '');
 END;
-
-CREATE TRIGGER IF NOT EXISTS assets_au AFTER UPDATE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename)
-    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename);
-    INSERT INTO assets_fts(rowid, title, author, publisher, filename)
-    VALUES (new.id, new.title, new.author, new.publisher, new.filename);
+CREATE TRIGGER assets_au AFTER UPDATE ON assets BEGIN
+    INSERT INTO assets_fts(assets_fts, rowid, title, author, publisher, filename, text_content)
+    VALUES ('delete', old.id, old.title, old.author, old.publisher, old.filename, '');
+    INSERT INTO assets_fts(rowid, title, author, publisher, filename, text_content)
+    VALUES (new.id, new.title, new.author, new.publisher, new.filename, '');
 END;
-
--- Collections/folders virtual organization
-CREATE TABLE IF NOT EXISTS collections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    parent_id INTEGER REFERENCES collections(id),
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE collections(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  parent_id INTEGER REFERENCES collections(id),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
-
--- Many-to-many: assets in collections
-CREATE TABLE IF NOT EXISTS asset_collections (
-    asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
-    collection_id INTEGER REFERENCES collections(id) ON DELETE CASCADE,
-    PRIMARY KEY (asset_id, collection_id)
+CREATE TABLE asset_collections(
+  asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
+  collection_id INTEGER REFERENCES collections(id) ON DELETE CASCADE,
+  PRIMARY KEY(asset_id, collection_id)
 );
-
--- Tags table for normalized tags
-CREATE TABLE IF NOT EXISTS tags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL
+CREATE TABLE tags(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT UNIQUE NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS asset_tags (
-    asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
-    tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
-    PRIMARY KEY (asset_id, tag_id)
+CREATE TABLE asset_tags(
+  asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
+  tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY(asset_id, tag_id)
 );
-
--- Page-level text for search with page numbers
-CREATE TABLE IF NOT EXISTS asset_pages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
-    page_num INTEGER NOT NULL,
-    text_content TEXT,
-    UNIQUE(asset_id, page_num)
+CREATE INDEX idx_assets_folder ON assets(folder_path);
+CREATE INDEX idx_assets_publisher ON assets(publisher);
+CREATE INDEX idx_assets_game_system ON assets(game_system);
+CREATE INDEX idx_assets_filename ON assets(filename);
+CREATE TABLE asset_pages(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
+  page_num INTEGER NOT NULL,
+  text_content TEXT,
+  UNIQUE(asset_id, page_num)
 );
-
--- Full-text search on pages
-CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
-    text_content,
-    content='asset_pages',
-    content_rowid='id'
-);
-
--- Triggers for page FTS
-CREATE TRIGGER IF NOT EXISTS pages_ai AFTER INSERT ON asset_pages BEGIN
+CREATE VIRTUAL TABLE pages_fts USING fts5(
+  text_content,
+  content='asset_pages',
+  content_rowid='id'
+)
+/* pages_fts(
+  text_content
+) */;
+CREATE TABLE IF NOT EXISTS 'pages_fts_data'(id INTEGER PRIMARY KEY, block BLOB);
+CREATE TABLE IF NOT EXISTS 'pages_fts_idx'(
+  segid,
+  term,
+  pgno,
+  PRIMARY KEY(segid, term)
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS 'pages_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
+CREATE TABLE IF NOT EXISTS 'pages_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID;
+CREATE TRIGGER pages_ai AFTER INSERT ON asset_pages BEGIN
     INSERT INTO pages_fts(rowid, text_content) VALUES (new.id, new.text_content);
 END;
-
-CREATE TRIGGER IF NOT EXISTS pages_ad AFTER DELETE ON asset_pages BEGIN
+CREATE TRIGGER pages_ad AFTER DELETE ON asset_pages BEGIN
     INSERT INTO pages_fts(pages_fts, rowid, text_content) VALUES ('delete', old.id, old.text_content);
 END;
-
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_assets_folder ON assets(folder_path);
-CREATE INDEX IF NOT EXISTS idx_assets_publisher ON assets(publisher);
-CREATE INDEX IF NOT EXISTS idx_assets_game_system ON assets(game_system);
-CREATE INDEX IF NOT EXISTS idx_assets_filename ON assets(filename);
-CREATE INDEX IF NOT EXISTS idx_pages_asset ON asset_pages(asset_id);
-
--- PDF Bookmarks/TOC
-CREATE TABLE IF NOT EXISTS asset_bookmarks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
-    level INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    page_num INTEGER,
-    UNIQUE(asset_id, level, title, page_num)
+CREATE INDEX idx_pages_asset ON asset_pages(asset_id);
+CREATE TABLE asset_bookmarks(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
+  level INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  page_num INTEGER,
+  UNIQUE(asset_id, level, title, page_num)
 );
-
-CREATE INDEX IF NOT EXISTS idx_bookmarks_asset ON asset_bookmarks(asset_id);
-
--- Application Settings
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+CREATE INDEX idx_bookmarks_asset ON asset_bookmarks(asset_id);
+CREATE TABLE settings(
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
-
--- Default settings
-INSERT OR IGNORE INTO settings (key, value) VALUES 
-    ('pdf_root', ''),
-    ('3d_root', ''),
-    ('smb_paths', '[]');
-
--- 3D Model Assets
-CREATE TABLE IF NOT EXISTS models (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    file_path TEXT UNIQUE NOT NULL,
-    filename TEXT NOT NULL,
-    title TEXT,
-    format TEXT,  -- stl, 3mf, obj
-    file_size INTEGER,
-    file_hash TEXT,
-    
-    -- Source info (for files inside ZIPs)
-    archive_path TEXT,  -- path to ZIP if extracted from archive
-    archive_member TEXT,  -- path within ZIP
-    
-    -- Organization
-    folder_path TEXT,
-    collection TEXT,  -- e.g., "Titans of Adventure Set14"
-    creator TEXT,  -- e.g., "Loot Studios"
-    
-    -- Model metadata
-    vertex_count INTEGER,
-    face_count INTEGER,
-    has_supports INTEGER DEFAULT 0,  -- supported version
-    
-    -- Preview
-    preview_image TEXT,  -- path to JPG if found in same archive
-    has_thumbnail INTEGER DEFAULT 0,
-    
-    -- Timestamps
-    created_at TEXT,
-    modified_at TEXT,
-    indexed_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Thumbnail tracking (new system)
-    thumb_storage TEXT,
-    volume_id INTEGER,
-    thumb_path TEXT,
-    thumb_rendered_at TEXT,
-    thumb_source_mtime INTEGER,
-    
-    deleted_at TEXT
+CREATE TABLE models(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT UNIQUE NOT NULL,
+  filename TEXT NOT NULL,
+  title TEXT,
+  format TEXT, -- stl, 3mf, obj
+  file_size INTEGER,
+  file_hash TEXT,
+  -- Source info(for files inside ZIPs)
+  archive_path TEXT, -- path to ZIP if extracted from archive
+  archive_member TEXT, -- path within ZIP
+  -- Organization
+  folder_path TEXT,
+  collection TEXT, -- e.g., "Titans of Adventure Set14"
+  creator TEXT, -- e.g., "Loot Studios"
+  -- Model metadata
+  vertex_count INTEGER,
+  face_count INTEGER,
+  has_supports INTEGER DEFAULT 0, -- supported version
+  -- Preview
+  preview_image TEXT, -- path to JPG if found in same archive
+  has_thumbnail INTEGER DEFAULT 0,
+  -- Timestamps
+  created_at TEXT,
+  modified_at TEXT,
+  indexed_at TEXT DEFAULT CURRENT_TIMESTAMP
+  ,
+  deleted_at TEXT DEFAULT NULL,
+  volume_id TEXT REFERENCES volumes(id),
+  relative_path TEXT,
+  file_size_bytes INTEGER,
+  file_mtime INTEGER,
+  partial_hash TEXT,
+  full_hash TEXT,
+  index_status TEXT DEFAULT 'indexed',
+  last_indexed_at TEXT,
+  last_verified_at TEXT,
+  last_seen_at TEXT,
+  missing_since TEXT,
+  thumb_storage TEXT,
+  thumb_path TEXT,
+  thumb_rendered_at TEXT,
+  thumb_source_mtime INTEGER,
+  force_reindex INTEGER DEFAULT 0,
+  force_rerender INTEGER DEFAULT 0,
+  is_duplicate INTEGER DEFAULT 0,
+  duplicate_of_id INTEGER
 );
-
--- Index for fast lookups
-CREATE INDEX IF NOT EXISTS idx_models_folder ON models(folder_path);
-CREATE INDEX IF NOT EXISTS idx_models_format ON models(format);
-CREATE INDEX IF NOT EXISTS idx_models_archive ON models(archive_path);
-CREATE INDEX IF NOT EXISTS idx_models_collection ON models(collection);
-
--- Full-text search for 3D models
-CREATE VIRTUAL TABLE IF NOT EXISTS models_fts USING fts5(
-    filename,
-    title,
-    collection,
-    creator,
-    content='models',
-    content_rowid='id'
-);
-
--- Triggers for FTS sync
-CREATE TRIGGER IF NOT EXISTS models_ai AFTER INSERT ON models BEGIN
+CREATE INDEX idx_models_folder ON models(folder_path);
+CREATE INDEX idx_models_format ON models(format);
+CREATE INDEX idx_models_archive ON models(archive_path);
+CREATE INDEX idx_models_collection ON models(collection);
+CREATE VIRTUAL TABLE models_fts USING fts5(
+  filename,
+  title,
+  collection,
+  creator,
+  content='models',
+  content_rowid='id'
+)
+/* models_fts(
+  filename,
+  title,
+  collection,
+  creator
+) */;
+CREATE TABLE IF NOT EXISTS 'models_fts_data'(id INTEGER PRIMARY KEY, block BLOB);
+CREATE TABLE IF NOT EXISTS 'models_fts_idx'(
+  segid,
+  term,
+  pgno,
+  PRIMARY KEY(segid, term)
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS 'models_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
+CREATE TABLE IF NOT EXISTS 'models_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID;
+CREATE TRIGGER models_ai AFTER INSERT ON models BEGIN
     INSERT INTO models_fts(rowid, filename, title, collection, creator)
     VALUES (new.id, new.filename, new.title, new.collection, new.creator);
 END;
-
-CREATE TRIGGER IF NOT EXISTS models_ad AFTER DELETE ON models BEGIN
+CREATE TRIGGER models_ad AFTER DELETE ON models BEGIN
     INSERT INTO models_fts(models_fts, rowid, filename, title, collection, creator)
     VALUES ('delete', old.id, old.filename, old.title, old.collection, old.creator);
 END;
-
-CREATE TRIGGER IF NOT EXISTS models_au AFTER UPDATE ON models BEGIN
-    INSERT INTO models_fts(models_fts, rowid, filename, title, collection, creator)
-    VALUES ('delete', old.id, old.filename, old.title, old.collection, old.creator);
-    INSERT INTO models_fts(rowid, filename, title, collection, creator)
-    VALUES (new.id, new.filename, new.title, new.collection, new.creator);
-END;
-
--- Asset Locations table for configurable content paths
-CREATE TABLE IF NOT EXISTS asset_locations (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    asset_type TEXT NOT NULL,
-    location_type TEXT NOT NULL DEFAULT 'local',
-    path TEXT NOT NULL,
-    ssh_host TEXT,
-    ssh_key_path TEXT,
-    ssh_user TEXT,
-    ssh_port INTEGER DEFAULT 22,
-    mount_check_path TEXT,
-    enabled INTEGER DEFAULT 1,
-    is_primary INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE INDEX idx_assets_deleted ON assets(deleted_at);
+CREATE INDEX idx_models_deleted ON models(deleted_at);
+CREATE TABLE change_journal(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL DEFAULT(datetime('now')),
+  -- What changed
+  entity_type TEXT NOT NULL, -- 'asset' or 'model'
+  entity_id INTEGER NOT NULL,
+  -- Change details
+  action TEXT NOT NULL, -- 'create',
+  'update',
+  'delete',
+  'restore'
+  field_name TEXT, -- Which field changed(for updates)
+  old_value TEXT, -- Previous value(JSON for complex)
+  new_value TEXT, -- New value
+  -- Context
+  source TEXT, -- 'indexer',
+  'api',
+  'manual',
+  'cleanup'
+  user_info TEXT, -- Optional user context
+  -- Indexes for efficient queries
+  FOREIGN KEY(entity_id) REFERENCES assets(id) ON DELETE SET NULL
 );
-
--- Index for asset locations
-CREATE INDEX IF NOT EXISTS idx_asset_locations_asset_type ON asset_locations(asset_type);
-CREATE INDEX IF NOT EXISTS idx_asset_locations_enabled ON asset_locations(enabled);
-
--- Volumes table for volume/mount tracking
-CREATE TABLE IF NOT EXISTS volumes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    path TEXT NOT NULL,
-    mount_path TEXT,
-    volume_type TEXT DEFAULT 'local',
-    is_readonly INTEGER DEFAULT 0,
-    enabled INTEGER DEFAULT 1,
-    last_seen TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE INDEX idx_journal_timestamp ON change_journal(timestamp);
+CREATE INDEX idx_journal_entity ON change_journal(entity_type, entity_id);
+CREATE INDEX idx_journal_action ON change_journal(action);
+CREATE TABLE asset_locations(
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  -- Type of assets: 'documents' or 'models'
+  asset_type TEXT NOT NULL CHECK(asset_type IN('documents', 'models')),
+  -- Location type: local, local_mount(SMB/NFS), remote_sftp
+  location_type TEXT NOT NULL CHECK(location_type IN('local', 'local_mount', 'remote_sftp')),
+  -- Path configuration
+  path TEXT NOT NULL, -- Local path or remote path
+  -- Remote connection(for remote_sftp)
+  ssh_host TEXT, -- SSH host or config alias
+  ssh_key_path TEXT, -- Path to SSH private key(optional if using config)
+  ssh_user TEXT, -- SSH username(optional if in host or config)
+  ssh_port INTEGER DEFAULT 22, -- SSH port
+  -- Mount info(for local_mount)
+  mount_check_path TEXT, -- Path to check if mounted(e.g., .mounted marker)
+  -- Status
+  enabled INTEGER NOT NULL DEFAULT 1,
+  is_primary INTEGER NOT NULL DEFAULT 0, -- Primary location for new uploads
+  -- Metadata
+  created_at TEXT NOT NULL DEFAULT(datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT(datetime('now')),
+  last_indexed_at TEXT,
+  last_status TEXT, -- 'online',
+  'offline',
+  'error'
+  last_status_message TEXT
 );
-
-CREATE INDEX IF NOT EXISTS idx_volumes_path ON volumes(path);
-CREATE INDEX IF NOT EXISTS idx_volumes_enabled ON volumes(enabled);
+CREATE INDEX idx_locations_type ON asset_locations(asset_type);
+CREATE INDEX idx_locations_enabled ON asset_locations(enabled);
+CREATE TABLE volumes(
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  mount_path TEXT NOT NULL,
+  volume_uuid TEXT,
+  -- Status
+  status TEXT DEFAULT 'online',
+  last_seen_at TEXT,
+  last_indexed_at TEXT,
+  -- Settings
+  is_readonly INTEGER DEFAULT 0,
+  index_priority INTEGER DEFAULT 0,
+  -- Timestamps
+  created_at TEXT DEFAULT(datetime('now')),
+  updated_at TEXT DEFAULT(datetime('now'))
+);
+CREATE INDEX idx_volumes_status ON volumes(status);
+CREATE INDEX idx_volumes_mount ON volumes(mount_path);
+CREATE TABLE scan_jobs(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job_type TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT,
+  target_path TEXT,
+  -- Settings
+  force_mode INTEGER DEFAULT 0,
+  recursive INTEGER DEFAULT 1,
+  include_thumbnails INTEGER DEFAULT 1,
+  priority INTEGER DEFAULT 5,
+  -- Status
+  status TEXT DEFAULT 'pending',
+  phase TEXT,
+  progress_current INTEGER DEFAULT 0,
+  progress_total INTEGER,
+  current_item TEXT,
+  -- Timing
+  created_at TEXT DEFAULT(datetime('now')),
+  scheduled_for TEXT,
+  started_at TEXT,
+  completed_at TEXT,
+  -- Results
+  items_processed INTEGER DEFAULT 0,
+  items_skipped INTEGER DEFAULT 0,
+  items_failed INTEGER DEFAULT 0,
+  items_missing INTEGER DEFAULT 0,
+  error_message TEXT,
+  -- Metadata
+  created_by TEXT
+);
+CREATE INDEX idx_jobs_status ON scan_jobs(status, priority);
+CREATE INDEX idx_jobs_type ON scan_jobs(job_type, status);
+CREATE TABLE job_errors(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job_id INTEGER REFERENCES scan_jobs(id) ON DELETE CASCADE,
+  asset_type TEXT,
+  asset_id INTEGER,
+  file_path TEXT,
+  error_type TEXT,
+  error_message TEXT,
+  created_at TEXT DEFAULT(datetime('now'))
+);
+CREATE INDEX idx_job_errors_job ON job_errors(job_id);
+CREATE INDEX idx_models_volume ON models(volume_id);
+CREATE INDEX idx_models_status ON models(index_status);
+CREATE INDEX idx_models_partial_hash ON models(partial_hash);
+CREATE INDEX idx_models_full_hash ON models(full_hash);
+CREATE INDEX idx_models_force ON models(force_reindex, force_rerender);
+CREATE INDEX idx_assets_volume ON assets(volume_id);
+CREATE INDEX idx_assets_status ON assets(index_status);
+CREATE INDEX idx_assets_partial_hash ON assets(partial_hash);
+CREATE INDEX idx_assets_full_hash ON assets(full_hash);
+CREATE INDEX idx_assets_force ON assets(force_reindex, force_rerender);

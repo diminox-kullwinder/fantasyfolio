@@ -23,7 +23,7 @@ class Config:
     
     # Application
     APP_NAME = "FantasyFolio"
-    APP_VERSION = "0.4.9"
+    APP_VERSION = "0.4.14"
     SECRET_KEY = get_env("FANTASYFOLIO_SECRET_KEY", "DAM_SECRET_KEY", "dev-secret-key-change-in-production")
     
     # Paths
