@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 import logging
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from flask import Blueprint, jsonify, request, send_file
 
 from fantasyfolio.core.database import get_connection, get_models_stats, get_model_by_id
@@ -18,6 +19,9 @@ from fantasyfolio.config import get_config
 
 logger = logging.getLogger(__name__)
 models_bp = Blueprint('models', __name__)
+
+# Global thumbnail render executor (max 4 concurrent renders to prevent resource exhaustion)
+_render_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="thumb_render")
 
 
 @models_bp.route('/models')
@@ -294,9 +298,8 @@ def api_model_preview(model_id: int):
             except Exception as e:
                 logger.error(f"✗ Background thumbnail render EXCEPTION for model {model_id}: {e}", exc_info=True)
         
-        # Start background render, return placeholder immediately
-        thread = threading.Thread(target=render_in_background, daemon=True)
-        thread.start()
+        # Queue background render (limited concurrency via global executor)
+        _render_executor.submit(render_in_background)
     
     # Return placeholder
     placeholder = config.STATIC_DIR / 'placeholder-3d.svg'
