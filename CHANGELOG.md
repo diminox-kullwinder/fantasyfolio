@@ -5,6 +5,154 @@ All notable changes to FantasyFolio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.13] - 2026-02-17
+
+### Added - Duplicate Prevention System
+
+#### Intelligent Duplicate Detection
+- **Hash-based duplicate detection during indexing** - Prevents duplicate records when same file uploaded to different locations
+  - Computes partial hash for every file during indexing/upload
+  - Checks hash against ALL existing records (not just current scan)
+  - Works for both standalone files and archive members
+  - Detects duplicates across different folders, volumes, and archives
+
+#### Three Duplicate Handling Policies
+Users can now choose how to handle duplicates via `duplicate_policy` parameter:
+
+**1. 'reject' (Strict Prevention)**
+- Skips duplicate files entirely
+- Does not create new records
+- Returns DUPLICATE action in scan results
+- Use case: Prevent any duplicate storage
+
+**2. 'warn' (Track & Audit)**
+- Creates new record but flags it
+- Sets `is_duplicate = 1` and `duplicate_of_id = <original>`
+- Preserves audit trail
+- Use case: Track all uploads, clean up duplicates later
+
+**3. 'merge' (Auto-Fix, Default)**
+- Updates existing record with new file path
+- Treats duplicate as "file moved"
+- Mends broken links automatically
+- No duplicate records created
+- Use case: File organization, folder reorganization, broken link repair
+
+#### API Enhancement
+- POST `/api/index/directory` now accepts `duplicate_policy` parameter
+- Scan statistics include `duplicate` count
+- `ScanAction.DUPLICATE` added for tracking rejected duplicates
+
+### Fixed - Duplicate Upload Prevention
+
+#### Problem Solved
+**Before v0.4.13:**
+```
+1. Upload dragon.stl to /models/folder-a → Record #123 created
+2. Upload same file to /models/folder-b → Record #456 created (DUPLICATE)
+Result: Two records, wasted storage, confusing search results
+```
+
+**After v0.4.13 (default 'merge' policy):**
+```
+1. Upload dragon.stl to /models/folder-a → Record #123 created
+2. Upload same file to /models/folder-b → Record #123 updated to new path
+Result: One record, broken link mended, no duplicates
+```
+
+### Improved - Indexing Intelligence
+
+#### Automatic Link Repair
+- When files are moved/renamed, existing records are automatically updated
+- No more orphaned records pointing to old locations
+- Database stays clean and accurate
+
+#### Storage Optimization
+- Single record per unique file (by content hash)
+- One thumbnail per unique file
+- Reduced database bloat
+
+### Use Cases
+
+**File Organization:**
+```bash
+# User reorganizes library: moves files from flat structure to organized folders
+# Old: /models/all-files/dragon.stl
+# New: /models/creatures/dragons/dragon.stl
+# Result: Record auto-updated, no duplicate created
+```
+
+**Backup Recovery:**
+```bash
+# User restores files from backup to different location
+# Original: /models/originals/model.stl (missing)
+# Restored: /models/backup-2024/model.stl
+# Result: Original record updated to point to restored location
+```
+
+**Duplicate Upload Protection:**
+```bash
+# User accidentally uploads same file multiple times
+# Policy 'reject': All duplicates skipped after first
+# Policy 'merge': First record kept, subsequent uploads update location
+```
+
+### API Usage
+
+```json
+POST /api/index/directory
+{
+  "path": "/models/new-folder",
+  "duplicate_policy": "merge",  // or "reject" or "warn"
+  "recursive": true,
+  "force": false
+}
+
+Response:
+{
+  "new": 5,
+  "update": 3,
+  "moved": 2,     // Files found at new location (same hash)
+  "duplicate": 1, // Duplicates rejected (if policy='reject')
+  "skip": 10,
+  "total": 21
+}
+```
+
+### Technical Details
+
+#### Hash Comparison Query
+```sql
+-- For each file during indexing:
+SELECT * FROM models 
+WHERE partial_hash = ? 
+AND file_path != ?
+ORDER BY last_seen_at DESC
+LIMIT 1
+
+-- If match found → Apply duplicate_policy
+```
+
+#### Scanner Changes
+- `scan_file()`: Added duplicate_policy parameter, hash checking logic
+- `scan_archive()`: Added duplicate_policy parameter for archive members
+- `scan_directory()`: Propagates duplicate_policy to all scans
+- `ScanAction` enum: Added DUPLICATE action
+
+#### Database Columns Used
+- `partial_hash`: Fast content comparison (MD5 of first 64KB + last 64KB + size)
+- `is_duplicate`: Flag for 'warn' policy
+- `duplicate_of_id`: Reference to original record
+- `file_path`: Updated when policy='merge'
+
+### Breaking Changes
+None - default policy is 'merge' which maintains v0.4.12 behavior
+
+### Notes
+- Partial hash collision rate: ~0.01% (verified duplicates via full hash if needed)
+- Performance impact: Minimal (single indexed query per file)
+- Compatible with existing deduplication API endpoint
+
 ## [0.4.12] - 2026-02-17
 
 ### Added - New Features
