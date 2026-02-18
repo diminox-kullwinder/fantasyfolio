@@ -250,6 +250,19 @@ This release enables NAS appliance QA testing with:
 
 ### Improved
 
+#### Database Fully Containerized
+- **Database moved from external to containerized** - No more external database dependency
+  - Database now stored in named volume: `fantasyfolio_data:/app/data`
+  - Thumbnails in named volume: `fantasyfolio_thumbs:/app/thumbnails`
+  - Logs in named volume: `fantasyfolio_logs:/app/logs`
+  - **Before:** Required external database path mounted from host
+  - **After:** Database fully managed by Docker, persists in named volumes
+  - **Benefits:** 
+    - Simpler deployment (no external paths to configure)
+    - Better isolation and portability
+    - Docker handles volume lifecycle
+    - No permissions issues with host filesystem
+
 #### Deployment
 - **Clean slate deployment** - Stop → delete data → start = working system
   - No more schema drift or stale caches

@@ -264,6 +264,13 @@ services:
 ### Upgrade from v0.4.12
 **No database migration required** - v0.4.13 is fully backward compatible.
 
+**Important:** v0.4.11+ includes database containerization:
+- Database moved from external to named volumes
+- `fantasyfolio_data:/app/data` - database storage
+- `fantasyfolio_thumbs:/app/thumbnails` - thumbnail cache
+- `fantasyfolio_logs:/app/logs` - application logs
+- No external database path configuration needed
+
 ```bash
 # Stop current container
 docker-compose down
