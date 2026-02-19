@@ -144,6 +144,14 @@ def create_location(data: Dict[str, Any]) -> Dict[str, Any]:
             now,
             now
         ))
+        
+        # Also create a corresponding volume entry for nav tree support
+        # Use the same ID so we can link models/assets to this volume
+        conn.execute("""
+            INSERT INTO volumes (id, label, mount_path, status, created_at, updated_at)
+            VALUES (?, ?, ?, 'online', ?, ?)
+        """, (location_id, data['name'], data['path'], now, now))
+        
         conn.commit()
     
     return get_location(location_id)
@@ -217,6 +225,8 @@ def delete_location(location_id: str) -> Dict[str, Any]:
         
         name = row[0]
         conn.execute("DELETE FROM asset_locations WHERE id = ?", (location_id,))
+        # Also delete the corresponding volume entry
+        conn.execute("DELETE FROM volumes WHERE id = ?", (location_id,))
         conn.commit()
     
     return {'success': True, 'message': f"Deleted location '{name}'"}
@@ -419,3 +429,35 @@ def get_enabled_paths(asset_type: str) -> List[str]:
             paths.append(loc['path'])
     
     return paths
+
+
+def get_location_for_path(file_path: str, asset_type: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Find which asset location contains a given file path.
+    
+    Args:
+        file_path: Full path to the file
+        asset_type: Optional filter by 'documents' or 'models'
+    
+    Returns:
+        The matching location dict, or None if no match found.
+        The location's 'id' can be used as volume_id for nav tree support.
+    """
+    locations = list_locations(asset_type=asset_type, enabled_only=True)
+    
+    # Normalize the file path
+    file_path = os.path.normpath(file_path)
+    
+    # Find the location whose path is a prefix of the file path
+    # Prefer longer matches (more specific locations)
+    best_match = None
+    best_match_len = 0
+    
+    for loc in locations:
+        loc_path = os.path.normpath(loc['path'])
+        if file_path.startswith(loc_path + os.sep) or file_path == loc_path:
+            if len(loc_path) > best_match_len:
+                best_match = loc
+                best_match_len = len(loc_path)
+    
+    return best_match

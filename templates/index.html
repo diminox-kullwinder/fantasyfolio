@@ -6857,7 +6857,7 @@
     async function browseDirectory(settingKey, inputId) {
       browserTargetSetting = settingKey;
       browserTargetInput = inputId;
-      await loadBrowserDirectory('/Volumes');
+      await loadBrowserDirectory('');  // Let API choose appropriate start path
       document.getElementById('browserModal').classList.add('active');
     }
     
@@ -6866,7 +6866,7 @@
         const res = await fetch(`/api/browse-directory?path=${encodeURIComponent(path)}`);
         const data = await res.json();
         
-        document.getElementById('browserPath').textContent = data.current;
+        document.getElementById('browserPath').textContent = data.path;
         
         let html = '';
         if (data.parent) {

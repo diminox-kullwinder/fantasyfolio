@@ -14,6 +14,7 @@ from typing import Optional, Dict, Any, List
 
 from fantasyfolio.config import get_config
 from fantasyfolio.core.database import get_connection, insert_asset
+from fantasyfolio.services.asset_locations import get_location_for_path
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,10 @@ class PDFIndexer:
         doc = pymupdf.open(str(pdf_path))
         metadata = doc.metadata or {}
         
+        # Look up which asset location this file belongs to (for volume_id)
+        location = get_location_for_path(str(pdf_path), asset_type='documents')
+        volume_id = location['id'] if location else None
+        
         asset = {
             'file_path': str(pdf_path),
             'filename': pdf_path.name,
@@ -99,7 +104,8 @@ class PDFIndexer:
             'category': None,
             'tags': None,
             'thumbnail_path': None,
-            'has_thumbnail': 0
+            'has_thumbnail': 0,
+            'volume_id': volume_id
         }
         
         # Insert asset

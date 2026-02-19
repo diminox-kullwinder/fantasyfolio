@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any, List
 
 from fantasyfolio.config import get_config
 from fantasyfolio.core.database import get_connection, insert_model
+from fantasyfolio.services.asset_locations import get_location_for_path
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +261,11 @@ class ModelsIndexer:
         with get_connection() as conn:
             for model in models:
                 try:
+                    # Look up which asset location this file belongs to (for volume_id)
+                    location = get_location_for_path(model['file_path'], asset_type='models')
+                    volume_id = location['id'] if location else None
+                    model['volume_id'] = volume_id
+                    
                     # Check if model exists and get its ID
                     existing = conn.execute(
                         "SELECT id, has_thumbnail FROM models WHERE file_path = ?",
@@ -279,7 +285,8 @@ class ModelsIndexer:
                                 folder_path=:folder_path, collection=:collection, creator=:creator,
                                 vertex_count=:vertex_count, face_count=:face_count,
                                 has_supports=:has_supports, preview_image=:preview_image,
-                                has_thumbnail=:has_thumbnail, modified_at=:modified_at
+                                has_thumbnail=:has_thumbnail, modified_at=:modified_at,
+                                volume_id=:volume_id
                             WHERE file_path=:file_path
                         """, {**model, 'has_thumbnail': has_thumb})
                     else:
@@ -289,12 +296,12 @@ class ModelsIndexer:
                                 file_path, filename, title, format, file_size, file_hash,
                                 archive_path, archive_member, folder_path, collection, creator,
                                 vertex_count, face_count, has_supports, preview_image,
-                                has_thumbnail, created_at, modified_at
+                                has_thumbnail, created_at, modified_at, volume_id
                             ) VALUES (
                                 :file_path, :filename, :title, :format, :file_size, :file_hash,
                                 :archive_path, :archive_member, :folder_path, :collection, :creator,
                                 :vertex_count, :face_count, :has_supports, :preview_image,
-                                :has_thumbnail, :created_at, :modified_at
+                                :has_thumbnail, :created_at, :modified_at, :volume_id
                             )
                         """, model)
                     self.stats['models_indexed'] += 1

@@ -236,13 +236,13 @@ def insert_asset(asset: Dict[str, Any]) -> int:
                 page_count, file_size, file_hash, created_at, modified_at,
                 pdf_creator, pdf_producer, pdf_creation_date, pdf_mod_date,
                 folder_path, game_system, category, tags,
-                thumbnail_path, has_thumbnail
+                thumbnail_path, has_thumbnail, volume_id
             ) VALUES (
                 :file_path, :filename, :title, :author, :publisher,
                 :page_count, :file_size, :file_hash, :created_at, :modified_at,
                 :pdf_creator, :pdf_producer, :pdf_creation_date, :pdf_mod_date,
                 :folder_path, :game_system, :category, :tags,
-                :thumbnail_path, :has_thumbnail
+                :thumbnail_path, :has_thumbnail, :volume_id
             )
         """, asset)
         conn.commit()
