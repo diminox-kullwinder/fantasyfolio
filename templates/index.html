@@ -4590,11 +4590,11 @@
         // Append to all loaded models
         if (append) {
           allLoadedModels = allLoadedModels.concat(models);
+          render3dModels(models, true);  // Only render NEW models when appending
         } else {
           allLoadedModels = models;
+          render3dModels(models, false);  // Render all when replacing
         }
-        
-        render3dModels(allLoadedModels, append);
       } finally {
         modelsLoading = false;
       }
