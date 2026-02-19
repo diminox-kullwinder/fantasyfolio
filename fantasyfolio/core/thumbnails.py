@@ -81,7 +81,7 @@ def _central_path(model: dict, central_dir: Path) -> Tuple[ThumbStorage, Path]:
     
     # Determine asset type subfolder
     fmt = (model.get('format') or '').lower()
-    if fmt in ('stl', 'obj', '3mf', 'glb', 'gltf'):
+    if fmt in ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d'):
         asset_type = '3d'
     elif fmt == 'pdf':
         asset_type = 'pdf'
@@ -552,7 +552,7 @@ def render_pending_thumbnails(
         FROM models m
         LEFT JOIN volumes v ON m.volume_id = v.id
         WHERE m.thumb_storage IS NULL
-        AND m.format IN ('stl', 'obj', '3mf', 'glb', 'gltf')
+        AND m.format IN ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d')
         LIMIT ?
     """, (limit,)).fetchall()
     

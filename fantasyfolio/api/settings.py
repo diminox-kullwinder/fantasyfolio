@@ -416,7 +416,7 @@ def api_upload_files():
     
     # Validate file types
     if content_type == '3d':
-        allowed_extensions = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg', '.zip', '.rar', '.7z'}
+        allowed_extensions = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg', '.dae', '.3ds', '.ply', '.x3d', '.zip', '.rar', '.7z'}
     else:
         allowed_extensions = {'.pdf'}
     

@@ -284,7 +284,7 @@ def render_3d_thumbnail(data: bytes, format: str, output_path: Optional[str] = N
     
     Args:
         data: Raw file bytes
-        format: File format ('stl', 'obj', '3mf')
+        format: File format ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d')
         output_path: Optional path to save the thumbnail
         size: Image size in pixels
         
@@ -293,7 +293,7 @@ def render_3d_thumbnail(data: bytes, format: str, output_path: Optional[str] = N
     """
     format = format.lower()
     
-    if format not in ('stl', 'obj', '3mf', 'glb', 'gltf'):
+    if format not in ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d'):
         raise ValueError(f"Unsupported format: {format}")
     
     # Try stl-thumb first (high quality OpenGL rendering)

@@ -18,6 +18,63 @@ from enum import Enum
 from fantasyfolio.core.hashing import compute_partial_hash, compute_partial_hash_from_bytes
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# GLTF VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def validate_gltf_dependencies(file_path: Path) -> tuple[bool, str]:
+    """
+    Check if a text GLTF file has all required companion files.
+    
+    Text GLTF (.gltf) files reference external resources:
+    - Binary buffers (.bin files)
+    - Textures (PNG/JPG files)
+    
+    Binary GLB files are self-contained and always valid.
+    
+    Returns:
+        (is_valid, error_message)
+    """
+    if file_path.suffix.lower() == '.glb':
+        return (True, "")  # GLB is always self-contained
+    
+    if file_path.suffix.lower() != '.gltf':
+        return (True, "")  # Not a GLTF file
+    
+    try:
+        import json
+        with open(file_path, 'r', encoding='utf-8') as f:
+            gltf_data = json.load(f)
+        
+        parent_dir = file_path.parent
+        missing_files = []
+        
+        # Check buffers
+        if 'buffers' in gltf_data:
+            for buf in gltf_data['buffers']:
+                if 'uri' in buf and not buf['uri'].startswith('data:'):
+                    # External file reference
+                    ref_path = parent_dir / buf['uri']
+                    if not ref_path.exists():
+                        missing_files.append(buf['uri'])
+        
+        # Check images/textures
+        if 'images' in gltf_data:
+            for img in gltf_data['images']:
+                if 'uri' in img and not img['uri'].startswith('data:'):
+                    ref_path = parent_dir / img['uri']
+                    if not ref_path.exists():
+                        missing_files.append(img['uri'])
+        
+        if missing_files:
+            return (False, f"Missing companion files: {', '.join(missing_files[:3])}")
+        
+        return (True, "")
+    
+    except Exception as e:
+        return (False, f"GLTF validation error: {str(e)}")
+
+
 class ScanAction(Enum):
     SKIP = 'skip'
     NEW = 'new'
@@ -221,6 +278,11 @@ def scan_file(
             )
         
         elif duplicate_policy == 'merge':
+            # Compute folder_path for new location
+            folder_path = str(file_path.parent.relative_to(volume['mount_path']))
+            if folder_path == '.':
+                folder_path = ''
+            
             # Treat as moved file - update existing record
             return ScanResult(
                 ScanAction.MOVED,
@@ -228,6 +290,7 @@ def scan_file(
                     **hash_match,
                     'file_path': str(file_path),
                     'relative_path': str(file_path.relative_to(volume['mount_path'])),
+                    'folder_path': folder_path,
                     'file_mtime': file_mtime,
                     'file_size_bytes': file_size,
                     'index_status': 'indexed',
@@ -281,10 +344,16 @@ def scan_file(
     
     # Modified or forced re-index
     if existing:
+        # Compute folder_path (may have changed if file moved or not set yet)
+        folder_path = str(file_path.parent.relative_to(volume['mount_path']))
+        if folder_path == '.':
+            folder_path = ''
+        
         return ScanResult(
             ScanAction.UPDATE,
             {
                 **existing,
+                'folder_path': folder_path,
                 'file_mtime': file_mtime,
                 'file_size_bytes': file_size,
                 'partial_hash': partial_hash,
@@ -297,6 +366,26 @@ def scan_file(
             'modified' if not force else 'forced re-index'
         )
     
+    # Validate GLTF dependencies before marking as new
+    file_format = file_path.suffix[1:].lower()
+    if file_format == 'gltf':
+        is_valid, error_msg = validate_gltf_dependencies(file_path)
+        if not is_valid:
+            return ScanResult(
+                ScanAction.ERROR,
+                {
+                    'file_path': str(file_path),
+                    'filename': file_path.name,
+                    'format': file_format,
+                },
+                f'GLTF validation failed: {error_msg}'
+            )
+    
+    # Compute folder_path (parent directory relative to volume mount)
+    folder_path = str(file_path.parent.relative_to(volume['mount_path']))
+    if folder_path == '.':
+        folder_path = ''  # Empty string for files at volume root
+    
     # New file
     return ScanResult(
         ScanAction.NEW,
@@ -304,8 +393,9 @@ def scan_file(
             'file_path': str(file_path),
             'filename': file_path.name,
             'relative_path': str(file_path.relative_to(volume['mount_path'])),
+            'folder_path': folder_path,
             'volume_id': volume['id'],
-            'format': file_path.suffix[1:].lower(),
+            'format': file_format,
             'file_size_bytes': file_size,
             'file_mtime': file_mtime,
             'partial_hash': partial_hash,
@@ -336,7 +426,7 @@ def scan_archive(
     
     Yields ScanResult for each model found.
     """
-    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg'}
+    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg', '.dae', '.3ds', '.ply', '.x3d'}
     
     try:
         archive_mtime = int(archive_path.stat().st_mtime)
@@ -348,27 +438,55 @@ def scan_archive(
         )
         return
     
+    # Determine archive type
+    archive_ext = archive_path.suffix.lower()
+    
     try:
-        with zipfile.ZipFile(archive_path, 'r') as zf:
-            for member in zf.namelist():
-                # Skip directories
-                if member.endswith('/'):
-                    continue
+        if archive_ext == '.rar':
+            # Handle RAR archives
+            import rarfile
+            rarfile.UNRAR_TOOL = "unar"  # Use unar instead of unrar
+            
+            with rarfile.RarFile(archive_path, 'r') as rf:
+                for member in rf.namelist():
+                    # Skip directories
+                    if member.endswith('/'):
+                        continue
+                    
+                    # Skip non-model files
+                    ext = Path(member).suffix.lower()
+                    if ext not in MODEL_EXTENSIONS:
+                        continue
+                    
+                    # Skip macOS metadata
+                    if '__MACOSX' in member or Path(member).name.startswith('.'):
+                        continue
+                    
+                    yield scan_archive_member(
+                        conn, archive_path, member, archive_mtime, volume, rf, force
+                    )
+        else:
+            # Handle ZIP archives
+            with zipfile.ZipFile(archive_path, 'r') as zf:
+                for member in zf.namelist():
+                    # Skip directories
+                    if member.endswith('/'):
+                        continue
+                    
+                    # Skip non-model files
+                    ext = Path(member).suffix.lower()
+                    if ext not in MODEL_EXTENSIONS:
+                        continue
+                    
+                    # Skip macOS metadata
+                    if '__MACOSX' in member or Path(member).name.startswith('.'):
+                        continue
+                    
+                    yield scan_archive_member(
+                        conn, archive_path, member, archive_mtime, volume, zf, force
+                    )
                 
-                # Skip non-model files
-                ext = Path(member).suffix.lower()
-                if ext not in MODEL_EXTENSIONS:
-                    continue
-                
-                # Skip macOS metadata
-                if '__MACOSX' in member or Path(member).name.startswith('.'):
-                    continue
-                
-                yield scan_archive_member(
-                    conn, archive_path, member, archive_mtime, volume, zf, force
-                )
-                
-    except zipfile.BadZipFile as e:
+    except (zipfile.BadZipFile, Exception) as e:
         yield ScanResult(
             ScanAction.ERROR,
             {'archive_path': str(archive_path)},
@@ -382,10 +500,10 @@ def scan_archive_member(
     member: str,
     archive_mtime: int,
     volume: dict,
-    zf: zipfile.ZipFile,
+    zf,  # zipfile.ZipFile or rarfile.RarFile
     force: bool
 ) -> ScanResult:
-    """Scan a single member inside an archive."""
+    """Scan a single member inside an archive (ZIP or RAR)."""
     now = datetime.now().isoformat()
     
     # Check for existing record (without hash first)
@@ -536,6 +654,11 @@ def scan_archive_member(
             'modified' if not force else 'forced re-index'
         )
     
+    # Compute folder_path (archive parent directory relative to volume mount)
+    folder_path = str(archive_path.parent.relative_to(volume['mount_path']))
+    if folder_path == '.':
+        folder_path = ''
+    
     # New member
     return ScanResult(
         ScanAction.NEW,
@@ -544,6 +667,7 @@ def scan_archive_member(
             'archive_member': member,
             'filename': Path(member).name,
             'relative_path': str(archive_path.relative_to(volume['mount_path'])),
+            'folder_path': folder_path,
             'volume_id': volume['id'],
             'format': Path(member).suffix[1:].lower(),
             'file_size_bytes': file_size,
@@ -580,8 +704,8 @@ def scan_directory(
     
     Yields ScanResult for each file/archive member found.
     """
-    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg'}
-    ARCHIVE_EXTENSIONS = {'.zip'}
+    MODEL_EXTENSIONS = {'.stl', '.obj', '.3mf', '.glb', '.gltf', '.svg', '.dae', '.3ds', '.ply', '.x3d'}
+    ARCHIVE_EXTENSIONS = {'.zip', '.rar'}
     
     pattern = '**/*' if recursive else '*'
     

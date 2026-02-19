@@ -313,7 +313,7 @@ def api_search_advanced():
     
     # Determine if searching 3D models or PDFs
     # Use content_type from UI if provided, otherwise infer from format
-    is_3d_search = (content_type == '3d') or (format_filter in ('stl', 'obj', '3mf'))
+    is_3d_search = (content_type == '3d') or (format_filter in ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d'))
     
     with get_connection() as conn:
         if is_3d_search:
