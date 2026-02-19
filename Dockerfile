@@ -20,12 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     sqlite3 \
     wget \
-    # Build tools for stl-thumb
-    cargo \
     # OpenGL software rendering (Mesa) for stl-thumb
     libgl1 \
     libgl1-mesa-dri \
     libegl1 \
+    libosmesa6-dev \
     xvfb \
     xauth \
     # X11 libraries for stl-thumb windowing
@@ -41,10 +40,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     f3d \
     && rm -rf /var/lib/apt/lists/*
 
-# Install stl-thumb via cargo (simpler than multi-stage)
-RUN cargo install stl-thumb \
-    && cp /root/.cargo/bin/stl-thumb /usr/local/bin/ \
-    && rm -rf /root/.cargo /root/.rustup
+# Install stl-thumb from pre-built .deb packages (platform-aware)
+COPY docker/binaries/stl-thumb_0.5.0_*.deb /tmp/
+RUN dpkg -i /tmp/stl-thumb_0.5.0_$(dpkg --print-architecture).deb \
+    && rm -f /tmp/stl-thumb_0.5.0_*.deb
 
 # Install Python dependencies
 COPY requirements.txt .
