@@ -4412,6 +4412,9 @@
     let modelFolderTreeData = [];
     let expandedModelFolders = new Set();
     
+    // Store query info for folder navigation (shared by 3D and PDF)
+    const folderQueryInfo = new Map();
+    
     async function load3dCollections() {
       const res = await fetch('/api/models/collections');
       const collections = await res.json();
@@ -4434,6 +4437,14 @@
       // Sort by path (natural tree order for renderLevel traversal)
       // This ensures parent-child hierarchy is preserved
       modelFolderTreeData = flat.sort((a, b) => a.path.localeCompare(b.path));
+      
+      // Store query info for each item (for volume roots vs folders)
+      flat.forEach(item => {
+        folderQueryInfo.set(item.path, {
+          query_param: item.query_param || 'folder',
+          query_value: item.query_value || item.folder_path || item.path
+        });
+      });
       
       render3dFolderTree();
     }
@@ -4551,7 +4562,14 @@
         url += `&collection=${encodeURIComponent(currentCollection)}`;
       }
       if (currentFolder) {
-        url += `&folder=${encodeURIComponent(currentFolder)}`;
+        // Use stored query info if available (for volume roots vs folders)
+        const queryInfo = folderQueryInfo.get(currentFolder);
+        if (queryInfo) {
+          url += `&${queryInfo.query_param}=${encodeURIComponent(queryInfo.query_value)}`;
+        } else {
+          // Fallback to folder parameter
+          url += `&folder=${encodeURIComponent(currentFolder)}`;
+        }
       }
       if (currentFormat) {
         url += `&format=${encodeURIComponent(currentFormat)}`;
@@ -5088,6 +5106,15 @@
       // This ensures parent-child hierarchy is preserved in depth-first order
       folderTreeData = flat.sort((a, b) => a.path.localeCompare(b.path));
       
+      // Store query info for each item
+      folderQueryInfo.clear();
+      flat.forEach(item => {
+        folderQueryInfo.set(item.path, {
+          query_param: item.query_param || 'folder',
+          query_value: item.query_value || item.folder_path || item.path
+        });
+      });
+      
       renderFolderTree();
     }
     
@@ -5190,7 +5217,16 @@
     
     async function loadAssets() {
       let url = `/api/assets?limit=100&sort=${currentSort}&order=${currentOrder}`;
-      if (currentFolder) url += `&folder=${encodeURIComponent(currentFolder)}`;
+      if (currentFolder) {
+        // Use stored query info if available (for volume roots vs folders)
+        const queryInfo = folderQueryInfo.get(currentFolder);
+        if (queryInfo) {
+          url += `&${queryInfo.query_param}=${encodeURIComponent(queryInfo.query_value)}`;
+        } else {
+          // Fallback to folder parameter
+          url += `&folder=${encodeURIComponent(currentFolder)}`;
+        }
+      }
       if (currentPublisher) url += `&publisher=${encodeURIComponent(currentPublisher)}`;
       
       const res = await fetch(url);

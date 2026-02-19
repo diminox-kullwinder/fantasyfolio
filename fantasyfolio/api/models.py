@@ -173,7 +173,9 @@ def api_models_folder_tree():
                 'name': volume_label,
                 'count': volume_count,
                 'depth': 0,
-                'hasChildren': has_folders
+                'hasChildren': has_folders,
+                'query_param': 'volume_id',
+                'query_value': volume_id
             })
             
             # Initialize tree for this volume
@@ -221,7 +223,9 @@ def api_models_folder_tree():
                         'name': name,
                         'count': all_paths[folder_path],
                         'depth': depth,
-                        'hasChildren': folder_path in parents_with_children
+                        'hasChildren': folder_path in parents_with_children,
+                        'query_param': 'folder',
+                        'query_value': folder_path
             })
         
         return jsonify({'tree': tree, 'flat': flat})

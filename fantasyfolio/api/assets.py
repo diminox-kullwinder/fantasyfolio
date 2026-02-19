@@ -30,10 +30,24 @@ def api_stats():
 def api_assets():
     """List assets with optional filters and sorting."""
     folder = request.args.get('folder')
+    volume_id = request.args.get('volume_id')
     limit = int(request.args.get('limit', 100))
     offset = int(request.args.get('offset', 0))
     sort = request.args.get('sort', 'filename')
     order = request.args.get('order', 'asc')
+    
+    # If volume_id is provided, query directly instead of using list_assets
+    if volume_id:
+        with get_connection() as conn:
+            # Validate sort column
+            valid_sorts = {'filename', 'title', 'file_size', 'created_at'}
+            if sort not in valid_sorts:
+                sort = 'filename'
+            order_clause = 'DESC' if order.lower() == 'desc' else 'ASC'
+            
+            query = f"SELECT * FROM assets WHERE volume_id = ? ORDER BY {sort} {order_clause} LIMIT ? OFFSET ?"
+            rows = conn.execute(query, (volume_id, limit, offset)).fetchall()
+            return jsonify([dict(row) for row in rows])
     
     assets = list_assets(folder=folder, limit=limit, offset=offset, sort=sort, order=order)
     return jsonify(assets)
@@ -222,58 +236,120 @@ def api_game_systems():
 
 @assets_bp.route('/folder-tree')
 def api_folder_tree():
-    """Get hierarchical folder tree for PDF navigation."""
+    """Get hierarchical folder tree grouped by volume labels."""
     with get_connection() as conn:
-        rows = conn.execute("""
-            SELECT folder_path, COUNT(*) as count
-            FROM assets
-            WHERE folder_path IS NOT NULL AND folder_path != ''
-            GROUP BY folder_path
-            ORDER BY folder_path
+        # Get volumes with asset counts
+        volumes = conn.execute("""
+            SELECT v.id, v.label, COUNT(a.id) as count
+            FROM volumes v
+            LEFT JOIN assets a ON a.volume_id = v.id
+            GROUP BY v.id, v.label
+            ORDER BY v.label
         """).fetchall()
         
-        # Build tree structure and collect all paths (including parents)
+        # Get folder paths grouped by volume
+        rows = conn.execute("""
+            SELECT a.volume_id, v.label as volume_label, a.folder_path, COUNT(*) as count
+            FROM assets a
+            LEFT JOIN volumes v ON a.volume_id = v.id
+            WHERE a.folder_path IS NOT NULL AND a.folder_path != ''
+            GROUP BY a.volume_id, v.label, a.folder_path
+            ORDER BY v.label, a.folder_path
+        """).fetchall()
+        
+        # Build tree structure grouped by volume
         tree = {}
-        all_paths = {}  # {path: count}
-        parents_with_children = set()  # Track which paths have children
+        flat = []
+        
+        # Group folders by volume
+        volume_folders = {}  # {volume_label: {path: count}}
         
         for row in rows:
-            path = row['folder_path']
+            volume_label = row['volume_label']
+            if not volume_label:
+                continue
+            
+            folder_path = row['folder_path']
             count = row['count']
             
-            # Add this path
-            all_paths[path] = count
+            if volume_label not in volume_folders:
+                volume_folders[volume_label] = {}
             
-            # Add all parent paths with aggregated counts
-            parts = path.split('/')
-            for i in range(1, len(parts)):
-                parent_path = '/'.join(parts[:i])
-                if parent_path not in all_paths:
-                    all_paths[parent_path] = 0
-                all_paths[parent_path] += count
-                parents_with_children.add(parent_path)  # This parent has children
-            
-            # Build tree structure
-            current = tree
-            for i, part in enumerate(parts):
-                if part not in current:
-                    current[part] = {'_count': 0, '_children': {}}
-                current[part]['_count'] += count
-                current = current[part]['_children']
+            volume_folders[volume_label][folder_path] = count
         
-        # Convert to flat array with rendering properties (O(n) not O(n²))
-        flat = []
-        for path in sorted(all_paths.keys()):
-            depth = path.count('/')
-            name = path.split('/')[-1]
+        # Process each volume and its folders
+        for vol in volumes:
+            volume_id = vol['id']
+            volume_label = vol['label']
+            volume_count = vol['count']
+            
+            if volume_count == 0:
+                continue
+            
+            # Add volume root to flat array
+            has_folders = volume_label in volume_folders and len(volume_folders[volume_label]) > 0
             flat.append({
-                'folder_path': path,
-                'path': path,
-                'count': all_paths[path],
-                'depth': depth,
-                'name': name,
-                'hasChildren': path in parents_with_children
+                'volume_id': volume_id,
+                'volume_label': volume_label,
+                'folder_path': None,
+                'path': volume_label,
+                'name': volume_label,
+                'count': volume_count,
+                'depth': 0,
+                'hasChildren': has_folders,
+                'query_param': 'volume_id',
+                'query_value': volume_id
             })
+            
+            # Initialize tree for this volume
+            tree[volume_label] = {
+                '_volume_id': volume_id,
+                '_count': volume_count,
+                '_children': {}
+            }
+            
+            # Process folders for this volume
+            if volume_label in volume_folders:
+                folders = volume_folders[volume_label]
+                all_paths = {}
+                parents_with_children = set()
+                
+                for folder_path, count in folders.items():
+                    all_paths[folder_path] = count
+                    
+                    # Add parent paths
+                    parts = folder_path.split('/')
+                    for i in range(1, len(parts)):
+                        parent_path = '/'.join(parts[:i])
+                        if parent_path not in all_paths:
+                            all_paths[parent_path] = 0
+                        all_paths[parent_path] += count
+                        parents_with_children.add(parent_path)
+                    
+                    # Build nested tree
+                    current = tree[volume_label]['_children']
+                    for i, part in enumerate(parts):
+                        if part not in current:
+                            current[part] = {'_count': 0, '_children': {}}
+                        current[part]['_count'] += count
+                        current = current[part]['_children']
+                
+                # Add folder entries to flat array (depth starts at 1 under volume)
+                for folder_path in sorted(all_paths.keys()):
+                    depth = folder_path.count('/') + 1  # +1 because volume is depth 0
+                    name = folder_path.split('/')[-1]
+                    flat.append({
+                        'volume_id': volume_id,
+                        'volume_label': volume_label,
+                        'folder_path': folder_path,
+                        'path': f"{volume_label}/{folder_path}",
+                        'name': name,
+                        'count': all_paths[folder_path],
+                        'depth': depth,
+                        'hasChildren': folder_path in parents_with_children,
+                        'query_param': 'folder',
+                        'query_value': folder_path
+                    })
         
         return jsonify({'tree': tree, 'flat': flat})
 
