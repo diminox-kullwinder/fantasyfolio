@@ -7,6 +7,9 @@
 4. [Dashboard Personalization](#4-dashboard-personalization)
 5. [Notification System](#5-notification-system)
 6. [Basic Collections](#6-basic-collections)
+7. [Cross-Asset Collections](#7-cross-asset-collections)
+8. [Design Decisions](#8-design-decisions-resolved)
+9. [Glossary](#9-glossary)
 
 ---
 
