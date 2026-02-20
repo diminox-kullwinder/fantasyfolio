@@ -4210,6 +4210,13 @@
     let modelsLoading = false;
     let allLoadedModels = [];
     
+    // Infinite scroll state for PDFs
+    let assetsOffset = 0;
+    let assetsLimit = 100;
+    let assetsHasMore = true;
+    let assetsLoading = false;
+    let allLoadedAssets = [];
+    
     // Context menu state
     let contextMenuPath = null;
     let contextMenuAssetId = null;
@@ -4330,23 +4337,28 @@
       // Sort dropdown
       document.getElementById('sortSelect').addEventListener('change', changeSort);
       
-      // Infinite scroll for 3D models
+      // Infinite scroll for both 3D models and PDFs
       const mainScroll = document.querySelector('.main-scroll');
       if (mainScroll) {
         mainScroll.addEventListener('scroll', () => {
-          // Only trigger for 3D models view
-          if (contentType !== '3d') return;
-          
           // Check if near bottom (within 300px)
           const scrollHeight = mainScroll.scrollHeight;
           const scrollTop = mainScroll.scrollTop;
           const clientHeight = mainScroll.clientHeight;
           
           if (scrollHeight - scrollTop - clientHeight < 300) {
-            // Load more if available and not already loading
-            if (modelsHasMore && !modelsLoading) {
-              console.log('Loading more models...', {offset: modelsOffset, hasMore: modelsHasMore});
-              load3dModels(true); // append=true
+            if (contentType === '3d') {
+              // Load more 3D models if available
+              if (modelsHasMore && !modelsLoading) {
+                console.log('Loading more models...', {offset: modelsOffset, hasMore: modelsHasMore});
+                load3dModels(true); // append=true
+              }
+            } else if (contentType === 'pdf') {
+              // Load more PDFs if available
+              if (assetsHasMore && !assetsLoading) {
+                console.log('Loading more PDFs...', {offset: assetsOffset, hasMore: assetsHasMore});
+                loadAssets(true); // append=true
+              }
             }
           }
         });
@@ -5215,8 +5227,20 @@
       `).join('');
     }
     
-    async function loadAssets() {
-      let url = `/api/assets?limit=100&sort=${currentSort}&order=${currentOrder}`;
+    async function loadAssets(append = false) {
+      if (assetsLoading) return;
+      if (append && !assetsHasMore) return;
+      
+      assetsLoading = true;
+      
+      // Reset state if not appending (new filter/sort)
+      if (!append) {
+        assetsOffset = 0;
+        assetsHasMore = true;
+        allLoadedAssets = [];
+      }
+      
+      let url = `/api/assets?limit=${assetsLimit}&offset=${assetsOffset}&sort=${currentSort}&order=${currentOrder}`;
       if (currentFolder) {
         // Use stored query info if available (for volume roots vs folders)
         const queryInfo = folderQueryInfo.get(currentFolder);
@@ -5229,10 +5253,31 @@
       }
       if (currentPublisher) url += `&publisher=${encodeURIComponent(currentPublisher)}`;
       
-      const res = await fetch(url);
-      const assets = await res.json();
-      renderAssets(assets);
-      toggleView();
+      try {
+        const res = await fetch(url);
+        const assets = await res.json();
+        
+        // Check if we got fewer results than requested (end of data)
+        if (assets.length < assetsLimit) {
+          assetsHasMore = false;
+        }
+        
+        // Update offset for next load
+        assetsOffset += assets.length;
+        
+        // Append to all loaded assets or replace
+        if (append) {
+          allLoadedAssets = allLoadedAssets.concat(assets);
+          renderAssets(assets, true);  // Only render NEW assets when appending
+        } else {
+          allLoadedAssets = assets;
+          renderAssets(assets, false);
+        }
+        
+        toggleView();
+      } finally {
+        assetsLoading = false;
+      }
     }
     
     function changeSort() {
@@ -5641,11 +5686,11 @@
       container.style.display = 'block';
     }
     
-    function renderAssets(assets) {
+    function renderAssets(assets, append = false) {
       const grid = document.getElementById('assetGrid');
       const list = document.getElementById('assetList');
       
-      if (assets.length === 0) {
+      if (assets.length === 0 && !append) {
         grid.innerHTML = `
           <div class="empty-state">
             <h3>No PDFs found</h3>
@@ -5658,7 +5703,7 @@
       
       // Grid view (with cache-busting for fresh thumbnails)
       const cacheBust = Date.now();
-      grid.innerHTML = assets.map(a => `
+      const gridHtml = assets.map(a => `
         <div class="asset-card" data-id="${a.id}" data-type="pdf" onclick="showDetail(${a.id})">
           <img class="asset-thumb" src="/api/thumbnail/${a.id}?t=${cacheBust}" alt="" loading="lazy" />
           <div class="asset-info">
@@ -5669,7 +5714,7 @@
       `).join('');
       
       // List view
-      list.innerHTML = assets.map(a => `
+      const listHtml = assets.map(a => `
         <div class="asset-row" data-id="${a.id}" data-type="pdf" onclick="showDetail(${a.id})">
           <img src="/api/thumbnail/${a.id}?t=${cacheBust}" alt="" loading="lazy" />
           <div>
@@ -5681,6 +5726,15 @@
           <div class="size">${formatSize(a.file_size)}</div>
         </div>
       `).join('');
+      
+      // Append or replace
+      if (append) {
+        grid.innerHTML += gridHtml;
+        list.innerHTML += listHtml;
+      } else {
+        grid.innerHTML = gridHtml;
+        list.innerHTML = listHtml;
+      }
     }
     
     function filterFolder(folder) {
