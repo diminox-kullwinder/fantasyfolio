@@ -83,7 +83,7 @@ def render_one(model_id: int, timeout_sec: int = 120) -> bool:
             return True
         
         fmt = model.get('format', '').lower()
-        if fmt not in ('stl', 'obj', '3mf'):
+        if fmt not in ('stl', 'obj', '3mf', 'svg'):
             return True
         
         # Prepare model file for rendering
@@ -116,15 +116,42 @@ def render_one(model_id: int, timeout_sec: int = 120) -> bool:
         if not model_file:
             return False
         
-        # Render using stl-thumb
+        # Render thumbnail
         try:
             cached.parent.mkdir(parents=True, exist_ok=True)
-            result = subprocess.run(
-                ['stl-thumb', '-s', '512', model_file, str(cached)],
-                capture_output=True,
-                timeout=timeout_sec
-            )
-            if result.returncode == 0:
+            
+            if fmt == 'svg':
+                # Use cairosvg for SVG files
+                import cairosvg
+                from PIL import Image
+                import io
+                
+                with open(model_file, 'rb') as f:
+                    svg_data = f.read()
+                
+                png_data = cairosvg.svg2png(bytestring=svg_data, output_width=512, output_height=512)
+                
+                # Add white background
+                img = Image.open(io.BytesIO(png_data))
+                bg = Image.new('RGB', (512, 512), (255, 255, 255))
+                x = (512 - img.width) // 2
+                y = (512 - img.height) // 2
+                if img.mode == 'RGBA':
+                    bg.paste(img, (x, y), img)
+                else:
+                    bg.paste(img, (x, y))
+                bg.save(str(cached), 'PNG')
+                render_success = True
+            else:
+                # Use stl-thumb for 3D models
+                result = subprocess.run(
+                    ['stl-thumb', '-s', '512', model_file, str(cached)],
+                    capture_output=True,
+                    timeout=timeout_sec
+                )
+                render_success = result.returncode == 0
+            
+            if render_success:
                 # Update database
                 try:
                     with get_connection() as conn:
@@ -163,7 +190,7 @@ def get_pending_by_size(config):
     with get_connection() as conn:
         rows = conn.execute("""
             SELECT id, file_size FROM models 
-            WHERE format IN ('stl', 'obj', '3mf')
+            WHERE format IN ('stl', 'obj', '3mf', 'svg')
             ORDER BY file_size ASC
         """).fetchall()
     

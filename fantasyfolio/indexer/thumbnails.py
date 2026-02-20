@@ -285,15 +285,72 @@ def render_mesh_thumbnail(triangles: np.ndarray, output_path: Optional[str] = No
     return png_data
 
 
+def render_svg_thumbnail(data: bytes, output_path: Optional[str] = None, size: int = 512) -> bytes:
+    """
+    Render a thumbnail for SVG vector graphics using cairosvg.
+    
+    Args:
+        data: SVG file bytes
+        output_path: Optional path to save the thumbnail
+        size: Image size in pixels
+        
+    Returns:
+        PNG image bytes
+    """
+    import cairosvg
+    from PIL import Image
+    import io
+    
+    try:
+        # Render SVG to PNG at target size
+        png_data = cairosvg.svg2png(bytestring=data, output_width=size, output_height=size)
+        
+        # Ensure consistent size and add padding if needed
+        img = Image.open(io.BytesIO(png_data))
+        
+        # Create white background and paste SVG centered
+        bg = Image.new('RGBA', (size, size), (255, 255, 255, 255))
+        
+        # Calculate position to center the image
+        x = (size - img.width) // 2
+        y = (size - img.height) // 2
+        
+        # Paste with alpha if available
+        if img.mode == 'RGBA':
+            bg.paste(img, (x, y), img)
+        else:
+            bg.paste(img, (x, y))
+        
+        # Convert to RGB (no alpha) for consistent output
+        bg = bg.convert('RGB')
+        
+        # Save to bytes
+        buf = io.BytesIO()
+        bg.save(buf, format='PNG')
+        png_data = buf.getvalue()
+        
+        if output_path:
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, 'wb') as f:
+                f.write(png_data)
+        
+        return png_data
+        
+    except Exception as e:
+        logger.error(f"SVG thumbnail render failed: {e}")
+        raise
+
+
 def render_3d_thumbnail(data: bytes, format: str, output_path: Optional[str] = None, size: int = 512) -> bytes:
     """
-    Render a thumbnail for any supported 3D format.
+    Render a thumbnail for any supported 3D format (or SVG).
     
     Uses stl-thumb (OpenGL) for high quality renders, falls back to PIL.
+    SVG uses cairosvg for rendering.
     
     Args:
         data: Raw file bytes
-        format: File format ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d')
+        format: File format ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d', 'svg')
         output_path: Optional path to save the thumbnail
         size: Image size in pixels
         
@@ -301,6 +358,10 @@ def render_3d_thumbnail(data: bytes, format: str, output_path: Optional[str] = N
         PNG image bytes
     """
     format = format.lower()
+    
+    # Handle SVG separately (2D vector graphics)
+    if format == 'svg':
+        return render_svg_thumbnail(data, output_path, size)
     
     if format not in ('stl', 'obj', '3mf', 'glb', 'gltf', 'dae', '3ds', 'ply', 'x3d'):
         raise ValueError(f"Unsupported format: {format}")
