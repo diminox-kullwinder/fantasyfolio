@@ -613,6 +613,144 @@ def oauth_discord_callback():
     return redirect(f"{redirect_to}#access_token={jwt_access}&refresh_token={refresh_token}")
 
 
+# ==================== OAuth: Google ====================
+
+@auth_bp.route('/oauth/google', methods=['GET'])
+def oauth_google_start():
+    """Start Google OAuth flow."""
+    config = auth_service.get_auth_config()
+    
+    if not config.google_client_id:
+        return jsonify({'error': 'Google OAuth not configured'}), 503
+    
+    state = auth_service.generate_oauth_state('google', request.args.get('redirect'))
+    
+    params = {
+        'client_id': config.google_client_id,
+        'redirect_uri': config.google_redirect_uri,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'state': state,
+        'access_type': 'offline',
+        'prompt': 'consent'
+    }
+    
+    url = 'https://accounts.google.com/o/oauth2/v2/auth?' + '&'.join(f'{k}={v}' for k, v in params.items())
+    
+    return redirect(url)
+
+
+@auth_bp.route('/oauth/google/callback', methods=['GET'])
+def oauth_google_callback():
+    """Handle Google OAuth callback."""
+    import requests
+    
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    
+    if error:
+        return jsonify({'error': f'Google error: {error}'}), 400
+    
+    # Verify state
+    state_data = auth_service.verify_oauth_state(state)
+    if not state_data:
+        return jsonify({'error': 'Invalid OAuth state'}), 400
+    
+    config = auth_service.get_auth_config()
+    
+    # Exchange code for token
+    token_response = requests.post('https://oauth2.googleapis.com/token', data={
+        'client_id': config.google_client_id,
+        'client_secret': config.google_client_secret,
+        'code': code,
+        'grant_type': 'authorization_code',
+        'redirect_uri': config.google_redirect_uri
+    })
+    
+    if token_response.status_code != 200:
+        logger.error(f"Google token exchange failed: {token_response.text}")
+        return jsonify({'error': 'Failed to authenticate with Google'}), 400
+    
+    tokens = token_response.json()
+    access_token = tokens['access_token']
+    
+    # Get user info
+    user_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers={
+        'Authorization': f'Bearer {access_token}'
+    })
+    
+    if user_response.status_code != 200:
+        return jsonify({'error': 'Failed to get Google user info'}), 400
+    
+    google_user = user_response.json()
+    google_id = google_user['id']
+    google_email = google_user.get('email')
+    google_name = google_user.get('name', google_email.split('@')[0] if google_email else 'User')
+    
+    # Check if user exists by OAuth link
+    user = auth_service.get_user_by_oauth('google', google_id)
+    
+    if not user:
+        # Check if email exists (for account linking)
+        if google_email:
+            existing_user = auth_service.get_user_by_email(google_email)
+            if existing_user:
+                # Link Google to existing account
+                auth_service.link_oauth_provider(
+                    existing_user['id'], 'google', google_id,
+                    provider_email=google_email, provider_username=google_name,
+                    access_token=access_token
+                )
+                user = existing_user
+        
+        if not user:
+            # Create new user (JIT provisioning)
+            user = auth_service.create_user(
+                email=google_email or f'{google_id}@google.user',
+                display_name=google_name,
+                role='player'
+            )
+            
+            if user:
+                # Mark email as verified (Google verifies emails)
+                if google_email:
+                    auth_service.update_user(user['id'], email_verified=1)
+                
+                # Link OAuth
+                auth_service.link_oauth_provider(
+                    user['id'], 'google', google_id,
+                    provider_email=google_email, provider_username=google_name,
+                    access_token=access_token
+                )
+    else:
+        # Update tokens
+        auth_service.update_oauth_tokens(user['id'], 'google', access_token, None, None)
+    
+    if not user:
+        return jsonify({'error': 'Failed to create account'}), 500
+    
+    # Generate tokens
+    jwt_access = auth_service.generate_access_token(user['id'], user['role'], user['email'])
+    refresh_token = auth_service.generate_refresh_token()
+    
+    # Create session
+    auth_service.create_session(
+        user['id'], refresh_token,
+        device_info='Google OAuth',
+        ip_address=request.remote_addr
+    )
+    
+    # Update last login
+    auth_service.update_user(user['id'], last_login_at=auth_service.datetime.utcnow().isoformat())
+    
+    logger.info(f"User logged in via Google: {user['email']}")
+    
+    # For browser, redirect with tokens in fragment (SPA flow)
+    redirect_to = state_data.get('redirect_to') or '/'
+    return redirect(f"{redirect_to}#access_token={jwt_access}&refresh_token={refresh_token}")
+
+
 # ==================== User Settings ====================
 
 @auth_bp.route('/settings', methods=['GET'])
