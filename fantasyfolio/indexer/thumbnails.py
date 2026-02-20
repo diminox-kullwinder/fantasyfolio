@@ -39,7 +39,7 @@ def render_with_stl_thumb(data: bytes, format: str, output_path: str, size: int 
         if shutil.which('f3d') and shutil.which('xvfb-run'):
             try:
                 # Camera direction: front view, slightly from above (good for miniatures)
-                # Build f3d command - add grey color for formats without textures
+                # Build f3d command - add blue color for formats without textures
                 f3d_cmd = ['xvfb-run', '-a', 'f3d', 
                      '--output', output_path, 
                      '--resolution', f'{size},{size}', 

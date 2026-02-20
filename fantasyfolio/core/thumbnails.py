@@ -240,7 +240,7 @@ def render_thumbnail(
             if file_format == 'svg':
                 success = _render_svg_thumbnail(tmp_path, str(output_path), size)
             else:
-                success = _render_3d_thumbnail(tmp_path, str(output_path), size)
+                success = _render_3d_thumbnail(tmp_path, str(output_path), size, file_format)
             os.unlink(tmp_path)
             
         except Exception:
@@ -259,7 +259,7 @@ def render_thumbnail(
         if file_format == 'svg':
             success = _render_svg_thumbnail(str(file_path), str(output_path), size)
         else:
-            success = _render_3d_thumbnail(str(file_path), str(output_path), size)
+            success = _render_3d_thumbnail(str(file_path), str(output_path), size, file_format)
     
     if success and output_path.exists():
         # Compute relative path for storage
@@ -283,7 +283,7 @@ def render_thumbnail(
     return None
 
 
-def _render_with_f3d(input_path: str, output_path: str, size: int = 1024) -> bool:
+def _render_with_f3d(input_path: str, output_path: str, size: int = 1024, file_format: str = 'stl') -> bool:
     """Render using f3d CLI - works in containers with Xvfb.
     
     f3d supports: STL, OBJ, 3MF, GLTF, PLY, FBX, and many more via assimp.
@@ -292,6 +292,8 @@ def _render_with_f3d(input_path: str, output_path: str, size: int = 1024) -> boo
     - --up +Z: STL/OBJ files typically use Z-up
     - Resolution: square thumbnail at specified size
     - Uses xvfb-run for headless rendering in containers
+    - Blue color (0.4,0.6,0.9) for geometry-only formats (STL, OBJ, 3MF)
+    - GLB/GLTF preserve original textures
     """
     import shutil
     import os
@@ -304,11 +306,17 @@ def _render_with_f3d(input_path: str, output_path: str, size: int = 1024) -> boo
         '--output', output_path,
         '--resolution', f'{size},{size}',
         '--up', '+Z',
-        '--camera-direction=0,1,-0.3',  # Front view, slight downward angle (good for miniatures)
+        '--camera-direction=0,-1,-0.3',  # Front view, slight downward angle (good for miniatures)
         '--axis=0',  # Disable axes (no red/green/blue lines)
         '--grid=0',  # Disable grid
-        input_path
     ]
+    
+    # Set consistent blue for geometry-only formats (STL, OBJ, 3MF)
+    # Leave GLB/GLTF alone so textures render correctly
+    if file_format.lower() in ('stl', 'obj', '3mf'):
+        base_cmd.extend(['--color', '0.4,0.6,0.9'])
+    
+    base_cmd.append(input_path)
     
     # Use xvfb-run if available (for headless rendering in containers)
     use_xvfb = shutil.which('xvfb-run') is not None
@@ -340,7 +348,7 @@ def _render_with_stl_thumb(input_path: str, output_path: str, size: int = 1024) 
     
     Enhanced quality settings:
     - 1024px size for crisp thumbnails
-    - Silver/grey material colors for realistic 3D print look
+    - Blue material colors to match f3d (0.4, 0.6, 0.9)
     - Dark grey background for better contrast
     """
     import shutil
@@ -351,9 +359,10 @@ def _render_with_stl_thumb(input_path: str, output_path: str, size: int = 1024) 
     # Use xvfb-run if available (for headless OpenGL rendering in containers)
     use_xvfb = shutil.which('xvfb-run') is not None
     
-    # Material colors (ambient, diffuse, specular) - silver/grey for 3D print look
-    material_ambient = 'c0c0c0'
-    material_diffuse = 'd8d8d8'
+    # Material colors (ambient, diffuse, specular) - blue to match f3d
+    # RGB 0.4,0.6,0.9 = hex 66,99,E6
+    material_ambient = '6699e6'
+    material_diffuse = '6699e6'
     material_specular = 'ffffff'
     
     # Background: dark grey, matches UI dark theme
@@ -382,13 +391,13 @@ def _render_with_stl_thumb(input_path: str, output_path: str, size: int = 1024) 
         return False
 
 
-def _render_3d_thumbnail(input_path: str, output_path: str, size: int = 1024) -> bool:
+def _render_3d_thumbnail(input_path: str, output_path: str, size: int = 1024, file_format: str = 'stl') -> bool:
     """Render 3D model thumbnail using best available renderer.
     
     Tries f3d first (container-friendly), falls back to stl-thumb.
     """
     # Try f3d first - works in containers
-    if _render_with_f3d(input_path, output_path, size):
+    if _render_with_f3d(input_path, output_path, size, file_format):
         return True
     
     # Fallback to stl-thumb (works on Mac/desktop)
