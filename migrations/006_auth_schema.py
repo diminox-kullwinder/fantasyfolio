@@ -179,9 +179,8 @@ CREATE INDEX IF NOT EXISTS idx_shares_user ON collection_shares(shared_with_user
 CREATE INDEX IF NOT EXISTS idx_shares_guest ON collection_shares(guest_token_hash);
 
 -- ==================== Schema Version ====================
-
-INSERT OR REPLACE INTO settings (key, value, updated_at) 
-VALUES ('schema_version', '6', CURRENT_TIMESTAMP);
+-- Note: settings table may not exist in fresh databases
+-- Version tracking is optional for this migration
 """
 
 
