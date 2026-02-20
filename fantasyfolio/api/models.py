@@ -720,7 +720,7 @@ def api_reindex_model(model_id):
     """
     from fantasyfolio.core.scanner import reindex_single_asset
     
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     force = data.get('force', False)
     include_thumbnail = data.get('include_thumbnail', True)
     
@@ -796,7 +796,7 @@ def api_purge_missing_models():
         missing_before: ISO date - purge missing since before this date
         confirm: REQUIRED - must be true
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     
     model_ids = data.get('model_ids')
     volume_id = data.get('volume_id')
@@ -1003,7 +1003,7 @@ def api_index_directory():
     from pathlib import Path
     import sqlite3
     
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     path = data.get('path')
     recursive = data.get('recursive', True)
     force = data.get('force', False)
@@ -1148,7 +1148,7 @@ def api_index_volume(volume_id):
     POST body:
         force: bool - force re-index (default false)
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     force = data.get('force', False)
     
     with get_connection() as conn:
@@ -1180,7 +1180,7 @@ def api_regenerate_thumbnail(model_id):
     from pathlib import Path
     from fantasyfolio.core.thumbnails import render_thumbnail
     
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     force = data.get('force', True)
     
     config = get_config()
@@ -1238,7 +1238,7 @@ def api_render_pending_thumbnails():
     from pathlib import Path
     from fantasyfolio.core.thumbnails import render_pending_thumbnails
     
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     limit = data.get('limit', 100)
     
     config = get_config()
@@ -1261,7 +1261,7 @@ def api_migrate_thumbnails():
     from pathlib import Path
     from fantasyfolio.core.thumbnails import migrate_thumbnails_to_sidecars
     
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     limit = data.get('limit')
     
     config = get_config()
@@ -1339,7 +1339,7 @@ def api_detect_duplicates():
     """
     from fantasyfolio.core.deduplication import process_duplicates
     
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     auto_mark = data.get('auto_mark', True)
     
     config = get_config()
