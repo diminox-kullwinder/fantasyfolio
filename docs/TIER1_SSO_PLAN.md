@@ -5,6 +5,18 @@ Add multi-provider SSO authentication, user management, and foundational collect
 
 ---
 
+## 📋 DECISIONS (2026-02-19)
+
+| Decision | Choice | Notes |
+|----------|--------|-------|
+| **Auth Priority** | Email → Gmail/Apple → Discord | Email first (always works), OAuth when no blockers |
+| **Collection Visibility** | Private + Shared only | No "Public" - commercial assets can't be openly distributed |
+| **Basic Profile** | ✅ Yes | Display name, avatar, role |
+| **Collections** | ✅ Yes | Requires at least email auth working |
+| **Discord OAuth** | Pending | Matthew researching requirements (Client ID + Secret needed) |
+
+---
+
 ## Phase 1: Database Schema & Core Auth (Week 1)
 
 ### 1.1 Database Schema Additions
@@ -94,11 +106,26 @@ python-jose>=3.3.0    # JWT with JWK support
 
 ### 2.1 Provider Setup
 
-| Provider | Client Type | Scopes | Notes |
-|----------|-------------|--------|-------|
-| Discord | OAuth2 | `identify`, `email` | Community-focused |
-| Google | OIDC | `openid`, `email`, `profile` | Broad reach |
-| Apple | OIDC | `email`, `name` | iOS users |
+**Implementation Priority:**
+1. **Email/Password** - Always available, no dependencies
+2. **Google (Gmail)** - Easy setup, broad reach
+3. **Apple** - iOS users, requires Apple Developer account
+4. **Discord** - Pending Matthew's setup (Client ID + Secret)
+
+| Provider | Client Type | Scopes | Status |
+|----------|-------------|--------|--------|
+| Email | Native | N/A | **Priority 1** |
+| Google | OIDC | `openid`, `email`, `profile` | **Priority 2** |
+| Apple | OIDC | `email`, `name` | **Priority 3** |
+| Discord | OAuth2 | `identify`, `email` | Pending setup |
+
+### 2.1.1 Discord OAuth Setup (for Matthew)
+1. Go to https://discord.com/developers/applications
+2. Click "New Application" → name it "FantasyFolio"  
+3. OAuth2 → General → copy **Client ID** and **Client Secret**
+4. Add Redirect URI: `https://<your-domain>/api/auth/oauth/discord/callback`
+5. Required scopes: `identify`, `email`
+6. No approval needed, free, ~5 minutes
 
 ### 2.2 API Endpoints
 ```
@@ -185,12 +212,16 @@ CREATE TABLE collections (
     name TEXT NOT NULL,
     description TEXT,
     cover_image_url TEXT,
-    visibility TEXT DEFAULT 'private',  -- private, shared, public
+    visibility TEXT DEFAULT 'private',  -- private, shared (NO public - commercial license concerns)
     collection_type TEXT DEFAULT 'manual',  -- manual, smart
     smart_filter BLOB,  -- JSON: filter criteria for smart collections
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- NOTE: "public" visibility intentionally excluded
+-- Many assets are commercial purchases with distribution restrictions
+-- Sharing is always explicit: specific users or time-limited guest links
 
 CREATE TABLE collection_items (
     id TEXT PRIMARY KEY,

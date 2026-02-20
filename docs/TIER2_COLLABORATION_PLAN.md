@@ -7,6 +7,16 @@ Build on Tier 1 auth to add advanced collections, sharing, notifications, and AI
 
 ---
 
+## 📋 DECISIONS (2026-02-19)
+
+| Decision | Choice | Notes |
+|----------|--------|-------|
+| **Public Collections** | ❌ Disabled | Commercial assets have distribution restrictions |
+| **Sharing Model** | Explicit only | Specific users OR time-limited guest links |
+| **Campaigns (GM sharing)** | ✅ Yes | Share collections with campaign members |
+
+---
+
 ## Phase 1: Smart Collections (Week 4)
 
 ### 1.1 Smart Filter Schema
