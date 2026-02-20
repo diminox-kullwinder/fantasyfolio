@@ -80,10 +80,17 @@ def render_one(model_id: int, timeout_sec: int = 120) -> bool:
         # Check cache
         cached = config.THUMBNAIL_DIR / "3d" / f"{model_id}.png"
         if cached.exists():
+            # File exists - update database to mark as having thumbnail
+            try:
+                with get_connection() as conn:
+                    conn.execute("UPDATE models SET has_thumbnail = 1 WHERE id = ?", (model_id,))
+                    conn.commit()
+            except Exception as e:
+                logger.warning(f"DB update failed for cached {model_id}: {e}")
             return True
         
         fmt = model.get('format', '').lower()
-        if fmt not in ('stl', 'obj', '3mf', 'svg'):
+        if fmt not in ('stl', 'obj', '3mf', 'svg', 'glb', 'gltf'):
             return True
         
         # Prepare model file for rendering
@@ -142,10 +149,24 @@ def render_one(model_id: int, timeout_sec: int = 120) -> bool:
                     bg.paste(img, (x, y))
                 bg.save(str(cached), 'PNG')
                 render_success = True
-            else:
-                # Use stl-thumb for 3D models
+            elif fmt in ('glb', 'gltf'):
+                # Use f3d for GLB/GLTF (supports textures)
                 result = subprocess.run(
-                    ['stl-thumb', '-s', '512', model_file, str(cached)],
+                    ['xvfb-run', '-a', 'f3d',
+                     '--output', str(cached),
+                     '--resolution', '512,512',
+                     '--up', '+Z',
+                     '--camera-direction=0,-1,-0.3',
+                     model_file],
+                    capture_output=True,
+                    timeout=timeout_sec
+                )
+                render_success = result.returncode == 0
+            else:
+                # Use stl-thumb for STL/OBJ/3MF
+                stl_cmd = ['stl-thumb', '-s', '512', model_file, str(cached)]
+                result = subprocess.run(
+                    stl_cmd,
                     capture_output=True,
                     timeout=timeout_sec
                 )
@@ -190,7 +211,7 @@ def get_pending_by_size(config):
     with get_connection() as conn:
         rows = conn.execute("""
             SELECT id, file_size FROM models 
-            WHERE format IN ('stl', 'obj', '3mf', 'svg')
+            WHERE format IN ('stl', 'obj', '3mf', 'svg', 'glb', 'gltf')
             ORDER BY file_size ASC
         """).fetchall()
     
