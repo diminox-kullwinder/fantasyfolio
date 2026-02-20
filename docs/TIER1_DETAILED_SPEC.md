@@ -897,3 +897,68 @@ CREATE INDEX idx_collection_items_asset ON collection_items(asset_id);
 | **Export List** | CSV/JSON with all items, types indicated |
 | **Print Queue** | Only 3D models sent to slicer integration |
 
+
+---
+
+# 8. Design Decisions (Resolved)
+
+## 8.1 Account Deletion
+**Decision:** Soft-delete indefinitely
+
+- Accounts are never hard-deleted
+- User can reactivate at any time
+- Data preserved for potential return
+- Admin can hard-delete if legally required (GDPR request)
+
+## 8.2 User Identity
+**Decision:** Email as UUID, display names must be unique
+
+- Email address is the unique identifier (UUID)
+- Display names / usernames are also unique
+- Validation: "This name has already been taken"
+- Users can change display name (if new name is available)
+
+## 8.3 Default Role
+**Decision:** Default role is "User" (not "Player")
+
+- New signups get role = "User"
+- "Player" is contextual - you become a "Player of [Campaign]" when invited/joined
+- Future VTT integration will expand on campaign roles
+- Role hierarchy:
+  - **User** - Base role, can create collections, browse assets
+  - **Player** - User who has joined a campaign
+  - **GM** - User who owns/runs a campaign
+  - **Admin** - System administrator
+
+## 8.4 Session Duration
+**Decision:** 12 hours
+
+- Access token expires after 12 hours
+- User must re-authenticate after 12 hours of inactivity
+- "Remember Me" checkbox extends refresh token (not session)
+- Active use keeps session alive (sliding expiration)
+
+## 8.5 Collection/Download Limits
+**Decision:** No collection limits initially, 1GB download limit
+
+- Unlimited collections
+- Unlimited items per collection
+- **Download limit: 1GB per ZIP**
+- Warning message when exceeded: "Your download exceeds the maximum size of 1GB. Please select fewer items or download in batches."
+- Future: May revisit for monetization (premium = larger downloads)
+
+---
+
+# 9. Glossary
+
+| Term | Definition |
+|------|------------|
+| **User** | Anyone with an account |
+| **Player** | A User who has joined a Campaign |
+| **GM** | Game Master - a User who owns/manages a Campaign |
+| **Campaign** | A group context for sharing (e.g., "Curse of Strahd campaign") |
+| **Collection** | A user-curated list of assets (3D models + PDFs) |
+| **Asset** | Any indexed item - 3D model or PDF document |
+| **Volume** | A mounted storage location (disk, NAS path) |
+| **Guest Link** | Time-limited URL for sharing with non-users |
+
