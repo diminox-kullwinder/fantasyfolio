@@ -314,7 +314,7 @@ def _render_with_f3d(input_path: str, output_path: str, size: int = 1024, file_f
     # Set consistent blue for geometry-only formats (STL, OBJ, 3MF)
     # Leave GLB/GLTF alone so textures render correctly
     if file_format.lower() in ('stl', 'obj', '3mf'):
-        base_cmd.extend(['--color', '0.4,0.6,0.9'])
+        base_cmd.extend(['--color', '0.0,0.5,1.0'])
     
     base_cmd.append(input_path)
     

@@ -49,7 +49,7 @@ def render_with_stl_thumb(data: bytes, format: str, output_path: str, size: int 
                 # Set consistent blue for geometry-only formats (STL, OBJ, 3MF)
                 # Leave GLB/GLTF alone so textures render correctly
                 if format.lower() in ('stl', 'obj', '3mf'):
-                    f3d_cmd.extend(['--color', '0.4,0.6,0.9'])
+                    f3d_cmd.extend(['--color', '0.0,0.5,1.0'])
                 
                 f3d_cmd.append(model_path)
                 
