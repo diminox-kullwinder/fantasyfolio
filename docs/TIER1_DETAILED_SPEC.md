@@ -759,3 +759,141 @@ Guest links allow sharing with people who don't have accounts:
 4. **Session Duration**: How long before requiring re-login? (Recommendation: 7 days if "Remember Me" checked, otherwise browser session)
 
 5. **Collection Limits**: Should free users have limits on collections/items? (Decision needed for monetization strategy)
+
+---
+
+# 7. Cross-Asset Collections
+
+## 7.1 Overview
+
+Collections can contain **both 3D models AND PDFs/documents**. This reflects real RPG campaign organization where a single adventure needs minis, maps, rules, and handouts together.
+
+## 7.2 Use Cases
+
+| Collection Type | Contents | Example |
+|-----------------|----------|---------|
+| **Campaign** | Everything for a campaign | Curse of Strahd: adventure PDF + all minis + all maps |
+| **Encounter** | Single encounter assets | Dragon Fight: dragon STL + lair map PDF + stat block |
+| **Print Session** | Next batch to print | Tonight's Print: 5 minis + reference cards PDF |
+| **Theme** | Assets by theme | Undead: zombie STLs + necromancer STLs + undead rules PDF |
+| **Source** | From same creator | Loot Studios March: all STLs + painting guide PDF |
+
+## 7.3 Collection View - Mixed Assets
+
+```
++------------------------------------------------------------------+
+| 🏰 Curse of Strahd Campaign                           [⚙️ Edit]   |
++------------------------------------------------------------------+
+| 47 items (32 models, 15 documents)                                |
++------------------------------------------------------------------+
+|                                                                   |
+| Filter: [All ▼]  [3D Models]  [PDFs]     Sort: [Type, then Name] |
+|                                                                   |
+| 📁 DOCUMENTS (15)                                                 |
+| +---------------+ +---------------+ +---------------+             |
+| | [PDF icon]    | | [PDF icon]    | | [PDF icon]    |             |
+| | Curse of      | | Barovia       | | Tarokka       |             |
+| | Strahd.pdf    | | Map.pdf       | | Deck.pdf      |             |
+| +---------------+ +---------------+ +---------------+             |
+|                                                                   |
+| 🎲 3D MODELS (32)                                                 |
+| +---------------+ +---------------+ +---------------+             |
+| | [Thumbnail]   | | [Thumbnail]   | | [Thumbnail]   |             |
+| | Strahd.stl    | | Castle        | | Wolves x6.stl |             |
+| |               | | Gate.stl      | |               |             |
+| +---------------+ +---------------+ +---------------+             |
+|                                                                   |
++------------------------------------------------------------------+
+```
+
+## 7.4 Adding Items from Either Asset Type
+
+### From 3D Models Browser
+```
+Right-click any model → Add to Collection → [Select collection]
+```
+
+### From PDF/Documents Browser
+```
+Right-click any PDF → Add to Collection → [Select collection]
+```
+
+### From Collection View
+```
+Click [+ Add Items] → Toggle between:
+  [3D Models Tab] | [Documents Tab]
+Browse/search and click to add
+```
+
+## 7.5 Future: Unified Nav Tree
+
+Eventually, collections could appear as a top-level navigation alongside asset types:
+
+```
++----------------------------------+
+| NAVIGATION                       |
++----------------------------------+
+| 📁 3D Models                     |
+|    └─ By Volume                  |
+|    └─ By Folder                  |
+|    └─ By Tag                     |
++----------------------------------+
+| 📄 Documents                     |
+|    └─ By Volume                  |
+|    └─ By Folder                  |
+|    └─ By Tag                     |
++----------------------------------+
+| ⭐ Collections          [+ New]  |
+|    └─ 🏰 Curse of Strahd        |
+|    └─ 🐉 Dragon Encounters      |
+|    └─ 🖨️ Print Queue            |
+|    └─ 📥 Shared with Me         |
++----------------------------------+
+| 🎮 Campaigns                     |
+|    └─ Curse of Strahd (GM)      |
+|    └─ Waterdeep (Player)        |
++----------------------------------+
+```
+
+## 7.6 Technical: Collection Items Table
+
+```sql
+CREATE TABLE collection_items (
+    id TEXT PRIMARY KEY,
+    collection_id TEXT NOT NULL,
+    
+    -- Asset reference (one of these will be set)
+    model_id INTEGER,      -- References models.id (3D assets)
+    asset_id INTEGER,      -- References assets.id (PDFs/documents)
+    
+    -- Metadata
+    added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    added_by TEXT,         -- User who added it
+    sort_order INTEGER,    -- For manual ordering
+    notes TEXT,            -- User notes on this item
+    
+    -- Constraints
+    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+    FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+    CHECK (
+        (model_id IS NOT NULL AND asset_id IS NULL) OR
+        (model_id IS NULL AND asset_id IS NOT NULL)
+    )
+);
+
+-- Index for fast lookups
+CREATE INDEX idx_collection_items_collection ON collection_items(collection_id);
+CREATE INDEX idx_collection_items_model ON collection_items(model_id);
+CREATE INDEX idx_collection_items_asset ON collection_items(asset_id);
+```
+
+## 7.7 Bulk Operations on Mixed Collections
+
+| Action | Behavior |
+|--------|----------|
+| **Download All** | Creates ZIP with `/3D/` and `/Documents/` folders |
+| **Share** | Recipient sees all items they have permission for |
+| **Export List** | CSV/JSON with all items, types indicated |
+| **Print Queue** | Only 3D models sent to slicer integration |
+
