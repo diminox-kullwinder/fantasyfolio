@@ -1,0 +1,448 @@
+"""
+Collections API endpoints for FantasyFolio.
+
+Handles:
+- Collection CRUD (create, read, update, delete)
+- Collection items (add, remove, reorder)
+- Collection sharing (with users, guest links)
+"""
+
+import json
+import logging
+from uuid import uuid4
+from datetime import datetime
+from flask import Blueprint, request, jsonify
+
+from fantasyfolio.api.auth import require_auth, get_current_user
+from fantasyfolio.core.database import get_db
+
+logger = logging.getLogger(__name__)
+
+collections_bp = Blueprint('collections', __name__, url_prefix='/api/collections')
+
+
+# ==================== Collection CRUD ====================
+
+@collections_bp.route('', methods=['GET'])
+@require_auth
+def list_collections():
+    """List current user's collections.
+    
+    Query params:
+        include_shared: Include collections shared with me (default: true)
+    """
+    user = request.current_user
+    include_shared = request.args.get('include_shared', 'true').lower() == 'true'
+    
+    db = get_db()
+    
+    # Get owned collections
+    owned = db.fetchall("""
+        SELECT * FROM user_collections 
+        WHERE owner_id = ? 
+        ORDER BY updated_at DESC
+    """, (user['id'],))
+    
+    # Get shared collections
+    shared = []
+    if include_shared:
+        shared = db.fetchall("""
+            SELECT c.*, cs.permission, u.display_name as owner_name
+            FROM user_collections c
+            JOIN collection_shares cs ON c.id = cs.collection_id
+            JOIN users u ON c.owner_id = u.id
+            WHERE cs.shared_with_user_id = ?
+            ORDER BY c.updated_at DESC
+        """, (user['id'],))
+    
+    return jsonify({
+        'owned': owned,
+        'shared': shared
+    })
+
+
+@collections_bp.route('', methods=['POST'])
+@require_auth
+def create_collection():
+    """Create a new collection.
+    
+    Body:
+        name: Collection name (required)
+        description: Optional description
+        visibility: 'private' or 'shared' (default: private)
+    """
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': 'Collection name required'}), 400
+    
+    collection_id = str(uuid4())
+    now = datetime.utcnow().isoformat()
+    
+    db = get_db()
+    with db.connection() as conn:
+        conn.execute("""
+            INSERT INTO user_collections (id, owner_id, name, description, visibility, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            collection_id,
+            user['id'],
+            name,
+            data.get('description', '').strip() or None,
+            data.get('visibility', 'private'),
+            now, now
+        ))
+        conn.commit()
+    
+    collection = db.fetchone("SELECT * FROM user_collections WHERE id = ?", (collection_id,))
+    logger.info(f"Collection created: {name} by {user['email']}")
+    
+    return jsonify(collection), 201
+
+
+@collections_bp.route('/<collection_id>', methods=['GET'])
+@require_auth
+def get_collection(collection_id):
+    """Get collection details with items."""
+    user = request.current_user
+    db = get_db()
+    
+    # Get collection (check ownership or share access)
+    collection = db.fetchone("""
+        SELECT c.*, u.display_name as owner_name
+        FROM user_collections c
+        JOIN users u ON c.owner_id = u.id
+        WHERE c.id = ?
+    """, (collection_id,))
+    
+    if not collection:
+        return jsonify({'error': 'Collection not found'}), 404
+    
+    # Check access
+    if collection['owner_id'] != user['id']:
+        share = db.fetchone("""
+            SELECT * FROM collection_shares 
+            WHERE collection_id = ? AND shared_with_user_id = ?
+        """, (collection_id, user['id']))
+        if not share:
+            return jsonify({'error': 'Access denied'}), 403
+        collection = dict(collection)
+        collection['permission'] = share['permission']
+    
+    # Get items with asset details
+    items = db.fetchall("""
+        SELECT ci.*, 
+            CASE 
+                WHEN ci.asset_type = 'model' THEN m.filename
+                WHEN ci.asset_type = 'pdf' THEN a.filename
+            END as filename,
+            CASE 
+                WHEN ci.asset_type = 'model' THEN m.format
+                WHEN ci.asset_type = 'pdf' THEN 'pdf'
+            END as format,
+            CASE 
+                WHEN ci.asset_type = 'model' THEN m.has_thumbnail
+                WHEN ci.asset_type = 'pdf' THEN a.has_thumbnail
+            END as has_thumbnail
+        FROM collection_items ci
+        LEFT JOIN models m ON ci.asset_type = 'model' AND ci.asset_id = m.id
+        LEFT JOIN assets a ON ci.asset_type = 'pdf' AND ci.asset_id = a.id
+        WHERE ci.collection_id = ?
+        ORDER BY ci.sort_order, ci.added_at
+    """, (collection_id,))
+    
+    result = dict(collection)
+    result['items'] = items
+    
+    return jsonify(result)
+
+
+@collections_bp.route('/<collection_id>', methods=['PATCH'])
+@require_auth
+def update_collection(collection_id):
+    """Update collection details.
+    
+    Body:
+        name: New name
+        description: New description
+        visibility: New visibility
+    """
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    db = get_db()
+    
+    # Check ownership
+    collection = db.fetchone("SELECT * FROM user_collections WHERE id = ? AND owner_id = ?", 
+                            (collection_id, user['id']))
+    if not collection:
+        return jsonify({'error': 'Collection not found or access denied'}), 404
+    
+    # Build update
+    updates = {}
+    if 'name' in data:
+        updates['name'] = data['name'].strip()
+    if 'description' in data:
+        updates['description'] = data['description'].strip() or None
+    if 'visibility' in data and data['visibility'] in ('private', 'shared'):
+        updates['visibility'] = data['visibility']
+    
+    if not updates:
+        return jsonify({'error': 'No valid updates provided'}), 400
+    
+    updates['updated_at'] = datetime.utcnow().isoformat()
+    
+    set_clause = ', '.join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [collection_id]
+    
+    with db.connection() as conn:
+        conn.execute(f"UPDATE user_collections SET {set_clause} WHERE id = ?", values)
+        conn.commit()
+    
+    return get_collection(collection_id)
+
+
+@collections_bp.route('/<collection_id>', methods=['DELETE'])
+@require_auth
+def delete_collection(collection_id):
+    """Delete a collection."""
+    user = request.current_user
+    db = get_db()
+    
+    # Check ownership
+    collection = db.fetchone("SELECT * FROM user_collections WHERE id = ? AND owner_id = ?",
+                            (collection_id, user['id']))
+    if not collection:
+        return jsonify({'error': 'Collection not found or access denied'}), 404
+    
+    with db.connection() as conn:
+        # Items and shares cascade delete
+        conn.execute("DELETE FROM user_collections WHERE id = ?", (collection_id,))
+        conn.commit()
+    
+    logger.info(f"Collection deleted: {collection['name']} by {user['email']}")
+    return jsonify({'message': 'Collection deleted'})
+
+
+# ==================== Collection Items ====================
+
+@collections_bp.route('/<collection_id>/items', methods=['POST'])
+@require_auth
+def add_items(collection_id):
+    """Add items to a collection.
+    
+    Body:
+        items: Array of {asset_type: 'model'|'pdf', asset_id: int}
+        
+    Or single item:
+        asset_type: 'model' or 'pdf'
+        asset_id: int
+    """
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    db = get_db()
+    
+    # Check ownership or edit permission
+    collection = db.fetchone("SELECT * FROM user_collections WHERE id = ?", (collection_id,))
+    if not collection:
+        return jsonify({'error': 'Collection not found'}), 404
+    
+    can_edit = collection['owner_id'] == user['id']
+    if not can_edit:
+        share = db.fetchone("""
+            SELECT * FROM collection_shares 
+            WHERE collection_id = ? AND shared_with_user_id = ? AND permission = 'edit'
+        """, (collection_id, user['id']))
+        can_edit = share is not None
+    
+    if not can_edit:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Handle single item or array
+    items = data.get('items', [])
+    if not items and 'asset_type' in data:
+        items = [{'asset_type': data['asset_type'], 'asset_id': data['asset_id']}]
+    
+    if not items:
+        return jsonify({'error': 'No items provided'}), 400
+    
+    now = datetime.utcnow().isoformat()
+    added = 0
+    
+    with db.connection() as conn:
+        for item in items:
+            asset_type = item.get('asset_type')
+            asset_id = item.get('asset_id')
+            
+            if asset_type not in ('model', 'pdf') or not asset_id:
+                continue
+            
+            try:
+                item_id = str(uuid4())
+                conn.execute("""
+                    INSERT INTO collection_items (id, collection_id, asset_type, asset_id, added_at, added_by)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (item_id, collection_id, asset_type, asset_id, now, user['id']))
+                added += 1
+            except Exception as e:
+                # Likely duplicate, skip
+                if 'UNIQUE constraint' not in str(e):
+                    logger.error(f"Error adding item: {e}")
+        
+        # Update item count
+        conn.execute("""
+            UPDATE user_collections SET item_count = (
+                SELECT COUNT(*) FROM collection_items WHERE collection_id = ?
+            ), updated_at = ? WHERE id = ?
+        """, (collection_id, now, collection_id))
+        conn.commit()
+    
+    return jsonify({'added': added})
+
+
+@collections_bp.route('/<collection_id>/items/<item_id>', methods=['DELETE'])
+@require_auth
+def remove_item(collection_id, item_id):
+    """Remove an item from a collection."""
+    user = request.current_user
+    db = get_db()
+    
+    # Check ownership or edit permission
+    collection = db.fetchone("SELECT * FROM user_collections WHERE id = ?", (collection_id,))
+    if not collection:
+        return jsonify({'error': 'Collection not found'}), 404
+    
+    can_edit = collection['owner_id'] == user['id']
+    if not can_edit:
+        share = db.fetchone("""
+            SELECT * FROM collection_shares 
+            WHERE collection_id = ? AND shared_with_user_id = ? AND permission = 'edit'
+        """, (collection_id, user['id']))
+        can_edit = share is not None
+    
+    if not can_edit:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    now = datetime.utcnow().isoformat()
+    
+    with db.connection() as conn:
+        conn.execute("DELETE FROM collection_items WHERE id = ? AND collection_id = ?", 
+                    (item_id, collection_id))
+        conn.execute("""
+            UPDATE user_collections SET item_count = (
+                SELECT COUNT(*) FROM collection_items WHERE collection_id = ?
+            ), updated_at = ? WHERE id = ?
+        """, (collection_id, now, collection_id))
+        conn.commit()
+    
+    return jsonify({'message': 'Item removed'})
+
+
+# ==================== Quick Add (by asset ID) ====================
+
+@collections_bp.route('/quick-add', methods=['POST'])
+@require_auth
+def quick_add():
+    """Quick add an asset to a collection (or create new collection).
+    
+    Body:
+        asset_type: 'model' or 'pdf'
+        asset_id: int
+        collection_id: existing collection ID (optional)
+        new_collection_name: create new collection with this name (optional)
+    """
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    db = get_db()
+    
+    asset_type = data.get('asset_type')
+    asset_id = data.get('asset_id')
+    
+    if asset_type not in ('model', 'pdf') or not asset_id:
+        return jsonify({'error': 'asset_type and asset_id required'}), 400
+    
+    collection_id = data.get('collection_id')
+    new_name = data.get('new_collection_name', '').strip()
+    
+    # Create new collection if requested
+    if new_name and not collection_id:
+        collection_id = str(uuid4())
+        now = datetime.utcnow().isoformat()
+        
+        with db.connection() as conn:
+            conn.execute("""
+                INSERT INTO user_collections (id, owner_id, name, visibility, created_at, updated_at)
+                VALUES (?, ?, ?, 'private', ?, ?)
+            """, (collection_id, user['id'], new_name, now, now))
+            conn.commit()
+    
+    if not collection_id:
+        return jsonify({'error': 'collection_id or new_collection_name required'}), 400
+    
+    # Verify collection access
+    collection = db.fetchone("SELECT * FROM user_collections WHERE id = ? AND owner_id = ?",
+                            (collection_id, user['id']))
+    if not collection:
+        return jsonify({'error': 'Collection not found'}), 404
+    
+    # Add item
+    now = datetime.utcnow().isoformat()
+    item_id = str(uuid4())
+    
+    try:
+        with db.connection() as conn:
+            conn.execute("""
+                INSERT INTO collection_items (id, collection_id, asset_type, asset_id, added_at, added_by)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (item_id, collection_id, asset_type, asset_id, now, user['id']))
+            conn.execute("""
+                UPDATE user_collections SET item_count = item_count + 1, updated_at = ? WHERE id = ?
+            """, (now, collection_id))
+            conn.commit()
+    except Exception as e:
+        if 'UNIQUE constraint' in str(e):
+            return jsonify({'error': 'Item already in collection'}), 409
+        raise
+    
+    return jsonify({
+        'collection_id': collection_id,
+        'collection_name': collection['name'] if collection else new_name,
+        'item_id': item_id
+    })
+
+
+# ==================== User's Collections for an Asset ====================
+
+@collections_bp.route('/for-asset', methods=['GET'])
+@require_auth
+def collections_for_asset():
+    """Get which of user's collections contain a specific asset.
+    
+    Query params:
+        asset_type: 'model' or 'pdf'
+        asset_id: int
+    """
+    user = request.current_user
+    asset_type = request.args.get('asset_type')
+    asset_id = request.args.get('asset_id')
+    
+    if not asset_type or not asset_id:
+        return jsonify({'error': 'asset_type and asset_id required'}), 400
+    
+    db = get_db()
+    
+    # Get all user's collections with flag if asset is in it
+    collections = db.fetchall("""
+        SELECT c.id, c.name, c.item_count,
+            EXISTS(
+                SELECT 1 FROM collection_items ci 
+                WHERE ci.collection_id = c.id 
+                AND ci.asset_type = ? AND ci.asset_id = ?
+            ) as contains_asset
+        FROM user_collections c
+        WHERE c.owner_id = ?
+        ORDER BY c.name
+    """, (asset_type, asset_id, user['id']))
+    
+    return jsonify({'collections': collections})

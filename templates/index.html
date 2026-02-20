@@ -3582,6 +3582,147 @@
       color: var(--text-secondary);
       cursor: pointer;
     }
+    
+    /* ==================== Collections Modal ==================== */
+    
+    .collections-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+    }
+    
+    .collections-modal.show {
+      display: flex;
+    }
+    
+    .collections-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 64px rgba(0,0,0,0.4);
+    }
+    
+    .collections-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .collections-header h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    
+    .collections-close {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    
+    .collections-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+    
+    .collection-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.2s;
+    }
+    
+    .collection-item:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    .collection-item.selected {
+      background: rgba(77, 171, 247, 0.2);
+      border: 1px solid var(--accent);
+    }
+    
+    .collection-item .icon {
+      font-size: 1.5rem;
+    }
+    
+    .collection-item .info {
+      flex: 1;
+    }
+    
+    .collection-item .name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    
+    .collection-item .count {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .collection-item .check {
+      color: var(--accent);
+      font-size: 1.2rem;
+    }
+    
+    .collections-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+    
+    .collections-footer input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+    }
+    
+    .collections-footer button {
+      padding: 10px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .collections-footer button:hover {
+      background: var(--accent-hover);
+    }
+    
+    .collections-empty {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+    }
+    
+    .collections-loading {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+    }
   </style>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"></head>
 <body>
@@ -4482,11 +4623,33 @@
       <span>⬇️</span> Download
     </div>
     <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="contextMenuAddToCollection()" id="ctxAddToCollection" style="display:none">
+      <span>📁</span> Add to Collection
+    </div>
     <div class="context-menu-item" onclick="contextMenuReindexAsset()">
       <span>🔄</span> Re-index Asset
     </div>
     <div class="context-menu-item" onclick="contextMenuRegenThumb()">
       <span>🖼️</span> Regenerate Thumbnail
+    </div>
+  </div>
+  
+  <!-- Collections Modal -->
+  <div class="collections-modal" id="collectionsModal" onclick="if(event.target===this)closeCollectionsModal()">
+    <div class="collections-box">
+      <div class="collections-header">
+        <h2 id="collectionsTitle">My Collections</h2>
+        <button class="collections-close" onclick="closeCollectionsModal()">✕</button>
+      </div>
+      
+      <div class="collections-content" id="collectionsContent">
+        <!-- Dynamic content -->
+      </div>
+      
+      <div class="collections-footer" id="collectionsFooter">
+        <input type="text" id="newCollectionName" placeholder="New collection name...">
+        <button onclick="createCollection()">Create</button>
+      </div>
     </div>
   </div>
 
@@ -4699,6 +4862,9 @@
         loginBtn.style.display = 'block';
         userMenu.style.display = 'none';
       }
+      
+      // Update context menu
+      updateContextMenuAuth();
     }
     
     function updateOAuthButtons() {
@@ -4860,6 +5026,236 @@
         options.headers['Authorization'] = `Bearer ${accessToken}`;
       }
       return fetch(url, options);
+    }
+    
+    // ==================== Collections ====================
+    
+    let collectionsCache = null;
+    let addToCollectionAsset = null;  // {type, id} of asset being added
+    
+    function openCollections() {
+      document.getElementById('userDropdown').classList.remove('show');
+      document.getElementById('collectionsTitle').textContent = 'My Collections';
+      document.getElementById('collectionsFooter').style.display = 'flex';
+      addToCollectionAsset = null;
+      loadCollections();
+      document.getElementById('collectionsModal').classList.add('show');
+    }
+    
+    function closeCollectionsModal() {
+      document.getElementById('collectionsModal').classList.remove('show');
+      addToCollectionAsset = null;
+    }
+    
+    async function loadCollections() {
+      const content = document.getElementById('collectionsContent');
+      content.innerHTML = '<div class="collections-loading">Loading...</div>';
+      
+      try {
+        const response = await authFetch('/api/collections');
+        if (!response.ok) throw new Error('Failed to load');
+        
+        const data = await response.json();
+        collectionsCache = data.owned || [];
+        
+        renderCollections();
+      } catch (err) {
+        content.innerHTML = '<div class="collections-empty">Failed to load collections</div>';
+      }
+    }
+    
+    function renderCollections() {
+      const content = document.getElementById('collectionsContent');
+      
+      if (!collectionsCache || collectionsCache.length === 0) {
+        content.innerHTML = '<div class="collections-empty">No collections yet.<br>Create one below!</div>';
+        return;
+      }
+      
+      let html = '';
+      for (const col of collectionsCache) {
+        const isInCollection = col.contains_asset;
+        html += `
+          <div class="collection-item ${isInCollection ? 'selected' : ''}" 
+               onclick="handleCollectionClick('${col.id}', '${col.name.replace(/'/g, "\\'")}')">
+            <span class="icon">📁</span>
+            <div class="info">
+              <div class="name">${escapeHtml(col.name)}</div>
+              <div class="count">${col.item_count || 0} items</div>
+            </div>
+            ${isInCollection ? '<span class="check">✓</span>' : ''}
+          </div>
+        `;
+      }
+      
+      content.innerHTML = html;
+    }
+    
+    function handleCollectionClick(collectionId, collectionName) {
+      if (addToCollectionAsset) {
+        // Add mode - add asset to this collection
+        addAssetToCollection(collectionId, collectionName);
+      } else {
+        // Browse mode - view collection contents
+        viewCollection(collectionId);
+      }
+    }
+    
+    async function addAssetToCollection(collectionId, collectionName) {
+      if (!addToCollectionAsset) return;
+      
+      try {
+        const response = await authFetch('/api/collections/quick-add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset_type: addToCollectionAsset.type,
+            asset_id: addToCollectionAsset.id,
+            collection_id: collectionId
+          })
+        });
+        
+        if (response.ok) {
+          closeCollectionsModal();
+          showToast(`Added to "${collectionName}"`);
+        } else {
+          const data = await response.json();
+          if (data.error === 'Item already in collection') {
+            showToast('Already in collection');
+          } else {
+            showToast('Failed to add');
+          }
+        }
+      } catch (err) {
+        showToast('Error adding to collection');
+      }
+    }
+    
+    async function createCollection() {
+      const input = document.getElementById('newCollectionName');
+      const name = input.value.trim();
+      
+      if (!name) {
+        input.focus();
+        return;
+      }
+      
+      try {
+        const body = { name };
+        
+        // If adding an asset, include it
+        if (addToCollectionAsset) {
+          // Use quick-add with new collection name
+          const response = await authFetch('/api/collections/quick-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              asset_type: addToCollectionAsset.type,
+              asset_id: addToCollectionAsset.id,
+              new_collection_name: name
+            })
+          });
+          
+          if (response.ok) {
+            input.value = '';
+            closeCollectionsModal();
+            showToast(`Created "${name}" and added asset`);
+          }
+        } else {
+          // Just create collection
+          const response = await authFetch('/api/collections', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          
+          if (response.ok) {
+            input.value = '';
+            loadCollections();
+            showToast(`Created "${name}"`);
+          }
+        }
+      } catch (err) {
+        showToast('Error creating collection');
+      }
+    }
+    
+    function viewCollection(collectionId) {
+      // TODO: Show collection contents in a panel
+      showToast('Collection view coming soon!');
+    }
+    
+    function contextMenuAddToCollection() {
+      if (!currentUser) {
+        openLoginModal();
+        return;
+      }
+      
+      addToCollectionAsset = {
+        type: contextMenuAssetType,
+        id: contextMenuAssetId
+      };
+      
+      document.getElementById('collectionsTitle').textContent = 'Add to Collection';
+      document.getElementById('collectionsFooter').style.display = 'flex';
+      
+      // Load collections and check which ones contain this asset
+      loadCollectionsForAsset();
+      document.getElementById('collectionsModal').classList.add('show');
+    }
+    
+    async function loadCollectionsForAsset() {
+      const content = document.getElementById('collectionsContent');
+      content.innerHTML = '<div class="collections-loading">Loading...</div>';
+      
+      try {
+        const response = await authFetch(
+          `/api/collections/for-asset?asset_type=${addToCollectionAsset.type}&asset_id=${addToCollectionAsset.id}`
+        );
+        if (!response.ok) throw new Error('Failed to load');
+        
+        const data = await response.json();
+        collectionsCache = data.collections || [];
+        
+        renderCollections();
+      } catch (err) {
+        content.innerHTML = '<div class="collections-empty">Failed to load collections</div>';
+      }
+    }
+    
+    // Simple toast notification
+    function showToast(message) {
+      // Remove existing toast
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        padding: 12px 24px;
+        border-radius: 8px;
+        color: var(--text-primary);
+        z-index: 9999;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      `;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 3000);
+    }
+    
+    // Show "Add to Collection" in context menu when logged in
+    function updateContextMenuAuth() {
+      const addBtn = document.getElementById('ctxAddToCollection');
+      if (addBtn) {
+        addBtn.style.display = currentUser ? 'flex' : 'none';
+      }
     }
     
     // Initialize
