@@ -6105,6 +6105,29 @@
         if (contentGrid) contentGrid.classList.add('hidden');
         if (contentList) contentList.classList.remove('hidden');
       }
+      
+      // After toggling view, check if we need to load more content
+      // (handles case where items don't fill viewport)
+      setTimeout(checkLoadMore, 100);
+    }
+    
+    function checkLoadMore() {
+      const mainScroll = document.querySelector('.main-scroll');
+      if (!mainScroll) return;
+      
+      const scrollHeight = mainScroll.scrollHeight;
+      const clientHeight = mainScroll.clientHeight;
+      
+      // If content doesn't fill viewport (or is close), load more
+      if (scrollHeight - clientHeight < 300) {
+        if (contentType === '3d' && modelsHasMore && !modelsLoading) {
+          console.log('Auto-loading more models (viewport not full)');
+          load3dModels(true);
+        } else if (contentType === 'pdf' && assetsHasMore && !assetsLoading) {
+          console.log('Auto-loading more PDFs (viewport not full)');
+          loadAssets(true);
+        }
+      }
     }
     
     function formatSize(bytes) {
