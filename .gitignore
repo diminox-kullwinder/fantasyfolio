@@ -49,3 +49,9 @@ config/local.py
 # Snapshot database files (large binaries)
 data/snapshots/*.db
 data/snapshots/*.json
+
+# Temp files
+*.tmp
+schema_*.sql
+create_*.py
+data/schema_*.sql
