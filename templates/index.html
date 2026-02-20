@@ -3296,6 +3296,292 @@
     .page-preview-download:hover {
       background: var(--accent-hover);
     }
+    
+    /* ==================== Auth & Login UI ==================== */
+    
+    .user-menu {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .user-avatar:hover {
+      transform: scale(1.1);
+    }
+    
+    .user-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-width: 200px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 2000;
+    }
+    
+    .user-dropdown.show {
+      display: block;
+    }
+    
+    .user-dropdown-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .user-dropdown-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .user-dropdown-email {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .user-dropdown-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+      transition: background 0.2s;
+    }
+    
+    .user-dropdown-item:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    .user-dropdown-item.danger {
+      color: #ff6b6b;
+    }
+    
+    .login-btn {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    
+    .login-btn:hover {
+      background: var(--accent-hover);
+    }
+    
+    /* Login Modal */
+    .login-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+    }
+    
+    .login-modal.show {
+      display: flex;
+    }
+    
+    .login-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 400px;
+      padding: 32px;
+      box-shadow: 0 16px 64px rgba(0,0,0,0.4);
+    }
+    
+    .login-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+    
+    .login-subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+    
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .login-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .login-field label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .login-field input {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+    
+    .login-field input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .login-submit {
+      padding: 12px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .login-submit:hover {
+      background: var(--accent-hover);
+    }
+    
+    .login-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-secondary);
+      margin: 16px 0;
+    }
+    
+    .login-divider::before,
+    .login-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    
+    .oauth-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .oauth-btn {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    
+    .oauth-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--accent);
+    }
+    
+    .oauth-btn.discord {
+      background: #5865F2;
+      border-color: #5865F2;
+    }
+    
+    .oauth-btn.discord:hover {
+      background: #4752c4;
+    }
+    
+    .oauth-btn.google {
+      background: white;
+      color: #333;
+    }
+    
+    .oauth-btn.google:hover {
+      background: #f0f0f0;
+    }
+    
+    .oauth-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .login-toggle {
+      text-align: center;
+      margin-top: 16px;
+      color: var(--text-secondary);
+    }
+    
+    .login-toggle a {
+      color: var(--accent);
+      cursor: pointer;
+    }
+    
+    .login-toggle a:hover {
+      text-decoration: underline;
+    }
+    
+    .login-error {
+      padding: 10px;
+      background: rgba(255,107,107,0.1);
+      border: 1px solid #ff6b6b;
+      border-radius: 6px;
+      color: #ff6b6b;
+      font-size: 0.9rem;
+      display: none;
+    }
+    
+    .login-error.show {
+      display: block;
+    }
+    
+    .login-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
   </style>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"></head>
 <body>
@@ -3313,7 +3599,73 @@
       <div class="stats" id="stats">Loading...</div>
       <button class="settings-btn" onclick="openUpload()" title="Upload files" id="uploadBtn">⬆️</button>
       <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️<span class="trash-badge" id="trashBadge" style="display:none">0</span></button>
+      
+      <!-- User Menu (shown when logged in) -->
+      <div class="user-menu" id="userMenu" style="display:none">
+        <div class="user-avatar" id="userAvatar" onclick="toggleUserDropdown()">?</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dropdown-header">
+            <div class="user-dropdown-name" id="userDisplayName">User</div>
+            <div class="user-dropdown-email" id="userEmail">user@example.com</div>
+          </div>
+          <div class="user-dropdown-item" onclick="openUserSettings()">
+            <span>⚙️</span> Settings
+          </div>
+          <div class="user-dropdown-item" onclick="openCollections()">
+            <span>📁</span> My Collections
+          </div>
+          <div class="user-dropdown-item danger" onclick="logout()">
+            <span>🚪</span> Sign Out
+          </div>
+        </div>
+      </div>
+      
+      <!-- Login Button (shown when logged out) -->
+      <button class="login-btn" id="loginBtn" onclick="openLoginModal()">Sign In</button>
     </header>
+    
+    <!-- Login Modal -->
+    <div class="login-modal" id="loginModal" onclick="if(event.target===this)closeLoginModal()">
+      <div class="login-box">
+        <div class="login-title">Welcome to FantasyFolio</div>
+        <div class="login-subtitle" id="loginSubtitle">Sign in to access your collections</div>
+        
+        <div class="login-error" id="loginError"></div>
+        
+        <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+          <div class="login-field">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" required placeholder="you@example.com">
+          </div>
+          <div class="login-field">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" required placeholder="••••••••">
+          </div>
+          <div class="login-field" id="loginNameField" style="display:none">
+            <label for="loginDisplayName">Display Name</label>
+            <input type="text" id="loginDisplayName" placeholder="Your name">
+          </div>
+          <button type="submit" class="login-submit" id="loginSubmitBtn">Sign In</button>
+        </form>
+        
+        <div class="login-divider">or continue with</div>
+        
+        <div class="oauth-buttons" id="oauthButtons">
+          <button class="oauth-btn discord" id="discordOAuthBtn" onclick="startOAuth('discord')" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+            Discord
+          </button>
+          <button class="oauth-btn google" id="googleOAuthBtn" onclick="startOAuth('google')" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Google
+          </button>
+        </div>
+        
+        <div class="login-toggle" id="loginToggle">
+          Don't have an account? <a onclick="toggleLoginMode()">Sign up</a>
+        </div>
+      </div>
+    </div>
     
     <div class="advanced-search-panel" id="advancedSearchPanel">
       <button class="adv-search-close" onclick="toggleAdvancedSearch()" title="Close">✕</button>
@@ -4221,8 +4573,300 @@
     let contextMenuPath = null;
     let contextMenuAssetId = null;
     
+    // ==================== Auth State ====================
+    let currentUser = null;
+    let accessToken = null;
+    let refreshToken = null;
+    let authProviders = { email: true, discord: false, google: false, apple: false };
+    let isLoginMode = true;  // true = login, false = register
+    
+    // ==================== Auth Functions ====================
+    
+    function initAuth() {
+      // Load tokens from localStorage
+      accessToken = localStorage.getItem('ff_access_token');
+      refreshToken = localStorage.getItem('ff_refresh_token');
+      
+      // Check available providers
+      fetch('/api/auth/providers')
+        .then(r => r.json())
+        .then(data => {
+          authProviders = data.providers || {};
+          updateOAuthButtons();
+        })
+        .catch(() => {});
+      
+      // If we have tokens, validate them
+      if (accessToken) {
+        validateAndLoadUser();
+      } else {
+        updateAuthUI();
+      }
+      
+      // Check for OAuth callback (tokens in URL fragment)
+      checkOAuthCallback();
+    }
+    
+    function checkOAuthCallback() {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const newAccessToken = params.get('access_token');
+        const newRefreshToken = params.get('refresh_token');
+        
+        if (newAccessToken) {
+          accessToken = newAccessToken;
+          refreshToken = newRefreshToken;
+          localStorage.setItem('ff_access_token', accessToken);
+          if (refreshToken) localStorage.setItem('ff_refresh_token', refreshToken);
+          
+          // Clear the hash
+          history.replaceState(null, '', window.location.pathname);
+          
+          validateAndLoadUser();
+        }
+      }
+    }
+    
+    async function validateAndLoadUser() {
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        
+        if (response.ok) {
+          currentUser = await response.json();
+          updateAuthUI();
+        } else if (response.status === 401 && refreshToken) {
+          // Try to refresh
+          await refreshAccessToken();
+        } else {
+          clearAuth();
+        }
+      } catch (err) {
+        console.error('Auth validation failed:', err);
+        clearAuth();
+      }
+    }
+    
+    async function refreshAccessToken() {
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          accessToken = data.access_token;
+          localStorage.setItem('ff_access_token', accessToken);
+          await validateAndLoadUser();
+        } else {
+          clearAuth();
+        }
+      } catch (err) {
+        clearAuth();
+      }
+    }
+    
+    function clearAuth() {
+      currentUser = null;
+      accessToken = null;
+      refreshToken = null;
+      localStorage.removeItem('ff_access_token');
+      localStorage.removeItem('ff_refresh_token');
+      updateAuthUI();
+    }
+    
+    function updateAuthUI() {
+      const loginBtn = document.getElementById('loginBtn');
+      const userMenu = document.getElementById('userMenu');
+      
+      if (currentUser) {
+        loginBtn.style.display = 'none';
+        userMenu.style.display = 'flex';
+        
+        // Update user info
+        document.getElementById('userDisplayName').textContent = currentUser.display_name || 'User';
+        document.getElementById('userEmail').textContent = currentUser.email;
+        
+        // Avatar - first letter of display name
+        const avatar = document.getElementById('userAvatar');
+        const initial = (currentUser.display_name || currentUser.email || '?')[0].toUpperCase();
+        avatar.textContent = initial;
+      } else {
+        loginBtn.style.display = 'block';
+        userMenu.style.display = 'none';
+      }
+    }
+    
+    function updateOAuthButtons() {
+      const discordBtn = document.getElementById('discordOAuthBtn');
+      const googleBtn = document.getElementById('googleOAuthBtn');
+      
+      if (authProviders.discord) {
+        discordBtn.disabled = false;
+      }
+      if (authProviders.google) {
+        googleBtn.disabled = false;
+      }
+    }
+    
+    function toggleUserDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.classList.toggle('show');
+      
+      // Close on click outside
+      setTimeout(() => {
+        document.addEventListener('click', function closeDropdown(e) {
+          if (!e.target.closest('.user-menu')) {
+            dropdown.classList.remove('show');
+            document.removeEventListener('click', closeDropdown);
+          }
+        });
+      }, 0);
+    }
+    
+    function openLoginModal() {
+      document.getElementById('loginModal').classList.add('show');
+      document.getElementById('loginEmail').focus();
+      resetLoginForm();
+    }
+    
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.remove('show');
+      resetLoginForm();
+    }
+    
+    function resetLoginForm() {
+      document.getElementById('loginForm').reset();
+      document.getElementById('loginError').classList.remove('show');
+      isLoginMode = true;
+      updateLoginMode();
+    }
+    
+    function toggleLoginMode() {
+      isLoginMode = !isLoginMode;
+      updateLoginMode();
+    }
+    
+    function updateLoginMode() {
+      const subtitle = document.getElementById('loginSubtitle');
+      const submitBtn = document.getElementById('loginSubmitBtn');
+      const toggle = document.getElementById('loginToggle');
+      const nameField = document.getElementById('loginNameField');
+      
+      if (isLoginMode) {
+        subtitle.textContent = 'Sign in to access your collections';
+        submitBtn.textContent = 'Sign In';
+        toggle.innerHTML = "Don't have an account? <a onclick=\"toggleLoginMode()\">Sign up</a>";
+        nameField.style.display = 'none';
+      } else {
+        subtitle.textContent = 'Create an account to save collections';
+        submitBtn.textContent = 'Create Account';
+        toggle.innerHTML = 'Already have an account? <a onclick="toggleLoginMode()">Sign in</a>';
+        nameField.style.display = 'block';
+      }
+    }
+    
+    async function handleLogin(event) {
+      event.preventDefault();
+      
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const displayName = document.getElementById('loginDisplayName').value;
+      const errorEl = document.getElementById('loginError');
+      const submitBtn = document.getElementById('loginSubmitBtn');
+      
+      submitBtn.disabled = true;
+      errorEl.classList.remove('show');
+      
+      try {
+        const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+        const body = isLoginMode 
+          ? { email, password }
+          : { email, password, display_name: displayName || undefined };
+        
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          accessToken = data.access_token;
+          refreshToken = data.refresh_token;
+          currentUser = data.user;
+          
+          localStorage.setItem('ff_access_token', accessToken);
+          localStorage.setItem('ff_refresh_token', refreshToken);
+          
+          closeLoginModal();
+          updateAuthUI();
+        } else {
+          errorEl.textContent = data.error || 'Authentication failed';
+          errorEl.classList.add('show');
+        }
+      } catch (err) {
+        errorEl.textContent = 'Network error. Please try again.';
+        errorEl.classList.add('show');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+    
+    function startOAuth(provider) {
+      // Redirect to OAuth flow
+      window.location.href = `/api/auth/oauth/${provider}`;
+    }
+    
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+      } catch (err) {
+        // Ignore errors - clear local state anyway
+      }
+      
+      clearAuth();
+      document.getElementById('userDropdown').classList.remove('show');
+    }
+    
+    function openUserSettings() {
+      // TODO: Open user settings modal
+      alert('User settings coming soon!');
+      document.getElementById('userDropdown').classList.remove('show');
+    }
+    
+    function openCollections() {
+      // TODO: Open collections view
+      alert('Collections coming soon!');
+      document.getElementById('userDropdown').classList.remove('show');
+    }
+    
+    // Helper: Add auth header to fetch requests
+    function authFetch(url, options = {}) {
+      if (accessToken) {
+        options.headers = options.headers || {};
+        options.headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      return fetch(url, options);
+    }
+    
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
+      // Initialize authentication
+      initAuth();
+      
       // Close context menus on click outside
       document.addEventListener('click', () => {
         document.getElementById('folderContextMenu').style.display = 'none';
