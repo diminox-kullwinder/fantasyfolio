@@ -339,3 +339,55 @@ docker exec fantasyfolio sqlite3 /app/data/fantasyfolio.db "SELECT..."
 # Restart container
 docker restart fantasyfolio
 ```
+
+---
+
+# 🏁 QUICK RELEASE CHECKLIST
+
+**Use this after testing is complete and you're ready to publish a release.**
+
+Copy and paste this section when wrapping up:
+
+```
+## Release: v_._._
+
+### Pre-Release
+- [ ] All bugs fixed and verified
+- [ ] Version bumped in `fantasyfolio/__init__.py`
+- [ ] CHANGELOG.md updated
+- [ ] All code committed and pushed to master
+
+### Schema Check
+- [ ] `data/schema.sql` matches current code expectations
+- [ ] Migration script created (if needed for existing DBs)
+
+### Build & Push
+- [ ] Container built: `docker build -t ghcr.io/diminox-kullwinder/fantasyfolio:X.X.X -t ghcr.io/diminox-kullwinder/fantasyfolio:latest .`
+- [ ] Pushed version tag: `docker push ghcr.io/diminox-kullwinder/fantasyfolio:X.X.X`
+- [ ] Pushed latest tag: `docker push ghcr.io/diminox-kullwinder/fantasyfolio:latest`
+
+### Fresh Pull Test (Mac)
+- [ ] Removed local images: `docker rmi ghcr.io/diminox-kullwinder/fantasyfolio:X.X.X`
+- [ ] Pulled fresh: `docker pull ghcr.io/diminox-kullwinder/fantasyfolio:X.X.X`
+- [ ] Started with clean data directory
+- [ ] Container starts, all 3 services running
+- [ ] Basic smoke test passed (add location, index, view assets)
+
+### Windows Deployment Commands Ready
+```powershell
+docker rm -f fantasyfolio
+docker rmi ghcr.io/diminox-kullwinder/fantasyfolio:OLD
+docker pull ghcr.io/diminox-kullwinder/fantasyfolio:X.X.X
+docker run -d --name fantasyfolio -p 8888:8888 -v C:\fantasyfolio\data:/app/data [VOLUMES] ghcr.io/diminox-kullwinder/fantasyfolio:X.X.X
+docker logs fantasyfolio
+```
+
+### Documentation
+- [ ] Release notes written
+- [ ] Any new features documented
+- [ ] Memory files updated (MEMORY.md, memory/YYYY-MM-DD.md)
+
+### Ready for Windows Test
+- [ ] All above complete
+- [ ] Matthew notified with version number and commands
+```
