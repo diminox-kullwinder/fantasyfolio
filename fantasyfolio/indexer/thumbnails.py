@@ -39,13 +39,22 @@ def render_with_stl_thumb(data: bytes, format: str, output_path: str, size: int 
         if shutil.which('f3d') and shutil.which('xvfb-run'):
             try:
                 # Camera direction: front view, slightly from above (good for miniatures)
-                result = subprocess.run(
-                    ['xvfb-run', '-a', 'f3d', 
+                # Build f3d command - add grey color for formats without textures
+                f3d_cmd = ['xvfb-run', '-a', 'f3d', 
                      '--output', output_path, 
                      '--resolution', f'{size},{size}', 
                      '--up', '+Z',
-                     '--camera-direction=0,-1,-0.3',  # Front view, slight downward angle
-                     model_path],
+                     '--camera-direction=0,-1,-0.3']  # Front view, slight downward angle
+                
+                # Set consistent grey for geometry-only formats (STL, OBJ, 3MF)
+                # Leave GLB/GLTF alone so textures render correctly
+                if format.lower() in ('stl', 'obj', '3mf'):
+                    f3d_cmd.extend(['--color', '0.7,0.7,0.7'])
+                
+                f3d_cmd.append(model_path)
+                
+                result = subprocess.run(
+                    f3d_cmd,
                     capture_output=True,
                     timeout=60
                 )
