@@ -10,6 +10,7 @@
 7. [Cross-Asset Collections](#7-cross-asset-collections)
 8. [Design Decisions](#8-design-decisions-resolved)
 9. [Glossary](#9-glossary)
+10. [Security Best Practices](#10-security-best-practices)
 
 ---
 
@@ -964,4 +965,298 @@ CREATE INDEX idx_collection_items_asset ON collection_items(asset_id);
 | **Asset** | Any indexed item - 3D model or PDF document |
 | **Volume** | A mounted storage location (disk, NAS path) |
 | **Guest Link** | Time-limited URL for sharing with non-users |
+
+
+---
+
+# 10. Security Best Practices
+
+## 10.1 Authentication Security
+
+### Password Requirements
+| Requirement | Value | Rationale |
+|-------------|-------|-----------|
+| Minimum length | 12 characters | NIST SP 800-63B recommendation |
+| Complexity | At least 1 uppercase, 1 lowercase, 1 number | Balance security/usability |
+| Common password check | Block top 100,000 breached passwords | Prevent credential stuffing |
+| Max length | 128 characters | Prevent DoS via long passwords |
+
+### Password Storage
+- **Algorithm:** Argon2id (winner of Password Hashing Competition)
+- **Parameters:** Memory: 64MB, Iterations: 3, Parallelism: 4
+- **Never:** Store plaintext, MD5, SHA1, or unsalted hashes
+
+### Brute Force Protection
+| Protection | Threshold | Action |
+|------------|-----------|--------|
+| Rate limiting | 5 attempts/minute/IP | Temporary block |
+| Account lockout | 10 failed attempts | Lock 15 minutes |
+| Progressive delay | After 3 failures | Exponential backoff |
+| CAPTCHA | After 5 failures | Require human verification |
+
+### Session Security
+| Feature | Implementation |
+|---------|----------------|
+| Token type | JWT (access) + Opaque (refresh) |
+| Access token expiry | 15 minutes |
+| Refresh token expiry | 12 hours |
+| Token storage | httpOnly, Secure, SameSite=Strict cookies |
+| Refresh rotation | New refresh token on each use, old invalidated |
+| Concurrent sessions | Allow multiple, user can revoke any |
+
+## 10.2 OAuth/SSO Security
+
+### State Parameter (CSRF Protection)
+```
+1. Generate random state value
+2. Store in server-side session
+3. Include in OAuth redirect
+4. Verify on callback matches stored value
+5. Reject if mismatch (CSRF attempt)
+```
+
+### PKCE (Proof Key for Code Exchange)
+- Required for all OAuth flows (even confidential clients)
+- Prevents authorization code interception attacks
+- Use SHA256 code challenge method
+
+### Token Handling
+- Never expose access tokens to frontend JavaScript
+- Store provider tokens server-side only
+- Encrypt tokens at rest in database
+- Automatic token refresh before expiry
+
+## 10.3 API Security
+
+### Input Validation
+| Rule | Implementation |
+|------|----------------|
+| Validate all input | Server-side, never trust client |
+| Parameterized queries | Prevent SQL injection |
+| Output encoding | Prevent XSS |
+| File upload validation | Check MIME type, extension, magic bytes |
+| Size limits | Max request body, max file size |
+
+### Rate Limiting (API)
+| Endpoint Type | Limit | Window |
+|---------------|-------|--------|
+| Authentication | 5 requests | 1 minute |
+| General API | 100 requests | 1 minute |
+| File upload | 10 requests | 1 minute |
+| Search | 30 requests | 1 minute |
+| Bulk operations | 5 requests | 1 minute |
+
+### CORS Policy
+```python
+CORS_ALLOWED_ORIGINS = [
+    "https://fantasyfolio.app",
+    "https://www.fantasyfolio.app"
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_METHODS = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
+CORS_ALLOWED_HEADERS = ["Authorization", "Content-Type"]
+```
+
+## 10.4 Data Protection
+
+### Encryption
+| Data State | Method |
+|------------|--------|
+| In transit | TLS 1.3 minimum |
+| At rest (sensitive) | AES-256-GCM |
+| Database (tokens) | Column-level encryption |
+| Backups | Encrypted with separate key |
+
+### Sensitive Data Handling
+| Data Type | Storage | Logging |
+|-----------|---------|---------|
+| Passwords | Argon2id hash only | Never log |
+| OAuth tokens | Encrypted | Never log |
+| Session tokens | Hashed | Never log |
+| Email addresses | Plain (for login) | Mask in logs (u***@domain.com) |
+| IP addresses | Plain (for security) | Retained 90 days |
+
+### Data Retention
+| Data Type | Retention | Deletion |
+|-----------|-----------|----------|
+| User accounts (soft-deleted) | Indefinite | On user request |
+| Session logs | 90 days | Auto-purge |
+| Failed login attempts | 30 days | Auto-purge |
+| Audit logs | 1 year | Archive then purge |
+| Uploaded files | Until user deletes | Soft-delete 30 days, then hard-delete |
+
+## 10.5 Security Headers
+
+```python
+# Required HTTP Security Headers
+SECURITY_HEADERS = {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+}
+```
+
+## 10.6 File Security
+
+### Upload Validation
+```python
+ALLOWED_3D_EXTENSIONS = {'.stl', '.obj', '.3mf', '.gltf', '.glb'}
+ALLOWED_DOC_EXTENSIONS = {'.pdf'}
+ALLOWED_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
+MAX_ARCHIVE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
+
+def validate_upload(file):
+    # 1. Check extension
+    # 2. Check MIME type
+    # 3. Check magic bytes (file signature)
+    # 4. Scan for malware (ClamAV integration)
+    # 5. Check file size
+```
+
+### Path Traversal Prevention
+- Sanitize all file paths
+- Use allowlist of permitted directories
+- Never construct paths from user input directly
+- Jail file operations to data directory
+
+### Guest Link Security
+| Feature | Implementation |
+|---------|----------------|
+| Token format | Cryptographically random, 32 bytes, base64url |
+| Storage | Store hash only (like passwords) |
+| Expiration | Enforced server-side |
+| Rate limiting | 10 accesses per minute per token |
+| Download tracking | Log all accesses with IP |
+
+## 10.7 Audit Logging
+
+### Events to Log
+| Category | Events |
+|----------|--------|
+| Authentication | Login success/failure, logout, password change/reset |
+| Authorization | Permission denied, role changes |
+| Data access | Collection shared, guest link created/used |
+| Admin actions | User management, system config changes |
+| Security events | Rate limit triggered, suspicious activity |
+
+### Log Format
+```json
+{
+  "timestamp": "2024-02-19T19:30:00Z",
+  "event_type": "auth.login.success",
+  "user_id": "uuid",
+  "ip_address": "192.168.1.100",
+  "user_agent": "Mozilla/5.0...",
+  "details": {
+    "method": "discord_sso"
+  },
+  "request_id": "uuid"
+}
+```
+
+### Log Protection
+- Logs stored separately from application data
+- Access restricted to admin role
+- Tamper-evident (append-only or signed)
+- Regular backup to separate system
+
+## 10.8 Dependency Security
+
+### Package Management
+- Pin all dependency versions
+- Use lock files (requirements.txt with hashes)
+- Regular vulnerability scanning (Dependabot, Snyk)
+- Update dependencies monthly (security patches immediately)
+
+### Container Security
+- Use official base images
+- Run as non-root user
+- Minimal image (no unnecessary tools)
+- Scan images for vulnerabilities
+- Sign and verify images
+
+## 10.9 Incident Response Plan
+
+### Severity Levels
+| Level | Description | Response Time |
+|-------|-------------|---------------|
+| Critical | Active breach, data exfiltration | Immediate |
+| High | Vulnerability being exploited | 4 hours |
+| Medium | Vulnerability discovered | 24 hours |
+| Low | Security improvement needed | 1 week |
+
+### Response Steps
+1. **Detect** - Monitoring alerts, user reports
+2. **Contain** - Isolate affected systems
+3. **Investigate** - Determine scope and cause
+4. **Remediate** - Fix vulnerability, patch systems
+5. **Recover** - Restore services, verify integrity
+6. **Document** - Post-incident report, lessons learned
+7. **Notify** - Inform affected users if data breached
+
+## 10.10 Compliance Considerations
+
+### GDPR (if EU users)
+- [ ] Right to access (data export)
+- [ ] Right to deletion (account deletion)
+- [ ] Data portability (export in standard format)
+- [ ] Consent management (clear opt-in)
+- [ ] Privacy policy (clear, accessible)
+- [ ] Data Processing Agreement with sub-processors
+
+### CCPA (if California users)
+- [ ] Right to know (what data collected)
+- [ ] Right to delete
+- [ ] Right to opt-out of sale (we don't sell data)
+- [ ] Non-discrimination
+
+### SOC 2 (if enterprise customers)
+- Security policies documented
+- Access controls implemented
+- Audit logging enabled
+- Incident response plan
+- Vendor management
+
+---
+
+## Security Checklist (Pre-Launch)
+
+### Authentication
+- [ ] Password hashing with Argon2id
+- [ ] Brute force protection enabled
+- [ ] Session management secure
+- [ ] OAuth state parameter validated
+- [ ] PKCE implemented
+
+### API
+- [ ] Input validation on all endpoints
+- [ ] Rate limiting configured
+- [ ] CORS policy restrictive
+- [ ] SQL injection prevented (parameterized queries)
+- [ ] XSS prevented (output encoding)
+
+### Infrastructure
+- [ ] TLS 1.3 enforced
+- [ ] Security headers configured
+- [ ] Secrets not in code (use env vars)
+- [ ] Database encrypted at rest
+- [ ] Backups encrypted
+
+### Monitoring
+- [ ] Audit logging enabled
+- [ ] Failed login monitoring
+- [ ] Anomaly detection alerts
+- [ ] Uptime monitoring
+
+### Process
+- [ ] Dependency vulnerability scanning
+- [ ] Security review before deploy
+- [ ] Incident response plan documented
+- [ ] Team trained on security practices
 
