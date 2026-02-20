@@ -178,12 +178,18 @@ def register_cli_commands(app: Flask):
     @app.cli.command('migrate-auth')
     def migrate_auth_command():
         """Run auth schema migration."""
+        import importlib.util
         from pathlib import Path
-        from migrations.006_auth_schema import run_migration
         from fantasyfolio.config import get_config
         
+        # Load migration module (can't import directly due to numeric prefix in original name)
+        migration_path = Path(__file__).parent.parent / 'migrations' / 'auth_schema.py'
+        spec = importlib.util.spec_from_file_location('auth_schema', migration_path)
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        
         config = get_config()
-        success = run_migration(config.DATABASE_PATH)
+        success = migration.run_migration(config.DATABASE_PATH)
         if success:
             print("Auth migration completed successfully.")
         else:
