@@ -26,6 +26,15 @@ Pillow>=12.0.0
 # Configuration
 python-dotenv>=1.0.0
 
+# Authentication
+argon2-cffi>=23.1.0     # Password hashing (Argon2id)
+PyJWT>=2.8.0            # JWT tokens
+requests>=2.31.0        # OAuth HTTP calls
+
+# Optional: Additional OAuth libraries
+# authlib>=1.3.0        # Full OAuth client (if needed)
+# python-jose>=3.3.0    # JWT with JWK support (for Apple)
+
 # Optional: Development
 # black>=23.0.0
 # flake8>=6.0.0

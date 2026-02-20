@@ -118,6 +118,7 @@ def register_blueprints(app: Flask):
     from fantasyfolio.api.settings import settings_bp
     from fantasyfolio.api.indexer import indexer_bp
     from fantasyfolio.api.system import system_bp
+    from fantasyfolio.api.auth import auth_bp
     
     app.register_blueprint(assets_bp, url_prefix='/api')
     app.register_blueprint(models_bp, url_prefix='/api')
@@ -125,6 +126,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(settings_bp, url_prefix='/api')
     app.register_blueprint(indexer_bp, url_prefix='/api')
     app.register_blueprint(system_bp, url_prefix='/api')
+    app.register_blueprint(auth_bp)  # Already has /api/auth prefix
 
 
 def register_error_handlers(app: Flask):
@@ -172,3 +174,17 @@ def register_cli_commands(app: Flask):
         from fantasyfolio.indexer.models3d import ModelsIndexer
         indexer = ModelsIndexer()
         indexer.run()
+    
+    @app.cli.command('migrate-auth')
+    def migrate_auth_command():
+        """Run auth schema migration."""
+        from pathlib import Path
+        from migrations.006_auth_schema import run_migration
+        from fantasyfolio.config import get_config
+        
+        config = get_config()
+        success = run_migration(config.DATABASE_PATH)
+        if success:
+            print("Auth migration completed successfully.")
+        else:
+            print("Auth migration failed. Check logs for details.")
