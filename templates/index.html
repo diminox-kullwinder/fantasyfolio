@@ -6121,10 +6121,8 @@
       // If content doesn't fill viewport (or is close), load more
       if (scrollHeight - clientHeight < 300) {
         if (contentType === '3d' && modelsHasMore && !modelsLoading) {
-          console.log('Auto-loading more models (viewport not full)');
           load3dModels(true);
         } else if (contentType === 'pdf' && assetsHasMore && !assetsLoading) {
-          console.log('Auto-loading more PDFs (viewport not full)');
           loadAssets(true);
         }
       }
