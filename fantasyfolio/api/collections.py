@@ -36,11 +36,11 @@ def list_collections():
     
     db = get_db()
     
-    # Get owned collections
+    # Get owned collections (flat list with parent info)
     owned = db.fetchall("""
         SELECT * FROM user_collections 
         WHERE owner_id = ? 
-        ORDER BY updated_at DESC
+        ORDER BY name
     """, (user['id'],))
     
     # Get shared collections
@@ -70,6 +70,7 @@ def create_collection():
         name: Collection name (required)
         description: Optional description
         visibility: 'private' or 'shared' (default: private)
+        parent_collection_id: Parent collection for nesting (optional)
     """
     user = request.current_user
     data = request.get_json(silent=True) or {}
@@ -78,20 +79,31 @@ def create_collection():
     if not name:
         return jsonify({'error': 'Collection name required'}), 400
     
+    parent_id = data.get('parent_collection_id')
+    
+    # Verify parent exists and user owns it
+    if parent_id:
+        db = get_db()
+        parent = db.fetchone("SELECT * FROM user_collections WHERE id = ? AND owner_id = ?", 
+                            (parent_id, user['id']))
+        if not parent:
+            return jsonify({'error': 'Parent collection not found or access denied'}), 404
+    
     collection_id = str(uuid4())
     now = datetime.utcnow().isoformat()
     
     db = get_db()
     with db.connection() as conn:
         conn.execute("""
-            INSERT INTO user_collections (id, owner_id, name, description, visibility, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO user_collections (id, owner_id, name, description, visibility, parent_collection_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             collection_id,
             user['id'],
             name,
             data.get('description', '').strip() or None,
             data.get('visibility', 'private'),
+            parent_id,
             now, now
         ))
         conn.commit()
@@ -168,6 +180,7 @@ def update_collection(collection_id):
         name: New name
         description: New description
         visibility: New visibility
+        parent_collection_id: New parent (null to unnest)
     """
     user = request.current_user
     data = request.get_json(silent=True) or {}
@@ -179,6 +192,19 @@ def update_collection(collection_id):
     if not collection:
         return jsonify({'error': 'Collection not found or access denied'}), 404
     
+    # Verify parent if being changed
+    if 'parent_collection_id' in data:
+        parent_id = data['parent_collection_id']
+        if parent_id:  # Allow null to unnest
+            parent = db.fetchone("SELECT * FROM user_collections WHERE id = ? AND owner_id = ?", 
+                                (parent_id, user['id']))
+            if not parent:
+                return jsonify({'error': 'Parent collection not found or access denied'}), 404
+            
+            # Prevent circular nesting
+            if parent_id == collection_id:
+                return jsonify({'error': 'Cannot nest collection into itself'}), 400
+    
     # Build update
     updates = {}
     if 'name' in data:
@@ -187,6 +213,8 @@ def update_collection(collection_id):
         updates['description'] = data['description'].strip() or None
     if 'visibility' in data and data['visibility'] in ('private', 'shared'):
         updates['visibility'] = data['visibility']
+    if 'parent_collection_id' in data:
+        updates['parent_collection_id'] = data['parent_collection_id']
     
     if not updates:
         return jsonify({'error': 'No valid updates provided'}), 400

@@ -409,12 +409,12 @@
       border-bottom: 1px solid var(--border);
     }
     
-    .folder-list, .publisher-list {
+    .folder-list {
       list-style: none;
       margin-bottom: 24px;
     }
     
-    .folder-list li, .publisher-list li {
+    .folder-list li {
       padding: 6px 8px;
       border-radius: 6px;
       cursor: pointer;
@@ -425,11 +425,11 @@
       transition: background 0.2s;
     }
     
-    .folder-list li:hover, .publisher-list li:hover {
+    .folder-list li:hover {
       background: var(--bg-card);
     }
     
-    .folder-list li.active, .publisher-list li.active {
+    .folder-list li.active {
       background: var(--accent);
       color: white;
     }
@@ -514,9 +514,11 @@
     
     .view-controls {
       display: flex;
+      align-items: center;
       gap: 12px;
       margin-bottom: 20px;
       flex-shrink: 0;
+      padding: 12px 0;
     }
     
     .main-scroll {
@@ -1190,29 +1192,293 @@
     }
     
     /* Collection list */
-    .collection-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
+    /* Old collection-list CSS - REMOVED, using collection-tree now */
     
-    .collection-list li {
-      padding: 8px 12px;
-      cursor: pointer;
-      border-radius: 6px;
+    /* Collections Navigation */
+    .collections-header-nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2px;
+      margin-bottom: 8px;
     }
     
-    .collection-list li:hover {
+    .collections-header-nav h3 {
+      margin: 0;
+      border: none;
+      padding: 0;
+    }
+    
+    .collections-header-nav .btn-icon {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    
+    .collections-header-nav .btn-icon:hover {
       background: var(--bg-card);
     }
     
-    .collection-list li.active {
+    .collection-tree {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 16px 0;
+      font-size: 0.85rem;
+    }
+    
+    .collection-tree-item {
+      margin-bottom: 2px;
+    }
+    
+    .collection-tree-item-content {
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      min-height: 32px;
+    }
+    
+    .collection-tree-item-content:hover {
+      background: var(--bg-card);
+    }
+    
+    .collection-tree-item-content.active {
       background: var(--accent);
       color: white;
+    }
+    
+    .collection-tree-item-toggle {
+      font-size: 0.7rem;
+      width: 16px;
+      text-align: center;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    
+    .collection-tree-item-icon {
+      font-size: 0.9rem;
+    }
+    
+    .collection-tree-item-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .collection-tree-item-count {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+    
+    .collection-tree-item-content.active .collection-tree-item-count {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+    
+    .collection-tree-item-content.drag-over {
+      background: #3b82f6 !important;
+      color: white !important;
+      border: 3px solid #1d4ed8 !important;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+      font-weight: bold;
+      padding: 8px;
+      margin: -2px;
+      z-index: 100;
+      position: relative;
+    }
+    
+    .collection-tree-item-content.drag-over .collection-tree-item-name,
+    .collection-tree-item-content.drag-over .collection-tree-item-count {
+      color: white !important;
+    }
+    
+    .collection-tree-children {
+      margin-left: 20px;
+      margin-top: 2px;
+    }
+    
+    .collection-tree-empty {
+      padding: 12px 8px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+    
+    /* Collection Item Remove Button */
+    .collection-item-remove-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s, background 0.2s;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    
+    .asset-card:hover .collection-item-remove-btn {
+      opacity: 1;
+    }
+    
+    .collection-item-remove-btn:hover {
+      background: rgba(220,38,38,0.9);
+    }
+    
+    .asset-row-remove {
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 14px;
+    }
+    
+    .asset-row-remove:hover {
+      background: rgba(220,38,38,0.9);
+    }
+    
+    /* Drag target indicator - REMOVED global, only on hover now */
+    .collection-tree-item-content.drag-over::after {
+      content: '➕';
+      margin-left: auto;
+      font-size: 1.2rem;
+      color: var(--accent);
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Collection Header Bar */
+    .collection-header-bar {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-secondary);
+    }
+    
+    .collection-breadcrumb-container {
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+      flex: 1;
+      min-width: 0;
+      margin-left: 12px;
+    }
+    
+    .collection-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.95rem;
+    }
+    
+    .breadcrumb-link {
+      color: var(--accent);
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .breadcrumb-link:hover {
+      opacity: 0.7;
+      text-decoration: underline;
+    }
+    
+    .breadcrumb-current {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .breadcrumb-separator {
+      color: var(--text-secondary);
+      user-select: none;
+    }
+    
+    .collection-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-secondary {
+      padding: 8px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    
+    .btn-secondary:hover {
+      background: var(--bg-secondary);
+    }
+    
+    /* Share Modal */
+    .share-section {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .share-section:last-child {
+      border-bottom: none;
+    }
+    
+    .share-section h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+    
+    .share-description {
+      margin: 0 0 12px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .share-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    
+    .share-toggle input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
     }
     
     /* Upload Modal */
@@ -1539,6 +1805,71 @@
       font-size: 0.85rem;
       color: var(--text-secondary);
       margin-bottom: 12px;
+    }
+    
+    .settings-hint a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    
+    /* Email Settings */
+    .email-status-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      font-weight: 500;
+    }
+    
+    .status-indicator {
+      font-size: 1rem;
+    }
+    
+    .email-unconfigured {
+      color: #f59e0b;
+    }
+    
+    .email-configured {
+      color: #10b981;
+    }
+    
+    .smtp-quick-configs {
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.875rem;
+    }
+    
+    #testEmailStatus {
+      padding: 12px;
+      border-radius: 6px;
+      display: none;
+    }
+    
+    #testEmailStatus.success {
+      display: block;
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+    
+    #testEmailStatus.error {
+      display: block;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
     }
     
     /* Asset Locations */
@@ -3711,6 +4042,89 @@
     .collections-footer button:hover {
       background: var(--accent-hover);
     }
+
+    /* Collection Items Grid */
+    .collection-items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 16px;
+      padding: 16px;
+    }
+    
+    .collection-item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .collection-item-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      border-color: var(--accent);
+    }
+    
+    .collection-item-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      background: var(--bg-secondary);
+    }
+    
+    .collection-item-placeholder {
+      width: 100%;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-secondary);
+    }
+    
+    .collection-item-name {
+      padding: 12px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .collection-item-remove {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .collection-item-card:hover .collection-item-remove {
+      opacity: 1;
+    }
+    
+    .collection-item-remove:hover {
+      background: rgba(220,38,38,0.9);
+    }
+    
+    .collections-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
     
     .collections-empty {
       text-align: center;
@@ -3722,6 +4136,40 @@
       text-align: center;
       padding: 32px;
       color: var(--text-secondary);
+    }
+    
+    /* User Settings Form */
+    .settings-field {
+      margin-bottom: 20px;
+    }
+    
+    .settings-field label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+    
+    .settings-field input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    
+    .settings-field input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .settings-field input:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
   </style>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"></head>
@@ -3861,18 +4309,26 @@
       <div id="pdfNav">
         <h3>📁 Folders</h3>
         <div class="folder-tree" id="folderTree"></div>
-        
-        <h3>🏢 Publishers</h3>
-        <ul class="publisher-list" id="publisherList"></ul>
       </div>
       
       <!-- 3D Models Navigation -->
       <div id="modelsNav" style="display:none;">
         <h3>📂 Folders</h3>
         <div class="folder-tree" id="modelFolderTree"></div>
+      </div>
+      
+      <!-- User Collections (shown when logged in) -->
+      <div id="collectionsNav" style="display:none;">
+        <div class="collections-header-nav">
+          <h3>⭐ My Collections</h3>
+          <button class="btn-icon" onclick="createCollectionInline()" title="New Collection">➕</button>
+        </div>
+        <div class="collection-tree" id="collectionTree"></div>
         
-        <h3>📦 Collections</h3>
-        <ul class="collection-list" id="collectionList"></ul>
+        <div class="collections-header-nav" style="margin-top:16px;">
+          <h3>📥 Shared with Me</h3>
+        </div>
+        <div class="collection-tree" id="sharedCollectionTree"></div>
       </div>
     </aside>
     <div class="resize-handle" id="resizeHandle"></div>
@@ -3978,6 +4434,9 @@
         </button>
         <button class="settings-tab" onclick="switchSettingsTab('advanced')" id="settingsTabAdvanced">
           🔧 Advanced
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('email')" id="settingsTabEmail">
+          📧 Email
         </button>
       </div>
       
@@ -4185,6 +4644,147 @@
               <div class="policy-validation-msg" id="policyValidationMsg"></div>
             </div>
           </div>
+        </div>
+        
+      </div>
+      
+      <!-- Email Tab -->
+      <div class="settings-body settings-tab-content" id="settingsEmail" style="display:none;">
+        
+        <!-- Email Status -->
+        <div class="settings-section">
+          <div class="email-status-banner" id="emailStatusBanner">
+            <span class="status-indicator email-unconfigured">●</span>
+            <span id="emailStatusText">Email service not configured</span>
+          </div>
+        </div>
+        
+        <!-- Provider Selection -->
+        <div class="settings-section">
+          <h3>📧 Email Provider</h3>
+          <p class="settings-hint">Choose how FantasyFolio sends emails (verification, password reset, sharing).</p>
+          
+          <div class="settings-field">
+            <label for="emailProvider">Provider</label>
+            <select id="emailProvider" onchange="switchEmailProvider()">
+              <option value="smtp">SMTP (Gmail, Office 365, etc.)</option>
+              <option value="sendgrid">SendGrid</option>
+              <option value="ses">AWS SES</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Common Settings -->
+        <div class="settings-section">
+          <h3>✉️ Sender Information</h3>
+          
+          <div class="settings-field">
+            <label for="emailFromAddress">From Email Address *</label>
+            <input type="email" id="emailFromAddress" placeholder="noreply@yourdomain.com">
+            <p class="settings-hint">The email address that appears in the "From" field.</p>
+          </div>
+          
+          <div class="settings-field">
+            <label for="emailFromName">From Name</label>
+            <input type="text" id="emailFromName" placeholder="FantasyFolio">
+            <p class="settings-hint">The friendly name that appears with the email address.</p>
+          </div>
+        </div>
+        
+        <!-- SMTP Settings -->
+        <div class="settings-section" id="smtpSettings">
+          <h3>🔧 SMTP Configuration</h3>
+          
+          <div class="settings-field">
+            <label for="smtpHost">SMTP Host *</label>
+            <input type="text" id="smtpHost" placeholder="smtp.gmail.com">
+            <p class="settings-hint">SMTP server hostname (e.g., smtp.gmail.com for Gmail).</p>
+          </div>
+          
+          <div class="settings-field">
+            <label for="smtpPort">SMTP Port *</label>
+            <input type="number" id="smtpPort" placeholder="587" value="587">
+            <p class="settings-hint">Usually 587 (TLS) or 465 (SSL).</p>
+          </div>
+          
+          <div class="settings-field">
+            <label for="smtpUser">Username *</label>
+            <input type="text" id="smtpUser" placeholder="your-email@gmail.com">
+            <p class="settings-hint">Your email account username (usually your email address).</p>
+          </div>
+          
+          <div class="settings-field">
+            <label for="smtpPassword">Password *</label>
+            <input type="password" id="smtpPassword" placeholder="••••••••••••••••">
+            <p class="settings-hint"><strong>Gmail users:</strong> Use an App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a></p>
+          </div>
+          
+          <div class="settings-field">
+            <label>
+              <input type="checkbox" id="smtpUseTls" checked>
+              Use TLS (recommended)
+            </label>
+            <p class="settings-hint">Enable for secure connection. Most servers require this.</p>
+          </div>
+          
+          <div class="smtp-quick-configs">
+            <p style="font-weight: 500; margin-bottom: 8px;">Quick Setup:</p>
+            <button class="btn btn-secondary btn-sm" onclick="applyGmailConfig()">Gmail</button>
+            <button class="btn btn-secondary btn-sm" onclick="applyOffice365Config()">Office 365</button>
+            <button class="btn btn-secondary btn-sm" onclick="applySendGridSMTPConfig()">SendGrid SMTP</button>
+          </div>
+        </div>
+        
+        <!-- SendGrid Settings -->
+        <div class="settings-section" id="sendgridSettings" style="display:none;">
+          <h3>📮 SendGrid Configuration</h3>
+          
+          <div class="settings-field">
+            <label for="sendgridApiKey">SendGrid API Key *</label>
+            <input type="password" id="sendgridApiKey" placeholder="SG.••••••••••••••••••••••">
+            <p class="settings-hint">Get your API key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank">SendGrid Dashboard</a></p>
+          </div>
+        </div>
+        
+        <!-- AWS SES Settings -->
+        <div class="settings-section" id="sesSettings" style="display:none;">
+          <h3>☁️ AWS SES Configuration</h3>
+          
+          <div class="settings-field">
+            <label for="sesRegion">AWS Region *</label>
+            <input type="text" id="sesRegion" placeholder="us-east-1">
+            <p class="settings-hint">Your AWS region (e.g., us-east-1, us-west-2).</p>
+          </div>
+          
+          <div class="settings-field">
+            <label for="sesAccessKey">AWS Access Key ID *</label>
+            <input type="text" id="sesAccessKey" placeholder="AKIA••••••••••••••••">
+            <p class="settings-hint">IAM user access key with SES permissions.</p>
+          </div>
+          
+          <div class="settings-field">
+            <label for="sesSecretKey">AWS Secret Access Key *</label>
+            <input type="password" id="sesSecretKey" placeholder="••••••••••••••••••••••••••••••••••••••••">
+            <p class="settings-hint">IAM user secret key.</p>
+          </div>
+        </div>
+        
+        <!-- Test Email -->
+        <div class="settings-section">
+          <h3>🧪 Test Email Configuration</h3>
+          <p class="settings-hint">Send a test email to verify your settings work correctly.</p>
+          
+          <div class="settings-field">
+            <label for="testEmailAddress">Test Email Address</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="email" id="testEmailAddress" placeholder="your-email@example.com" style="flex: 1;">
+              <button class="btn btn-primary" onclick="sendTestEmail()" id="sendTestEmailBtn">
+                📧 Send Test
+              </button>
+            </div>
+          </div>
+          
+          <div id="testEmailStatus" style="margin-top: 12px;"></div>
         </div>
         
       </div>
@@ -4653,6 +5253,125 @@
     </div>
   </div>
 
+  <!-- Share Collection Modal -->
+  <div class="collections-modal" id="shareModal" onclick="if(event.target===this)closeShareModal()">
+    <div class="collections-box" style="max-width:500px;">
+      <div class="collections-header">
+        <h2>📤 Share Collection</h2>
+        <button class="collections-close" onclick="closeShareModal()">✕</button>
+      </div>
+      
+      <div class="collections-content" style="padding:20px;">
+        <input type="hidden" id="shareCollectionId" />
+        
+        <div class="share-section">
+          <h3>🌐 Make Public</h3>
+          <p class="share-description">Anyone with the link can view this collection</p>
+          <label class="share-toggle">
+            <input type="checkbox" id="sharePublic" onchange="togglePublicShare()">
+            <span>Make public</span>
+          </label>
+          <div id="publicLinkSection" style="display:none;margin-top:12px;">
+            <input type="text" id="publicLink" readonly style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-secondary);">
+            <button onclick="copyPublicLink()" style="margin-top:8px;">📋 Copy Link</button>
+          </div>
+        </div>
+        
+        <div class="share-section">
+          <h3>👥 Share with Users</h3>
+          <p class="share-description">Share with other users on this FantasyFolio instance</p>
+          <input type="email" 
+                 id="shareUserEmail" 
+                 placeholder="Enter user email" 
+                 style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
+          <select id="shareUserPermission" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
+            <option value="view">View Only</option>
+            <option value="download">View & Download</option>
+          </select>
+          <button onclick="shareWithUser()">➕ Add User</button>
+          
+          <div id="sharedUsersList" style="margin-top:12px;">
+            <!-- Shared users will appear here -->
+          </div>
+        </div>
+        
+        <div class="share-section">
+          <h3>📧 Share External (Email Link)</h3>
+          <p class="share-description">Generate a time-limited link for people without accounts</p>
+          <input type="email" 
+                 id="shareExternalEmail" 
+                 placeholder="Recipient email" 
+                 style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
+          <select id="shareExternalDays" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
+            <option value="1">Expires in 1 day</option>
+            <option value="7" selected>Expires in 7 days</option>
+            <option value="30">Expires in 30 days</option>
+          </select>
+          <select id="shareExternalPermission" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
+            <option value="view">View Only</option>
+            <option value="download">View & Download</option>
+          </select>
+          <button onclick="shareExternal()">📧 Send Link</button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- User Settings Modal -->
+  <div class="collections-modal" id="userSettingsModal" onclick="if(event.target===this)closeUserSettings()">
+    <div class="collections-box">
+      <div class="collections-header">
+        <h2>👤 Profile Settings</h2>
+        <button class="collections-close" onclick="closeUserSettings()">✕</button>
+      </div>
+      
+      <div class="collections-content" style="padding:20px;">
+        <form id="userSettingsForm" onsubmit="return saveUserSettings(event)">
+          
+          <div class="settings-field">
+            <label for="settingsEmail">Email</label>
+            <input type="email" id="settingsEmail" disabled style="opacity:0.7;cursor:not-allowed;">
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">Email cannot be changed</p>
+          </div>
+          
+          <div class="settings-field">
+            <label for="settingsDisplayName">Display Name</label>
+            <input type="text" id="settingsDisplayName" required placeholder="Your name" maxlength="50">
+          </div>
+          
+          <div class="settings-field">
+            <label for="settingsAvatarUrl">Avatar URL (optional)</label>
+            <input type="url" id="settingsAvatarUrl" placeholder="https://...">
+            <div id="avatarPreview" style="margin-top:12px;display:none;">
+              <img id="avatarPreviewImg" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">
+            </div>
+          </div>
+          
+          <div class="settings-field">
+            <h3 style="margin:24px 0 12px;">Change Password</h3>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px;">Leave blank to keep current password</p>
+            
+            <label for="settingsCurrentPassword">Current Password</label>
+            <input type="password" id="settingsCurrentPassword" autocomplete="current-password">
+            
+            <label for="settingsNewPassword" style="margin-top:12px;">New Password</label>
+            <input type="password" id="settingsNewPassword" autocomplete="new-password" minlength="8">
+            
+            <label for="settingsConfirmPassword" style="margin-top:12px;">Confirm New Password</label>
+            <input type="password" id="settingsConfirmPassword" autocomplete="new-password" minlength="8">
+          </div>
+          
+          <div class="collections-footer" style="border-top:1px solid var(--border);padding-top:16px;margin-top:24px;">
+            <button type="button" onclick="closeUserSettings()" style="background:var(--bg-secondary);color:var(--text-primary);">Cancel</button>
+            <button type="submit" style="background:var(--accent);color:white;">Save Changes</button>
+          </div>
+          
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Context Menu for Breadcrumbs (in info panels) -->
   <div id="breadcrumbContextMenu" class="context-menu" style="display: none;">
     <div class="context-menu-item" onclick="breadcrumbContextNavigate()">
@@ -4757,7 +5476,9 @@
           authProviders = data.providers || {};
           updateOAuthButtons();
         })
-        .catch(() => {});
+        .catch(err => {
+          console.error('Failed to fetch providers:', err);
+        });
       
       // If we have tokens, validate them
       if (accessToken) {
@@ -4858,9 +5579,15 @@
         const avatar = document.getElementById('userAvatar');
         const initial = (currentUser.display_name || currentUser.email || '?')[0].toUpperCase();
         avatar.textContent = initial;
+        
+        // Load collections sidebar
+        loadCollectionsSidebar();
       } else {
         loginBtn.style.display = 'block';
         userMenu.style.display = 'none';
+        
+        // Hide collections sidebar
+        document.getElementById('collectionsNav').style.display = 'none';
       }
       
       // Update context menu
@@ -5007,17 +5734,140 @@
       document.getElementById('userDropdown').classList.remove('show');
     }
     
-    function openUserSettings() {
-      // TODO: Open user settings modal
-      alert('User settings coming soon!');
+    async function openUserSettings() {
       document.getElementById('userDropdown').classList.remove('show');
+      
+      // Load current user data
+      try {
+        const response = await authFetch('/api/auth/me');
+        if (!response.ok) throw new Error('Failed to load user data');
+        
+        const user = await response.json();
+        
+        // Populate form
+        document.getElementById('settingsEmail').value = user.email || '';
+        document.getElementById('settingsDisplayName').value = user.display_name || '';
+        document.getElementById('settingsAvatarUrl').value = user.avatar_url || '';
+        
+        // Show avatar preview if URL exists
+        if (user.avatar_url) {
+          document.getElementById('avatarPreviewImg').src = user.avatar_url;
+          document.getElementById('avatarPreview').style.display = 'block';
+        }
+        
+        // Clear password fields
+        document.getElementById('settingsCurrentPassword').value = '';
+        document.getElementById('settingsNewPassword').value = '';
+        document.getElementById('settingsConfirmPassword').value = '';
+        
+        // Show modal
+        document.getElementById('userSettingsModal').classList.add('show');
+        
+      } catch (error) {
+        console.error('Failed to load user settings:', error);
+        showToast('Failed to load settings', 'error');
+      }
     }
     
-    function openCollections() {
-      // TODO: Open collections view
-      alert('Collections coming soon!');
-      document.getElementById('userDropdown').classList.remove('show');
+    function closeUserSettings() {
+      document.getElementById('userSettingsModal').classList.remove('show');
     }
+    
+    async function saveUserSettings(event) {
+      event.preventDefault();
+      
+      const displayName = document.getElementById('settingsDisplayName').value.trim();
+      const avatarUrl = document.getElementById('settingsAvatarUrl').value.trim();
+      const currentPassword = document.getElementById('settingsCurrentPassword').value;
+      const newPassword = document.getElementById('settingsNewPassword').value;
+      const confirmPassword = document.getElementById('settingsConfirmPassword').value;
+      
+      if (!displayName) {
+        showToast('Display name is required', 'error');
+        return false;
+      }
+      
+      // Validate password change if attempted
+      if (newPassword || confirmPassword || currentPassword) {
+        if (!currentPassword) {
+          showToast('Current password required to change password', 'error');
+          return false;
+        }
+        if (newPassword !== confirmPassword) {
+          showToast('New passwords do not match', 'error');
+          return false;
+        }
+        if (newPassword.length < 8) {
+          showToast('Password must be at least 8 characters', 'error');
+          return false;
+        }
+      }
+      
+      try {
+        // Update profile
+        const profileResponse = await authFetch('/api/auth/me', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            display_name: displayName,
+            avatar_url: avatarUrl || null
+          })
+        });
+        
+        if (!profileResponse.ok) {
+          const error = await profileResponse.json();
+          throw new Error(error.error || 'Failed to update profile');
+        }
+        
+        // Update password if provided
+        if (newPassword) {
+          const passwordResponse = await authFetch('/api/auth/me/password', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              current_password: currentPassword,
+              new_password: newPassword
+            })
+          });
+          
+          if (!passwordResponse.ok) {
+            const error = await passwordResponse.json();
+            throw new Error(error.error || 'Failed to change password');
+          }
+        }
+        
+        showToast('Settings saved successfully');
+        
+        // Update UI
+        currentUser.display_name = displayName;
+        currentUser.avatar_url = avatarUrl || null;
+        updateUserAvatar();
+        
+        closeUserSettings();
+        
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        showToast(error.message || 'Failed to save settings', 'error');
+      }
+      
+      return false;
+    }
+    
+    // Avatar preview on URL change
+    document.addEventListener('DOMContentLoaded', () => {
+      const avatarInput = document.getElementById('settingsAvatarUrl');
+      if (avatarInput) {
+        avatarInput.addEventListener('input', (e) => {
+          const url = e.target.value.trim();
+          if (url) {
+            document.getElementById('avatarPreviewImg').src = url;
+            document.getElementById('avatarPreview').style.display = 'block';
+          } else {
+            document.getElementById('avatarPreview').style.display = 'none';
+          }
+        });
+      }
+    });
     
     // Helper: Add auth header to fetch requests
     function authFetch(url, options = {}) {
@@ -5180,9 +6030,986 @@
       }
     }
     
-    function viewCollection(collectionId) {
-      // TODO: Show collection contents in a panel
-      showToast('Collection view coming soon!');
+    async function viewCollection(collectionId) {
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}`);
+        if (!response.ok) throw new Error('Failed to load collection');
+        
+        const collection = await response.json();
+        
+        // Update modal title with back button
+        document.getElementById('collectionsTitle').innerHTML = `
+          <button onclick="openCollections()" style="background:none;border:none;color:var(--accent);cursor:pointer;margin-right:10px;">←</button>
+          ${escapeHtml(collection.name)}
+        `;
+        
+        // Hide footer (no create button needed here)
+        document.getElementById('collectionsFooter').style.display = 'none';
+        
+        // Render collection items
+        const content = document.getElementById('collectionsContent');
+        
+        if (!collection.items || collection.items.length === 0) {
+          content.innerHTML = '<div class="collections-empty">This collection is empty.<br>Add items by right-clicking assets!</div>';
+          return;
+        }
+        
+        let html = '<div class="collection-items-grid">';
+        for (const item of collection.items) {
+          const thumbUrl = item.asset_type === 'model' 
+            ? `/api/models/${item.asset_id}/thumbnail`
+            : `/api/assets/${item.asset_id}/thumbnail`;
+          
+          const icon = item.asset_type === 'model' ? '🎲' : '📄';
+          
+          html += `
+            <div class="collection-item-card" onclick="viewCollectionItem('${item.asset_type}', ${item.asset_id}, '${collectionId}')">
+              ${item.has_thumbnail 
+                ? `<img src="${thumbUrl}" alt="${escapeHtml(item.filename)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+                : ''}
+              <div class="collection-item-placeholder" style="${item.has_thumbnail ? 'display:none' : ''}">
+                <span style="font-size:48px">${icon}</span>
+              </div>
+              <div class="collection-item-name">${escapeHtml(item.filename || 'Unnamed')}</div>
+              <button class="collection-item-remove" onclick="removeFromCollection(event, '${collectionId}', '${item.id}')" title="Remove from collection">
+                ✕
+              </button>
+            </div>
+          `;
+        }
+        html += '</div>';
+        
+        content.innerHTML = html;
+        
+      } catch (error) {
+        console.error('Failed to load collection:', error);
+        showToast('Failed to load collection', 'error');
+      }
+    }
+    
+    function viewCollectionItem(assetType, assetId, collectionId) {
+      // Close collections modal and navigate to the asset
+      closeCollectionsModal();
+      
+      if (assetType === 'model') {
+        // Switch to 3D view and load the model
+        contentType = '3d';
+        document.getElementById('pdfTab').classList.remove('active');
+        document.getElementById('modelsTab').classList.add('active');
+        document.getElementById('pdfContent').classList.remove('active');
+        document.getElementById('modelsContent').classList.add('active');
+        
+        // Find and show the model
+        load3dModels({ model_id: assetId });
+      } else {
+        // Switch to PDF view and load the asset
+        contentType = 'pdf';
+        document.getElementById('modelsTab').classList.remove('active');
+        document.getElementById('pdfTab').classList.add('active');
+        document.getElementById('modelsContent').classList.remove('active');
+        document.getElementById('pdfContent').classList.add('active');
+        
+        // Load asset details and open PDF viewer
+        showDetail(assetId);
+      }
+    }
+    
+    async function removeFromCollection(event, collectionId, itemId) {
+      event.stopPropagation();
+      
+      if (!confirm('Remove this item from the collection?')) return;
+      
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}/items/${itemId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) throw new Error('Failed to remove item');
+        
+        showToast('Item removed from collection');
+        
+        // Refresh collection view
+        viewCollectionInMainArea(collectionId);
+        
+      } catch (error) {
+        console.error('Failed to remove item:', error);
+        showToast('Failed to remove item', 'error');
+      }
+    }
+    
+    // ==================== Sidebar Collections Tree ====================
+    
+    let collectionsTree = { owned: [], shared: [] };
+    let expandedCollections = new Set();
+    let activeCollectionId = null;
+    
+    async function loadCollectionsSidebar() {
+      if (!currentUser) {
+        document.getElementById('collectionsNav').style.display = 'none';
+        return;
+      }
+      
+      document.getElementById('collectionsNav').style.display = 'block';
+      
+      try {
+        const response = await authFetch('/api/collections');
+        if (!response.ok) throw new Error('Failed to load collections');
+        
+        const data = await response.json();
+        collectionsTree.owned = data.owned || [];
+        collectionsTree.shared = data.shared || [];
+        
+        renderCollectionsSidebar();
+      } catch (error) {
+        console.error('Failed to load collections:', error);
+      }
+    }
+    
+    function buildCollectionTree(collections) {
+      // Build hierarchical tree from flat list
+      const map = {};
+      const roots = [];
+      
+      // First pass: create map
+      collections.forEach(col => {
+        map[col.id] = { ...col, children: [] };
+      });
+      
+      // Second pass: build tree
+      collections.forEach(col => {
+        if (col.parent_collection_id && map[col.parent_collection_id]) {
+          map[col.parent_collection_id].children.push(map[col.id]);
+        } else {
+          roots.push(map[col.id]);
+        }
+      });
+      
+      return roots;
+    }
+    
+    function renderCollectionsSidebar() {
+      const ownedTree = buildCollectionTree(collectionsTree.owned);
+      const sharedTree = buildCollectionTree(collectionsTree.shared);
+      
+      // Render owned collections
+      const ownedContainer = document.getElementById('collectionTree');
+      if (ownedTree.length === 0) {
+        ownedContainer.innerHTML = '<div class="collection-tree-empty">No collections yet</div>';
+      } else {
+        ownedContainer.innerHTML = renderCollectionTreeNodes(ownedTree);
+      }
+      
+      // Render shared collections
+      const sharedContainer = document.getElementById('sharedCollectionTree');
+      if (sharedTree.length === 0) {
+        sharedContainer.innerHTML = '<div class="collection-tree-empty">None</div>';
+      } else {
+        sharedContainer.innerHTML = renderCollectionTreeNodes(sharedTree);
+      }
+    }
+    
+    function renderCollectionTreeNodes(nodes, level = 0) {
+      let html = '';
+      
+      for (const node of nodes) {
+        const hasChildren = node.children && node.children.length > 0;
+        const isExpanded = expandedCollections.has(node.id);
+        const isActive = activeCollectionId === node.id;
+        
+        html += '<div class="collection-tree-item">';
+        html += `<div class="collection-tree-item-content ${isActive ? 'active' : ''}" 
+                      draggable="true"
+                      data-collection-id="${node.id}"
+                      data-collection-name="${escapeHtml(node.name).replace(/"/g, '&quot;')}"
+                      onclick="viewCollectionInMainArea('${node.id}')"
+                      oncontextmenu="showCollectionContextMenu(event, '${node.id}', '${escapeHtml(node.name).replace(/'/g, "\\'")}')"
+                      ondragstart="handleCollectionDragStart(event)"
+                      ondragover="handleCollectionDragOver(event)"
+                      ondragenter="handleCollectionDragEnter(event)"
+                      ondragleave="handleCollectionDragLeave(event)"
+                      ondrop="handleCollectionDrop(event)"
+                      ondragend="handleCollectionDragEnd(event)">`;
+        
+        // Toggle arrow (if has children)
+        if (hasChildren) {
+          html += `<span class="collection-tree-item-toggle" onclick="event.stopPropagation();toggleCollection('${node.id}')">${isExpanded ? '▼' : '▶'}</span>`;
+        } else {
+          html += '<span class="collection-tree-item-toggle"></span>';
+        }
+        
+        html += `<span class="collection-tree-item-icon">📁</span>`;
+        html += `<span class="collection-tree-item-name">${escapeHtml(node.name)}</span>`;
+        html += `<span class="collection-tree-item-count">${node.item_count || 0}</span>`;
+        html += '</div>';
+        
+        // Render children if expanded
+        if (hasChildren && isExpanded) {
+          html += '<div class="collection-tree-children">';
+          html += renderCollectionTreeNodes(node.children, level + 1);
+          html += '</div>';
+        }
+        
+        html += '</div>';
+      }
+      
+      return html;
+    }
+    
+    // ==================== Drag and Drop for Nesting ====================
+    
+    let draggedCollectionId = null;
+    
+    function handleCollectionDragStart(event) {
+      draggedCollectionId = event.currentTarget.dataset.collectionId;
+      event.currentTarget.style.opacity = '0.5';
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedCollectionId);
+    }
+    
+    function handleCollectionDragOver(event) {
+      event.preventDefault(); // Allow drop
+      event.dataTransfer.dropEffect = draggedAsset ? 'copy' : 'move';
+      
+      // Continuously maintain hover timeout while dragging over
+      const targetElement = event.currentTarget;
+      const targetId = targetElement.dataset.collectionId;
+      
+      if (targetId === draggedCollectionId || targetId === draggedAsset?.id) return;
+      
+      // If we're not tracking this target yet, or it changed, start fresh
+      if (dragOverTarget !== targetElement) {
+        // Clear any existing timeout
+        if (dragEnterTimeout) {
+          clearTimeout(dragEnterTimeout);
+        }
+        
+        // Store current target
+        dragOverTarget = targetElement;
+        
+        // Add drag-over class after 400ms hover
+        dragEnterTimeout = setTimeout(() => {
+          if (dragOverTarget === targetElement) {
+            targetElement.classList.add('drag-over');
+          }
+        }, 400);
+      }
+    }
+    
+    let dragEnterTimeout = null;
+    let dragOverTarget = null;
+    
+    function handleCollectionDragEnter(event) {
+      // dragover handles the timeout logic now, this just prevents default
+      event.preventDefault();
+    }
+    
+    function handleCollectionDragLeave(event) {
+      const relatedTarget = event.relatedTarget;
+      
+      // Only clear timeout if we're ACTUALLY leaving the element (not entering child)
+      if (!event.currentTarget.contains(relatedTarget)) {
+        // Clear timeout if leaving before it triggers
+        if (dragEnterTimeout) {
+          clearTimeout(dragEnterTimeout);
+          dragEnterTimeout = null;
+        }
+        
+        // Remove visual indicator
+        event.currentTarget.classList.remove('drag-over');
+        if (dragOverTarget === event.currentTarget) {
+          dragOverTarget = null;
+        }
+      }
+    }
+    
+    async function handleCollectionDrop(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.classList.remove('drag-over');
+      
+      // Clear any pending timeout
+      if (dragEnterTimeout) {
+        clearTimeout(dragEnterTimeout);
+        dragEnterTimeout = null;
+      }
+      
+      const targetId = event.currentTarget.dataset.collectionId;
+      
+      if (!draggedCollectionId || draggedCollectionId === targetId) return;
+      
+      // Prevent circular nesting (can't nest parent into its own child)
+      if (isDescendant(targetId, draggedCollectionId)) {
+        showToast('Cannot nest a collection into its own child', 'error');
+        return;
+      }
+      
+      // Update parent
+      try {
+        const response = await authFetch(`/api/collections/${draggedCollectionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parent_collection_id: targetId })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to nest collection');
+        }
+        
+        showToast('Collection nested successfully');
+        loadCollectionsSidebar(); // Reload tree
+        
+      } catch (error) {
+        console.error('Failed to nest collection:', error);
+        showToast(error.message || 'Failed to nest collection', 'error');
+      }
+    }
+    
+    function handleCollectionDragEnd(event) {
+      event.currentTarget.style.opacity = '1';
+      draggedCollectionId = null;
+      
+      // Clear hover timeout
+      if (dragEnterTimeout) {
+        clearTimeout(dragEnterTimeout);
+        dragEnterTimeout = null;
+      }
+      dragOverTarget = null;
+      
+      // Clean up any lingering drag-over states
+      document.querySelectorAll('.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+      });
+    }
+    
+    function isDescendant(potentialChildId, potentialParentId) {
+      // Check if potentialParentId is a descendant of potentialChildId
+      // This prevents circular nesting
+      const findInTree = (nodes, targetId) => {
+        for (const node of nodes) {
+          if (node.id === targetId) return node;
+          if (node.children && node.children.length > 0) {
+            const found = findInTree(node.children, targetId);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      
+      const parentNode = findInTree(buildCollectionTree(collectionsTree.owned), potentialParentId);
+      if (!parentNode) return false;
+      
+      const checkChildren = (node) => {
+        if (node.id === potentialChildId) return true;
+        if (node.children && node.children.length > 0) {
+          return node.children.some(checkChildren);
+        }
+        return false;
+      };
+      
+      return checkChildren(parentNode);
+    }
+    
+    // ==================== Drag Assets to Collections ====================
+    
+    let draggedAsset = null;
+    
+    function handleAssetDragStart(event) {
+      const card = event.currentTarget;
+      draggedAsset = {
+        id: parseInt(card.dataset.id),
+        type: card.dataset.type
+      };
+      event.currentTarget.style.opacity = '0.5';
+      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.setData('text/plain', JSON.stringify(draggedAsset));
+    }
+    
+    function handleAssetDragEnd(event) {
+      event.currentTarget.style.opacity = '1';
+      draggedAsset = null;
+      
+      // Clear hover timeout
+      if (dragEnterTimeout) {
+        clearTimeout(dragEnterTimeout);
+        dragEnterTimeout = null;
+      }
+      dragOverTarget = null;
+      
+      // Remove visual indicators
+      document.querySelectorAll('.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+      });
+    }
+    
+    // Update collection drag handlers to support assets too
+    const originalCollectionDragOver = handleCollectionDragOver;
+    const originalCollectionDrop = handleCollectionDrop;
+    
+    async function handleCollectionDrop(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.classList.remove('drag-over');
+      
+      // Clear hover timeout
+      if (dragEnterTimeout) {
+        clearTimeout(dragEnterTimeout);
+        dragEnterTimeout = null;
+      }
+      dragOverTarget = null;
+      
+      const targetCollectionId = event.currentTarget.dataset.collectionId;
+      
+      // Check if dropping an asset (not a collection)
+      if (draggedAsset) {
+        try {
+          const response = await authFetch('/api/collections/quick-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              asset_type: draggedAsset.type,
+              asset_id: draggedAsset.id,
+              collection_id: targetCollectionId
+            })
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to add to collection');
+          }
+          
+          showToast('Added to collection');
+          loadCollectionsSidebar(); // Update counts
+          
+        } catch (error) {
+          console.error('Failed to add to collection:', error);
+          showToast(error.message || 'Failed to add to collection', 'error');
+        }
+        return;
+      }
+      
+      // Otherwise, it's a collection being nested
+      if (!draggedCollectionId || draggedCollectionId === targetCollectionId) return;
+      
+      // Prevent circular nesting (can't nest parent into its own child)
+      if (isDescendant(targetCollectionId, draggedCollectionId)) {
+        showToast('Cannot nest a collection into its own child', 'error');
+        return;
+      }
+      
+      // Update parent
+      try {
+        const response = await authFetch(`/api/collections/${draggedCollectionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parent_collection_id: targetCollectionId })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to nest collection');
+        }
+        
+        showToast('Collection nested successfully');
+        loadCollectionsSidebar(); // Reload tree
+        
+      } catch (error) {
+        console.error('Failed to nest collection:', error);
+        showToast(error.message || 'Failed to nest collection', 'error');
+      }
+    }
+    
+    function toggleCollection(collectionId) {
+      if (expandedCollections.has(collectionId)) {
+        expandedCollections.delete(collectionId);
+      } else {
+        expandedCollections.add(collectionId);
+      }
+      renderCollectionsSidebar();
+    }
+    
+    let currentViewingCollectionId = null;
+    let currentViewingCollection = null;
+    
+    async function viewCollectionInMainArea(collectionId) {
+      // Clear active highlight to avoid confusion during drag
+      activeCollectionId = null;
+      renderCollectionsSidebar();
+      
+      currentViewingCollectionId = collectionId;
+      
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}`);
+        if (!response.ok) throw new Error('Failed to load collection');
+        
+        currentViewingCollection = await response.json();
+        renderCollectionView();
+        
+      } catch (error) {
+        console.error('Failed to load collection:', error);
+        showToast('Failed to load collection', 'error');
+      }
+    }
+    
+    function switchCollectionView(view) {
+      currentView = view;
+      renderCollectionView();
+    }
+    
+    function renderCollectionView() {
+      if (!currentViewingCollection) return;
+      
+      const collection = currentViewingCollection;
+      const collectionId = collection.id;
+      const breadcrumb = buildCollectionBreadcrumb(collectionId);
+      
+      const viewControls = document.querySelector('.view-controls');
+      const mainArea = document.getElementById('assetGrid');
+      const listArea = document.getElementById('assetList');
+      
+      // Add breadcrumb to view controls (after Grid/List buttons, before sort controls)
+      if (viewControls) {
+        // Check if breadcrumb already exists
+        let breadcrumbEl = viewControls.querySelector('.collection-breadcrumb-container');
+        if (!breadcrumbEl) {
+          breadcrumbEl = document.createElement('div');
+          breadcrumbEl.className = 'collection-breadcrumb-container';
+          // Insert after Grid/List buttons, before sort controls
+          const sortControls = viewControls.querySelector('.sort-controls');
+          if (sortControls) {
+            viewControls.insertBefore(breadcrumbEl, sortControls);
+          } else {
+            viewControls.appendChild(breadcrumbEl);
+          }
+        }
+        breadcrumbEl.innerHTML = breadcrumb;
+        
+        // Add share button if not already present
+        let shareBtn = viewControls.querySelector('.share-collection-btn');
+        if (!shareBtn) {
+          shareBtn = document.createElement('button');
+          shareBtn.className = 'btn-secondary share-collection-btn';
+          shareBtn.title = 'Share collection';
+          shareBtn.innerHTML = '<span>📤</span> Share';
+          shareBtn.onclick = () => shareCollectionModal(collectionId);
+          
+          // Find sort controls and insert before them
+          const sortControls = viewControls.querySelector('.sort-controls');
+          if (sortControls) {
+            viewControls.insertBefore(shareBtn, sortControls);
+          } else {
+            viewControls.appendChild(shareBtn);
+          }
+        }
+      }
+      
+      if (!collection.items || collection.items.length === 0) {
+        mainArea.innerHTML = `
+          <div class="empty-state">
+            <h3>This collection is empty</h3>
+            <p>Drag assets here or right-click to add</p>
+          </div>
+        `;
+        listArea.innerHTML = '';
+        return;
+      }
+      
+      const cacheBust = Date.now();
+      
+      // Grid view
+      let gridHtml = '';
+      collection.items.forEach(item => {
+        // Use correct endpoint for 3D models
+        const thumbUrl = item.asset_type === 'model' 
+          ? `/api/models/${item.asset_id}/preview?t=${cacheBust}`
+          : `/api/thumbnail/${item.asset_id}?t=${cacheBust}`;
+        
+        const icon = item.asset_type === 'model' ? '🎲' : '📄';
+        
+        gridHtml += `
+          <div class="asset-card" 
+               data-id="${item.asset_id}" 
+               data-type="${item.asset_type}" 
+               data-collection-item-id="${item.id}"
+               oncontextmenu="showCollectionItemContextMenu(event, '${collectionId}', '${item.id}')"
+               onclick="openCollectionItemDetail('${item.asset_type}', ${item.asset_id})">
+            <button class="collection-item-remove-btn" 
+                    onclick="event.stopPropagation();removeItemFromCollection('${collectionId}', '${item.id}')" 
+                    title="Remove from collection">✕</button>
+            <img class="asset-thumb" 
+                 src="${thumbUrl}" 
+                 alt="${escapeHtml(item.filename)}" 
+                 loading="lazy"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+            <div class="thumbnail-placeholder" style="display:none;">
+              <span style="font-size:48px">${icon}</span>
+            </div>
+            <div class="asset-info">
+              <div class="asset-title">${escapeHtml(item.filename || 'Unnamed')}</div>
+              <div class="asset-meta">${item.asset_type === 'model' ? '3D Model' : 'PDF'}</div>
+            </div>
+          </div>
+        `;
+      });
+      
+      // List view
+      let listHtml = '';
+      collection.items.forEach(item => {
+        const thumbUrl = item.asset_type === 'model' 
+          ? `/api/models/${item.asset_id}/preview?t=${cacheBust}`
+          : `/api/thumbnail/${item.asset_id}?t=${cacheBust}`;
+        
+        const icon = item.asset_type === 'model' ? '🎲' : '📄';
+        
+        listHtml += `
+          <div class="asset-row" 
+               data-id="${item.asset_id}" 
+               data-type="${item.asset_type}"
+               oncontextmenu="showCollectionItemContextMenu(event, '${collectionId}', '${item.id}')"
+               onclick="openCollectionItemDetail('${item.asset_type}', ${item.asset_id})">
+            <img src="${thumbUrl}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+            <div class="thumbnail-placeholder" style="display:none;width:60px;height:80px;align-items:center;justify-content:center;background:var(--bg-secondary);">
+              <span style="font-size:32px">${icon}</span>
+            </div>
+            <div>
+              <div class="title">${escapeHtml(item.filename || 'Unnamed')}</div>
+              <div class="meta">${item.asset_type === 'model' ? '3D Model' : 'PDF'}</div>
+            </div>
+            <button class="asset-row-remove" 
+                    onclick="event.stopPropagation();removeItemFromCollection('${collectionId}', '${item.id}')" 
+                    title="Remove from collection">✕</button>
+          </div>
+        `;
+      });
+      
+      mainArea.innerHTML = gridHtml;
+      listArea.innerHTML = listHtml;
+    }
+    
+    async function removeItemFromCollection(collectionId, itemId) {
+      if (!confirm('Remove this item from the collection?')) return;
+      
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}/items/${itemId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) throw new Error('Failed to remove item');
+        
+        showToast('Item removed from collection');
+        viewCollectionInMainArea(collectionId); // Refresh view
+        loadCollectionsSidebar(); // Update counts
+        
+      } catch (error) {
+        console.error('Failed to remove item:', error);
+        showToast('Failed to remove item', 'error');
+      }
+    }
+    
+    function openCollectionItemDetail(assetType, assetId) {
+      // Open detail view (info panel)
+      if (assetType === 'model') {
+        show3dModelInfo(assetId);
+      } else {
+        showDetail(assetId);
+      }
+    }
+    
+    function buildCollectionBreadcrumb(collectionId) {
+      // Find collection and build path to root
+      const findCollection = (id, collections) => {
+        for (const col of collections) {
+          if (col.id === id) return col;
+        }
+        return null;
+      };
+      
+      const buildPath = (id, path = []) => {
+        const col = findCollection(id, collectionsTree.owned) || findCollection(id, collectionsTree.shared);
+        if (!col) return path;
+        
+        path.unshift(col);
+        if (col.parent_collection_id) {
+          return buildPath(col.parent_collection_id, path);
+        }
+        return path;
+      };
+      
+      const path = buildPath(collectionId);
+      
+      if (path.length === 0) return '<span>Collection</span>';
+      
+      return path.map((col, idx) => {
+        if (idx === path.length - 1) {
+          // Current collection (not clickable)
+          return `<span class="breadcrumb-current">📁 ${escapeHtml(col.name)}</span>`;
+        } else {
+          // Parent (clickable)
+          return `<span class="breadcrumb-link" onclick="viewCollectionInMainArea('${col.id}')">📁 ${escapeHtml(col.name)}</span>`;
+        }
+      }).join(' <span class="breadcrumb-separator">›</span> ');
+    }
+    
+    function showCollectionItemContextMenu(event, collectionId, itemId) {
+      event.preventDefault();
+      
+      // Remove existing menu
+      const existing = document.getElementById('collectionItemContextMenu');
+      if (existing) existing.remove();
+      
+      const menu = document.createElement('div');
+      menu.id = 'collectionItemContextMenu';
+      menu.className = 'context-menu';
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.innerHTML = `
+        <div class="context-menu-item" onclick="removeItemFromCollection('${collectionId}', '${itemId}')">
+          <span>✕</span> Remove from Collection
+        </div>
+      `;
+      
+      document.body.appendChild(menu);
+      
+      // Close on click outside
+      setTimeout(() => {
+        document.addEventListener('click', function closeMenu() {
+          menu.remove();
+          document.removeEventListener('click', closeMenu);
+        });
+      }, 0);
+    }
+    
+    function showCollectionContextMenu(event, collectionId, collectionName) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      // Remove existing menu
+      const existing = document.getElementById('collectionContextMenu');
+      if (existing) existing.remove();
+      
+      const menu = document.createElement('div');
+      menu.id = 'collectionContextMenu';
+      menu.className = 'context-menu';
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.innerHTML = `
+        <div class="context-menu-item" onclick="shareCollectionModal('${collectionId}')">
+          <span>📤</span> Share Collection
+        </div>
+        <div class="context-menu-item" onclick="renameCollection('${collectionId}', '${collectionName.replace(/'/g, "\\'")}')">
+          <span>✏️</span> Rename
+        </div>
+        <div class="context-menu-item" onclick="moveCollectionToRoot('${collectionId}')">
+          <span>↖️</span> Move to Root
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" onclick="deleteCollection('${collectionId}')">
+          <span>🗑️</span> Delete Collection
+        </div>
+      `;
+      
+      document.body.appendChild(menu);
+      
+      // Close on click outside
+      setTimeout(() => {
+        document.addEventListener('click', function closeMenu() {
+          menu.remove();
+          document.removeEventListener('click', closeMenu);
+        });
+      }, 0);
+    }
+    
+    function shareCollectionModal(collectionId) {
+      document.getElementById('shareCollectionId').value = collectionId;
+      document.getElementById('shareModal').classList.add('show');
+    }
+    
+    function closeShareModal() {
+      document.getElementById('shareModal').classList.remove('show');
+    }
+    
+    async function renameCollection(collectionId, currentName) {
+      const newName = prompt('Rename collection:', currentName);
+      if (!newName || !newName.trim() || newName.trim() === currentName) return;
+      
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName.trim() })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to rename collection');
+        }
+        
+        showToast('Collection renamed');
+        loadCollectionsSidebar();
+        if (currentViewingCollectionId === collectionId) {
+          viewCollectionInMainArea(collectionId); // Refresh view
+        }
+        
+      } catch (error) {
+        console.error('Failed to rename collection:', error);
+        showToast(error.message || 'Failed to rename collection', 'error');
+      }
+    }
+    
+    async function moveCollectionToRoot(collectionId) {
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parent_collection_id: null })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to move collection');
+        }
+        
+        showToast('Collection moved to root');
+        loadCollectionsSidebar();
+        
+      } catch (error) {
+        console.error('Failed to move collection:', error);
+        showToast(error.message || 'Failed to move collection', 'error');
+      }
+    }
+    
+    async function deleteCollection(collectionId) {
+      if (!confirm('Delete this collection? Items will not be deleted, only the collection.')) return;
+      
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to delete collection');
+        }
+        
+        showToast('Collection deleted');
+        loadCollectionsSidebar();
+        if (currentViewingCollectionId === collectionId) {
+          // Clear main area
+          document.getElementById('assetGrid').innerHTML = '<div class="empty-state"><h3>Collection deleted</h3></div>';
+          currentViewingCollection = null;
+          currentViewingCollectionId = null;
+        }
+        
+      } catch (error) {
+        console.error('Failed to delete collection:', error);
+        showToast(error.message || 'Failed to delete collection', 'error');
+      }
+    }
+    
+    async function createCollectionInline() {
+      const name = prompt('Collection name:');
+      if (!name || !name.trim()) return;
+      
+      try {
+        const response = await authFetch('/api/collections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim() })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create collection');
+        }
+        
+        showToast(`Collection "${name}" created`);
+        loadCollectionsSidebar(); // Reload to show new collection
+        
+      } catch (error) {
+        console.error('Failed to create collection:', error);
+        showToast(error.message || 'Failed to create collection', 'error');
+      }
+    }
+    
+    // ==================== Share Collection Functions ====================
+    
+    function togglePublicShare() {
+      const checkbox = document.getElementById('sharePublic');
+      const section = document.getElementById('publicLinkSection');
+      
+      if (checkbox.checked) {
+        const collectionId = document.getElementById('shareCollectionId').value;
+        const publicLink = `${window.location.origin}/collection/${collectionId}`;
+        document.getElementById('publicLink').value = publicLink;
+        section.style.display = 'block';
+        showToast('Note: Public sharing will be implemented in future release', 'info');
+      } else {
+        section.style.display = 'none';
+      }
+    }
+    
+    function copyPublicLink() {
+      const input = document.getElementById('publicLink');
+      input.select();
+      document.execCommand('copy');
+      showToast('Link copied to clipboard');
+    }
+    
+    async function shareWithUser() {
+      const collectionId = document.getElementById('shareCollectionId').value;
+      const email = document.getElementById('shareUserEmail').value.trim();
+      const permission = document.getElementById('shareUserPermission').value;
+      
+      if (!email) {
+        showToast('Please enter a user email', 'error');
+        return;
+      }
+      
+      showToast('User sharing will be implemented in future release', 'info');
+      
+      // TODO: Implement actual sharing
+      // try {
+      //   const response = await authFetch(`/api/collections/${collectionId}/share`, {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({ email, permission })
+      //   });
+      //   
+      //   if (!response.ok) throw new Error('Failed to share');
+      //   showToast(`Shared with ${email}`);
+      //   document.getElementById('shareUserEmail').value = '';
+      // } catch (error) {
+      //   showToast(error.message || 'Failed to share', 'error');
+      // }
+    }
+    
+    async function shareExternal() {
+      const collectionId = document.getElementById('shareCollectionId').value;
+      const email = document.getElementById('shareExternalEmail').value.trim();
+      const days = document.getElementById('shareExternalDays').value;
+      const permission = document.getElementById('shareExternalPermission').value;
+      
+      if (!email) {
+        showToast('Please enter a recipient email', 'error');
+        return;
+      }
+      
+      showToast('External sharing will be implemented in future release', 'info');
+      
+      // TODO: Implement actual external sharing
+      // try {
+      //   const response = await authFetch(`/api/collections/${collectionId}/share/guest`, {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({ email, expiresInDays: days, permission })
+      //   });
+      //   
+      //   if (!response.ok) throw new Error('Failed to share');
+      //   showToast(`Link sent to ${email}`);
+      //   document.getElementById('shareExternalEmail').value = '';
+      // } catch (error) {
+      //   showToast(error.message || 'Failed to share', 'error');
+      // }
     }
     
     function contextMenuAddToCollection() {
@@ -5327,10 +7154,10 @@
       });
       loadStats();
       loadFolders();
-      loadPublishers();
+      // loadPublishers(); // REMOVED
       loadAssets();
       // Pre-load 3D nav for quick switching
-      load3dCollections();
+      // load3dCollections(); // REMOVED
       
       // Check if thumbnail rendering is already in progress
       checkThumbnailRenderStatus();
@@ -5448,6 +7275,9 @@
       document.getElementById('formatFilter').value = '';
       document.getElementById('contentResults').style.display = 'none';
       
+      // Restore normal view controls (clear any collection breadcrumb)
+      restoreNormalViewControls();
+      
       // Reload content
       loadStats();
       if (type === 'pdf') {
@@ -5455,7 +7285,7 @@
         loadAssets();
       } else {
         load3dFolders();
-        load3dCollections();
+        // load3dCollections(); // REMOVED
         load3dModels();
       }
     }
@@ -5467,19 +7297,19 @@
     // Store query info for folder navigation (shared by 3D and PDF)
     const folderQueryInfo = new Map();
     
-    async function load3dCollections() {
-      const res = await fetch('/api/models/collections');
-      const collections = await res.json();
-      
-      const list = document.getElementById('collectionList');
-      list.innerHTML = collections.map(c => `
-        <li onclick="filter3dCollection('${escapeHtml(c.collection)}')" 
-            class="${currentCollection === c.collection ? 'active' : ''}">
-          ${escapeHtml(c.collection)}
-          <span class="count-badge">${c.count}</span>
-        </li>
-      `).join('');
-    }
+    // Old category-based collections - REMOVED in favor of user collections
+    // async function load3dCollections() {
+    //   const res = await fetch('/api/models/collections');
+    //   const collections = await res.json();
+    //   const list = document.getElementById('collectionList');
+    //   list.innerHTML = collections.map(c => `
+    //     <li onclick="filter3dCollection('${escapeHtml(c.collection)}')" 
+    //         class="${currentCollection === c.collection ? 'active' : ''}">
+    //       ${escapeHtml(c.collection)}
+    //       <span class="count-badge">${c.count}</span>
+    //     </li>
+    //   `).join('');
+    // }
     
     async function load3dFolders() {
       const res = await fetch('/api/models/folder-tree');
@@ -5591,14 +7421,36 @@
         }
       }
       
-      load3dCollections();  // Update active states
+      // load3dCollections(); // REMOVED  // Update active states
       render3dFolderTree();
       load3dModels();
+    }
+    
+    function restoreNormalViewControls() {
+      const viewControls = document.querySelector('.view-controls');
+      if (viewControls && currentViewingCollectionId) {
+        // Remove breadcrumb container
+        const breadcrumb = viewControls.querySelector('.collection-breadcrumb-container');
+        if (breadcrumb) breadcrumb.remove();
+        
+        // Remove share button
+        const shareBtn = viewControls.querySelector('.share-collection-btn');
+        if (shareBtn) shareBtn.remove();
+        
+        // Clear collection viewing state
+        currentViewingCollectionId = null;
+        currentViewingCollection = null;
+      }
     }
     
     async function load3dModels(append = false) {
       if (modelsLoading) return;
       if (append && !modelsHasMore) return;
+      
+      // Restore normal view controls when loading assets
+      if (!append) {
+        restoreNormalViewControls();
+      }
       
       modelsLoading = true;
       
@@ -5657,13 +7509,14 @@
       load3dModels();
     }
     
-    function filter3dCollection(collection) {
-      currentCollection = collection;
-      currentFolder = null;  // Clear folder filter when filtering by collection
-      load3dCollections();
-      render3dFolderTree();
-      load3dModels();
-    }
+    // Old category-based collection filter - REMOVED
+    // function filter3dCollection(collection) {
+    //   currentCollection = collection;
+    //   currentFolder = null;
+    //   // load3dCollections(); // REMOVED
+    //   render3dFolderTree();
+    //   load3dModels();
+    // }
     
     function render3dModels(models, append = false) {
       const grid = document.getElementById('assetGrid');
@@ -5683,7 +7536,14 @@
       // Grid view with preview thumbnails (fresh timestamp for immediate updates)
       const cacheBust = Date.now();
       const gridHtml = models.map(m => `
-        <div class="asset-card" data-id="${m.id}" data-type="model" onclick="show3dDetail(${m.id})" title="ID: ${m.id}">
+        <div class="asset-card" 
+             data-id="${m.id}" 
+             data-type="model" 
+             draggable="true"
+             ondragstart="handleAssetDragStart(event)"
+             ondragend="handleAssetDragEnd(event)"
+             onclick="show3dDetail(${m.id})" 
+             title="ID: ${m.id}">
           <img class="asset-thumb model-grid-thumb" data-model-id="${m.id}" src="/api/models/${m.id}/preview?t=${cacheBust}" alt="" loading="lazy" 
                onerror="console.error('Thumb failed for model ${m.id}:', this.src); this.src='/static/placeholder-3d.svg';" />
           <div class="asset-info">
@@ -6253,23 +8113,28 @@
       }
     }
     
-    async function loadPublishers() {
-      const res = await fetch('/api/publishers');
-      const publishers = await res.json();
-      const list = document.getElementById('publisherList');
-      
-      list.innerHTML = publishers.slice(0, 15).map(p => `
-        <li class="${currentPublisher === p.publisher ? 'active' : ''}"
-            onclick="filterPublisher('${p.publisher}')">
-          ${p.publisher || 'Unknown'}
-          <span class="count-badge">${p.count}</span>
-        </li>
-      `).join('');
-    }
+    // Publisher filtering - REMOVED in favor of user collections
+    // async function loadPublishers() {
+    //   const res = await fetch('/api/publishers');
+    //   const publishers = await res.json();
+    //   const list = document.getElementById('publisherList');
+    //   list.innerHTML = publishers.slice(0, 15).map(p => `
+    //     <li class="${currentPublisher === p.publisher ? 'active' : ''}"
+    //         onclick="filterPublisher('${p.publisher}')">
+    //       ${p.publisher || 'Unknown'}
+    //       <span class="count-badge">${p.count}</span>
+    //     </li>
+    //   `).join('');
+    // }
     
     async function loadAssets(append = false) {
       if (assetsLoading) return;
       if (append && !assetsHasMore) return;
+      
+      // Restore normal view controls when loading assets
+      if (!append) {
+        restoreNormalViewControls();
+      }
       
       assetsLoading = true;
       
@@ -6351,11 +8216,11 @@
       // Load content based on current view type
       if (contentType === '3d') {
         load3dFolders();
-        load3dCollections();
+        // load3dCollections(); // REMOVED
         load3dModels();
       } else {
         loadFolders();
-        loadPublishers();
+        // loadPublishers(); // REMOVED
         loadAssets();
       }
     }
@@ -6744,7 +8609,13 @@
       // Grid view (with cache-busting for fresh thumbnails)
       const cacheBust = Date.now();
       const gridHtml = assets.map(a => `
-        <div class="asset-card" data-id="${a.id}" data-type="pdf" onclick="showDetail(${a.id})">
+        <div class="asset-card" 
+             data-id="${a.id}" 
+             data-type="pdf" 
+             draggable="true"
+             ondragstart="handleAssetDragStart(event)"
+             ondragend="handleAssetDragEnd(event)"
+             onclick="showDetail(${a.id})">
           <img class="asset-thumb" src="/api/thumbnail/${a.id}?t=${cacheBust}" alt="" loading="lazy" />
           <div class="asset-info">
             <div class="asset-title" title="${escapeHtml(a.title || a.filename)}">${escapeHtml(a.title || a.filename)}</div>
@@ -6798,7 +8669,7 @@
       }
       
       loadFolders();
-      loadPublishers();
+      // loadPublishers(); // REMOVED
       
       // Load assets based on current mode
       if (contentType === '3d') {
@@ -6809,17 +8680,15 @@
       updateScopeOption();
     }
     
-    function filterPublisher(publisher) {
-      // Clear search state
-      lastSearchQuery = '';
-      searchMatchesByAsset = {};
-      document.getElementById('searchInput').value = '';
-      document.getElementById('contentResults').style.display = 'none';
-      
-      currentPublisher = publisher;
-      loadPublishers();
-      loadAssets();
-    }
+    // Publisher filtering - REMOVED
+    // function filterPublisher(publisher) {
+    //   lastSearchQuery = '';
+    //   searchMatchesByAsset = {};
+    //   document.getElementById('searchInput').value = '';
+    //   document.getElementById('contentResults').style.display = 'none';
+    //   currentPublisher = publisher;
+    //   loadAssets();
+    // }
     
     // Store search matches by asset ID for display in detail modal
     let searchMatchesByAsset = {};
@@ -7964,9 +9833,16 @@
     }
     
     async function saveSettings() {
-      // Settings are now saved per-feature (Asset Locations, Backup Policies, etc.)
-      closeSettings();
-      showToast('Settings saved!', 'success');
+      // Check which tab is active and save accordingly
+      const emailTab = document.getElementById('settingsTabEmail');
+      if (emailTab && emailTab.classList.contains('active')) {
+        await saveEmailConfig();
+        closeSettings();
+      } else {
+        // Settings are now saved per-feature (Asset Locations, Backup Policies, etc.)
+        closeSettings();
+        showToast('Settings saved!', 'success');
+      }
     }
     
     async function browseDirectory(settingKey, inputId) {
@@ -8574,11 +10450,11 @@
               // Refresh everything properly
               if (uploadContentType === '3d') {
                 load3dFolders();
-                load3dCollections();
+                // load3dCollections(); // REMOVED
                 load3dModels();
               } else {
                 loadFolders();
-                loadPublishers();
+                // loadPublishers(); // REMOVED
                 loadAssets();
               }
               loadStats();
@@ -8806,10 +10682,12 @@
       // Update tab buttons
       document.getElementById('settingsTabGeneral').classList.toggle('active', tab === 'general');
       document.getElementById('settingsTabAdvanced').classList.toggle('active', tab === 'advanced');
+      document.getElementById('settingsTabEmail').classList.toggle('active', tab === 'email');
       
       // Show/hide content
       document.getElementById('settingsGeneral').style.display = tab === 'general' ? 'block' : 'none';
       document.getElementById('settingsAdvanced').style.display = tab === 'advanced' ? 'block' : 'none';
+      document.getElementById('settingsEmail').style.display = tab === 'email' ? 'block' : 'none';
       
       // Load data for advanced tab
       if (tab === 'advanced') {
@@ -8818,6 +10696,225 @@
         loadSnapshotStatus();
         loadBackupPolicies();
       }
+      
+      // Load email configuration
+      if (tab === 'email') {
+        loadEmailConfig();
+      }
+    }
+    
+    // ==================== Email Configuration Functions ====================
+    
+    async function loadEmailConfig() {
+      try {
+        const response = await fetch('/api/email/config');
+        if (!response.ok) throw new Error('Failed to load email config');
+        
+        const config = await response.json();
+        
+        // Set provider
+        document.getElementById('emailProvider').value = config.provider || 'smtp';
+        
+        // Set common fields
+        document.getElementById('emailFromAddress').value = config.from_address || '';
+        document.getElementById('emailFromName').value = config.from_name || 'FantasyFolio';
+        
+        // Set SMTP fields
+        document.getElementById('smtpHost').value = config.smtp_host || '';
+        document.getElementById('smtpPort').value = config.smtp_port || '587';
+        document.getElementById('smtpUser').value = config.smtp_user || '';
+        document.getElementById('smtpUseTls').checked = config.smtp_use_tls !== false;
+        // Password is not returned for security
+        
+        // Set SendGrid fields
+        // API key is not returned for security
+        
+        // Set SES fields
+        document.getElementById('sesRegion').value = config.ses_region || '';
+        // Keys are not returned for security
+        
+        // Update status banner
+        updateEmailStatus(config.is_configured);
+        
+        // Show correct provider section
+        switchEmailProvider();
+        
+      } catch (error) {
+        console.error('Failed to load email config:', error);
+        showToast('Failed to load email configuration', 'error');
+      }
+    }
+    
+    function switchEmailProvider() {
+      const provider = document.getElementById('emailProvider').value;
+      
+      // Hide all provider sections
+      document.getElementById('smtpSettings').style.display = 'none';
+      document.getElementById('sendgridSettings').style.display = 'none';
+      document.getElementById('sesSettings').style.display = 'none';
+      
+      // Show selected provider section
+      if (provider === 'smtp') {
+        document.getElementById('smtpSettings').style.display = 'block';
+      } else if (provider === 'sendgrid') {
+        document.getElementById('sendgridSettings').style.display = 'block';
+      } else if (provider === 'ses') {
+        document.getElementById('sesSettings').style.display = 'block';
+      }
+    }
+    
+    async function saveEmailConfig() {
+      const provider = document.getElementById('emailProvider').value;
+      const data = {
+        provider: provider,
+        from_address: document.getElementById('emailFromAddress').value,
+        from_name: document.getElementById('emailFromName').value
+      };
+      
+      // Add provider-specific fields
+      if (provider === 'smtp') {
+        data.smtp_host = document.getElementById('smtpHost').value;
+        data.smtp_port = parseInt(document.getElementById('smtpPort').value);
+        data.smtp_user = document.getElementById('smtpUser').value;
+        data.smtp_use_tls = document.getElementById('smtpUseTls').checked;
+        
+        const password = document.getElementById('smtpPassword').value;
+        if (password) {
+          data.smtp_password = password;
+        }
+      } else if (provider === 'sendgrid') {
+        const apiKey = document.getElementById('sendgridApiKey').value;
+        if (apiKey) {
+          data.sendgrid_api_key = apiKey;
+        }
+      } else if (provider === 'ses') {
+        data.ses_region = document.getElementById('sesRegion').value;
+        
+        const accessKey = document.getElementById('sesAccessKey').value;
+        if (accessKey) {
+          data.ses_access_key = accessKey;
+        }
+        
+        const secretKey = document.getElementById('sesSecretKey').value;
+        if (secretKey) {
+          data.ses_secret_key = secretKey;
+        }
+      }
+      
+      try {
+        const response = await fetch('/api/email/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save email config');
+        }
+        
+        showToast('Email configuration saved', 'success');
+        
+        // Reload status
+        const statusResponse = await fetch('/api/email/status');
+        const status = await statusResponse.json();
+        updateEmailStatus(status.configured);
+        
+      } catch (error) {
+        console.error('Failed to save email config:', error);
+        showToast(error.message || 'Failed to save email configuration', 'error');
+      }
+    }
+    
+    async function sendTestEmail() {
+      const testEmail = document.getElementById('testEmailAddress').value;
+      const statusDiv = document.getElementById('testEmailStatus');
+      const btn = document.getElementById('sendTestEmailBtn');
+      
+      if (!testEmail || !testEmail.includes('@')) {
+        statusDiv.className = 'error';
+        statusDiv.textContent = 'Please enter a valid email address';
+        return;
+      }
+      
+      // Save config first
+      await saveEmailConfig();
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Sending...';
+      statusDiv.style.display = 'block';
+      statusDiv.className = '';
+      statusDiv.textContent = 'Sending test email...';
+      
+      try {
+        const response = await fetch('/api/email/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to_address: testEmail })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          statusDiv.className = 'success';
+          statusDiv.textContent = `✅ Test email sent successfully to ${testEmail}! Check your inbox.`;
+        } else {
+          statusDiv.className = 'error';
+          statusDiv.textContent = `❌ Failed to send test email: ${result.error || 'Unknown error'}`;
+        }
+        
+      } catch (error) {
+        console.error('Test email error:', error);
+        statusDiv.className = 'error';
+        statusDiv.textContent = `❌ Error: ${error.message}`;
+        
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📧 Send Test';
+      }
+    }
+    
+    function updateEmailStatus(isConfigured) {
+      const banner = document.getElementById('emailStatusBanner');
+      const indicator = banner.querySelector('.status-indicator');
+      const text = document.getElementById('emailStatusText');
+      
+      if (isConfigured) {
+        indicator.className = 'status-indicator email-configured';
+        text.textContent = 'Email service is configured and ready';
+      } else {
+        indicator.className = 'status-indicator email-unconfigured';
+        text.textContent = 'Email service not configured - enter settings below';
+      }
+    }
+    
+    // Quick configuration helpers
+    function applyGmailConfig() {
+      document.getElementById('emailProvider').value = 'smtp';
+      document.getElementById('smtpHost').value = 'smtp.gmail.com';
+      document.getElementById('smtpPort').value = '587';
+      document.getElementById('smtpUseTls').checked = true;
+      switchEmailProvider();
+      showToast('Gmail SMTP settings applied. Enter your Gmail address and App Password.', 'success');
+    }
+    
+    function applyOffice365Config() {
+      document.getElementById('emailProvider').value = 'smtp';
+      document.getElementById('smtpHost').value = 'smtp.office365.com';
+      document.getElementById('smtpPort').value = '587';
+      document.getElementById('smtpUseTls').checked = true;
+      switchEmailProvider();
+      showToast('Office 365 SMTP settings applied. Enter your email and password.', 'success');
+    }
+    
+    function applySendGridSMTPConfig() {
+      document.getElementById('emailProvider').value = 'smtp';
+      document.getElementById('smtpHost').value = 'smtp.sendgrid.net';
+      document.getElementById('smtpPort').value = '587';
+      document.getElementById('smtpUser').value = 'apikey';
+      document.getElementById('smtpUseTls').checked = true;
+      switchEmailProvider();
+      showToast('SendGrid SMTP settings applied. Enter your SendGrid API key as the password.', 'success');
     }
     
     /**
