@@ -4595,6 +4595,11 @@
           <div class="snapshot-list" id="resticSnapshotList"></div>
         </div>
         
+        </div>
+        <!-- End of Deleted Records Sub-tab -->
+        
+        <!-- DB Back-Up Sub-tab -->
+        <div id="advancedBackup" class="advanced-subtab-content" style="display:none;">
         <!-- Backup Policies Section -->
         <div class="settings-section">
           <h3>💾 Backup</h3>
@@ -4683,10 +4688,11 @@
           </div>
         </div>
         
-      </div>
-      
-      <!-- Email Tab -->
-      <div class="settings-body settings-tab-content" id="settingsEmail" style="display:none;">
+        </div>
+        <!-- End of DB Back-Up Sub-tab -->
+        
+        <!-- Email Settings Sub-tab -->
+        <div id="advancedEmail" class="advanced-subtab-content" style="display:none;">
         
         <!-- Email Status -->
         <div class="settings-section">
@@ -4824,7 +4830,11 @@
           <div id="testEmailStatus" style="margin-top: 12px;"></div>
         </div>
         
+        </div>
+        <!-- End of Email Settings Sub-tab -->
+        
       </div>
+      <!-- End of Advanced Tab -->
       
       <div class="settings-footer">
         <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
@@ -11306,6 +11316,29 @@
       
       // Load email configuration
       if (tab === 'email') {
+        loadEmailConfig();
+      }
+    }
+    
+    function switchAdvancedSubtab(subtab) {
+      // Update subtab buttons
+      const subtabs = ['deleted', 'email', 'backup'];
+      subtabs.forEach(tab => {
+        const btn = document.getElementById(`advancedSubtab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        if (btn) {
+          btn.classList.toggle('active', tab === subtab);
+          btn.style.borderBottom = tab === subtab ? '2px solid var(--accent)' : '2px solid transparent';
+          btn.style.color = tab === subtab ? 'var(--text-primary)' : 'var(--text-secondary)';
+        }
+      });
+      
+      // Show/hide content
+      document.getElementById('advancedDeleted').style.display = subtab === 'deleted' ? 'block' : 'none';
+      document.getElementById('advancedEmail').style.display = subtab === 'email' ? 'block' : 'none';
+      document.getElementById('advancedBackup').style.display = subtab === 'backup' ? 'block' : 'none';
+      
+      // Load data for subtabs
+      if (subtab === 'email') {
         loadEmailConfig();
       }
     }
