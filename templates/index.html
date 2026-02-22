@@ -3923,7 +3923,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 3000;
+      z-index: 5000;
     }
     
     .collections-modal.show {
@@ -7100,9 +7100,28 @@
     }
     
     function shareCollectionModal(collectionId) {
+      console.log('shareCollectionModal executing');
       try {
+        // Close settings modal if open
+        const settingsModal = document.getElementById('settingsModal');
+        if (settingsModal && settingsModal.classList.contains('active')) {
+          console.log('Closing settings modal first');
+          settingsModal.classList.remove('active');
+        }
+        
+        const modal = document.getElementById('shareModal');
+        console.log('Modal element:', modal);
+        console.log('Modal current display:', window.getComputedStyle(modal).display);
+        console.log('Modal current z-index:', window.getComputedStyle(modal).zIndex);
+        
         document.getElementById('shareCollectionId').value = collectionId;
-        document.getElementById('shareModal').classList.add('show');
+        modal.classList.add('show');
+        
+        console.log('Added show class, new display:', window.getComputedStyle(modal).display);
+        console.log('Modal classList:', modal.classList.toString());
+        
+        // Force reflow to ensure CSS is applied
+        modal.offsetHeight;
         
         // Load data asynchronously without blocking modal display
         loadSharedUsersList(collectionId);
@@ -7114,7 +7133,7 @@
           }
         });
       } catch (error) {
-        console.error('Error opening share modal:', error);
+        console.error('Error opening share modal:', error, error.stack);
         showToast('Failed to open share modal', 'error');
       }
     }
