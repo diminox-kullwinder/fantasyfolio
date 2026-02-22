@@ -251,10 +251,14 @@ GUEST_TEMPLATE = """
       {% if items %}
       <div class="grid">
         {% for item in items %}
-        <div class="card" onclick="viewItem('{{ item.asset_type }}', {{ item.asset_id }})">
+        <div class="card" onclick="viewItem('{{ item.asset_type }}', {{ item.asset_id }}, '{{ token }}')">
           <div class="card-thumb">
-            {% if item.asset_type == 'model' %}
+            {% if item.asset_type == 'model' and item.thumb_path %}
+              <img src="/api/models/{{ item.asset_id }}/preview" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='🎲'">
+            {% elif item.asset_type == 'model' %}
               🎲
+            {% elif item.asset_type == 'pdf' and item.pdf_id %}
+              <img src="/api/thumbnail/{{ item.pdf_id }}" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='📄'">
             {% else %}
               📄
             {% endif %}
@@ -273,13 +277,14 @@ GUEST_TEMPLATE = """
   </div>
   
   <script>
-    function viewItem(type, id) {
+    function viewItem(type, id, token) {
       const canDownload = {{ 'true' if can_download else 'false' }};
       if (canDownload) {
-        // TODO: Implement download
-        alert('Download: ' + type + ' #' + id);
+        // Download the file
+        const url = `/shared/${token}/download/${type}/${id}`;
+        window.open(url, '_blank');
       } else {
-        alert('View-only access');
+        alert('View-only access - downloads not permitted with this link');
       }
     }
   </script>
@@ -362,13 +367,21 @@ def access_shared_collection(token):
     if not collection:
         return "Collection not found", 404
     
-    # Get collection items
+    # Get collection items with thumbnail info
     items = db.fetchall("""
         SELECT ci.*, 
                CASE 
                    WHEN ci.asset_type = 'model' THEN (SELECT filename FROM assets WHERE id = ci.asset_id)
                    WHEN ci.asset_type = 'pdf' THEN (SELECT filename FROM assets WHERE id = ci.asset_id)
-               END as filename
+               END as filename,
+               CASE 
+                   WHEN ci.asset_type = 'model' THEN (SELECT thumb_path FROM assets WHERE id = ci.asset_id)
+                   WHEN ci.asset_type = 'pdf' THEN NULL
+               END as thumb_path,
+               CASE 
+                   WHEN ci.asset_type = 'pdf' THEN (SELECT id FROM assets WHERE id = ci.asset_id)
+                   ELSE NULL
+               END as pdf_id
         FROM collection_items ci
         WHERE ci.collection_id = ?
         ORDER BY ci.sort_order, ci.added_at
@@ -404,6 +417,7 @@ def access_shared_collection(token):
         permission=share['permission'],
         can_download=share['permission'] in ('download', 'edit'),
         expires_at=expires_display,
+        token=token,
         error=None
     )
 
@@ -429,9 +443,15 @@ def download_shared_asset(token, asset_type, asset_id):
     
     # Check expiry
     if share['expires_at']:
-        expires = datetime.fromisoformat(share['expires_at'])
-        if datetime.utcnow() > expires:
+        expires = datetime.fromisoformat(share['expires_at'].replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        if now > expires:
             return "Link expired", 410
+    
+    # Get asset info
+    asset = db.fetchone("SELECT * FROM assets WHERE id = ?", (asset_id,))
+    if not asset:
+        return "Asset not found", 404
     
     # Increment download count
     with db.connection() as conn:
@@ -440,7 +460,22 @@ def download_shared_asset(token, asset_type, asset_id):
             SET download_count = download_count + 1
             WHERE id = ?
         """, (share['id'],))
+        conn.commit()
     
-    # TODO: Implement actual file download
-    # This would use the existing file serving logic from models/pdfs API
-    return f"Download: {asset_type} #{asset_id}", 200
+    # Serve the file
+    from flask import send_file
+    from pathlib import Path
+    
+    try:
+        file_path = Path(asset['file_path'])
+        if not file_path.exists():
+            return "File not found on disk", 404
+        
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=asset['filename']
+        )
+    except Exception as e:
+        logger.error(f"Failed to serve file: {e}")
+        return "Failed to download file", 500

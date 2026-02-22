@@ -7085,19 +7085,24 @@
       }, 0);
     }
     
-    async function shareCollectionModal(collectionId) {
-      document.getElementById('shareCollectionId').value = collectionId;
-      document.getElementById('shareModal').classList.add('show');
-      
-      // Load data asynchronously without blocking modal display
-      loadSharedUsersList(collectionId);
-      loadAvailableUsersForShare().catch(err => {
-        console.error('Failed to load users for share:', err);
-        const select = document.getElementById('shareUserSelect');
-        if (select) {
-          select.innerHTML = '<option value="">Failed to load users</option><option value="__invite__">📧 Invite via Email...</option>';
-        }
-      });
+    function shareCollectionModal(collectionId) {
+      try {
+        document.getElementById('shareCollectionId').value = collectionId;
+        document.getElementById('shareModal').classList.add('show');
+        
+        // Load data asynchronously without blocking modal display
+        loadSharedUsersList(collectionId);
+        loadAvailableUsersForShare().catch(err => {
+          console.error('Failed to load users for share:', err);
+          const select = document.getElementById('shareUserSelect');
+          if (select) {
+            select.innerHTML = '<option value="">Failed to load users</option><option value="__invite__">📧 Invite via Email...</option>';
+          }
+        });
+      } catch (error) {
+        console.error('Error opening share modal:', error);
+        showToast('Failed to open share modal', 'error');
+      }
     }
     
     async function loadAvailableUsersForShare() {
