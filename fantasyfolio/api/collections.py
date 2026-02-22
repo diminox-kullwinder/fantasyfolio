@@ -634,8 +634,9 @@ def create_share(collection_id):
             logger.info(f"Email service configured: {email_service.is_configured()}")
             
             if email_service.is_configured():
-                # Build collection URL (TODO: use configured base URL)
-                collection_url = f"/collections/{collection_id}"
+                # Build full URL to app (user will see collection in "Shared with Me")
+                base_url = request.host_url.rstrip('/')  # e.g., https://localhost:8008
+                collection_url = f"{base_url}/#shared"  # Link to shared collections view
                 
                 html_body, text_body = collection_share_invite_email(
                     inviter_name=user.get('display_name') or user['email'],
