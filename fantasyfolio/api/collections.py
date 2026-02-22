@@ -626,9 +626,13 @@ def create_share(collection_id):
     
     # Send email notification
     send_email = data.get('send_email', True)
+    logger.info(f"Attempting to send share invite (send_email={send_email})")
+    
     if send_email:
         try:
             email_service = get_email_service()
+            logger.info(f"Email service configured: {email_service.is_configured()}")
+            
             if email_service.is_configured():
                 # Build collection URL (TODO: use configured base URL)
                 collection_url = f"/collections/{collection_id}"
@@ -640,15 +644,22 @@ def create_share(collection_id):
                     permissions=permission
                 )
                 
-                email_service.send(
+                logger.info(f"Sending share invite to {email}")
+                success = email_service.send(
                     to_address=email,
                     subject=f"{user.get('display_name', 'Someone')} shared a collection with you",
                     html_body=html_body,
                     text_body=text_body
                 )
-                logger.info(f"Share invite sent to {email} for collection {collection_id}")
+                
+                if success:
+                    logger.info(f"✅ Share invite sent to {email} for collection {collection_id}")
+                else:
+                    logger.error(f"❌ Email service returned False for {email}")
+            else:
+                logger.warning(f"Email service not configured, skipping invite to {email}")
         except Exception as e:
-            logger.error(f"Failed to send share invite email: {e}")
+            logger.error(f"Failed to send share invite email: {e}", exc_info=True)
             # Don't fail the share creation if email fails
     
     return jsonify({
