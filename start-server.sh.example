@@ -1,0 +1,22 @@
+#!/bin/bash
+# Example startup script for FantasyFolio
+# Copy this to start-server.sh and configure with your actual values
+
+cd "$(dirname "$0")"
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Export environment variables
+export FLASK_APP=fantasyfolio.app
+export FLASK_ENV=production
+export DAM_DATABASE_PATH=/path/to/your/data/dam.db
+export SECRET_KEY=your-secret-key-here
+export GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+export GOOGLE_OAUTH_CLIENT_SECRET=your-client-secret
+
+# Start Flask with HTTPS
+nohup flask run --host 0.0.0.0 --port 8008 --cert cert.pem --key key.pem > flask.log 2>&1 &
+
+echo "FantasyFolio started on https://0.0.0.0:8008"
+echo "Check flask.log for output"
