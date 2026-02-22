@@ -584,6 +584,7 @@ def create_share(collection_id):
                 data.get('expires_at'), data.get('max_downloads'),
                 password_hash, now, user['id']
             ))
+            conn.commit()  # CRITICAL: Must commit transaction!
         
         return jsonify({
             'id': share_id,
@@ -623,6 +624,7 @@ def create_share(collection_id):
             (id, collection_id, shared_with_user_id, permission, created_at, created_by)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (share_id, collection_id, target_user['id'], permission, now, user['id']))
+        conn.commit()  # CRITICAL: Must commit transaction!
     
     # Send email notification
     send_email = data.get('send_email', True)
@@ -700,6 +702,8 @@ def revoke_share(collection_id, share_id):
         
         if cursor.rowcount == 0:
             return jsonify({'error': 'Share not found'}), 404
+        
+        conn.commit()  # CRITICAL: Must commit transaction!
     
     logger.info(f"Share {share_id} revoked for collection {collection_id}")
     return jsonify({'success': True})
@@ -764,6 +768,7 @@ def update_share(collection_id, share_id):
             SET {', '.join(updates)}
             WHERE id = ? AND collection_id = ?
         """, params)
+        conn.commit()  # CRITICAL: Must commit transaction!
     
     # Get updated share
     updated_share = db.fetchone(
