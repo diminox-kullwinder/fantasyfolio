@@ -28,13 +28,21 @@ collections_bp = Blueprint('collections', __name__, url_prefix='/api/collections
 @collections_bp.route('', methods=['GET'])
 @require_auth
 def list_collections():
-    """List current user's collections.
+    """List current user's collections (or another user's if owner_id specified).
     
     Query params:
         include_shared: Include collections shared with me (default: true)
+        owner_id: Get collections owned by specific user (admin only)
     """
     user = request.current_user
     include_shared = request.args.get('include_shared', 'true').lower() == 'true'
+    owner_id = request.args.get('owner_id')
+    
+    # If querying another user's collections, require admin
+    if owner_id and owner_id != user['id'] and user.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    target_user_id = owner_id if owner_id else user['id']
     
     db = get_db()
     
@@ -43,7 +51,7 @@ def list_collections():
         SELECT * FROM user_collections 
         WHERE owner_id = ? 
         ORDER BY name
-    """, (user['id'],))
+    """, (target_user_id,))
     
     # Get shared collections (with custom names if set)
     shared = []
@@ -72,6 +80,35 @@ def list_collections():
     return jsonify({
         'owned': owned,
         'shared': shared
+    })
+
+
+@collections_bp.route('/shared-with/<user_id>', methods=['GET'])
+@require_auth
+def get_collections_shared_with_user(user_id):
+    """Get collections shared with a specific user (admin only).
+    
+    Returns collections that have been shared with the specified user.
+    """
+    user = request.current_user
+    
+    # Require admin access (or viewing own shares)
+    if user_id != user['id'] and user.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    db = get_db()
+    
+    shared = db.fetchall("""
+        SELECT c.*, cs.permission, cs.custom_name, u.display_name as owner_name
+        FROM user_collections c
+        JOIN collection_shares cs ON c.id = cs.collection_id
+        JOIN users u ON c.owner_id = u.id
+        WHERE cs.shared_with_user_id = ?
+        ORDER BY c.updated_at DESC
+    """, (user_id,))
+    
+    return jsonify({
+        'shared': [dict(row) for row in shared]
     })
 
 

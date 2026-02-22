@@ -4187,7 +4187,6 @@
       </div>
       <div class="stats" id="stats">Loading...</div>
       <button class="settings-btn" onclick="openUpload()" title="Upload files" id="uploadBtn">⬆️</button>
-      <button class="settings-btn" onclick="openUserManagement()" title="User Management" id="usersBtn">👥</button>
       <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️<span class="trash-badge" id="trashBadge" style="display:none">0</span></button>
       
       <!-- User Menu (shown when logged in) -->
@@ -5519,6 +5518,96 @@
           </div>
           
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div class="collections-modal" id="editUserModal" onclick="if(event.target===this)closeEditUserModal()">
+    <div class="collections-box" style="max-width: 700px;">
+      <div class="collections-header">
+        <h2>✏️ Edit User</h2>
+        <button class="collections-close" onclick="closeEditUserModal()">✕</button>
+      </div>
+      
+      <div class="collections-content" style="padding:20px;">
+        
+        <!-- Sub-menu tabs -->
+        <div class="settings-tabs" style="margin-bottom:20px;display:flex;gap:8px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+          <button class="settings-subtab active" onclick="switchEditUserTab('account')" id="editUserTabAccount" style="padding:8px 16px;background:transparent;border:none;cursor:pointer;border-bottom:2px solid var(--accent);color:var(--text-primary);">
+            👤 Account
+          </button>
+          <button class="settings-subtab" onclick="switchEditUserTab('collections')" id="editUserTabCollections" style="padding:8px 16px;background:transparent;border:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-secondary);">
+            📁 Collections
+          </button>
+          <button class="settings-subtab" onclick="switchEditUserTab('profile')" id="editUserTabProfile" style="padding:8px 16px;background:transparent;border:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-secondary);">
+            📋 Profile
+          </button>
+        </div>
+        
+        <!-- Account Tab -->
+        <div id="editUserAccountTab" class="edit-user-tab-content">
+          <div class="settings-field">
+            <label for="editUserRole">Role</label>
+            <select id="editUserRole" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);">
+              <option value="player">Player</option>
+              <option value="gm">GM</option>
+              <option value="admin">Admin</option>
+              <option value="guest">Guest</option>
+            </select>
+          </div>
+          
+          <div class="settings-field">
+            <label for="editUserDisplayName">Display Name</label>
+            <input type="text" id="editUserDisplayName" placeholder="John Doe">
+          </div>
+          
+          <div class="settings-field" style="opacity:0.5;pointer-events:none;">
+            <label>Metadata Privileges</label>
+            <p style="color:var(--text-secondary);font-size:0.85rem;">Coming soon...</p>
+          </div>
+        </div>
+        
+        <!-- Collections Tab -->
+        <div id="editUserCollectionsTab" class="edit-user-tab-content" style="display:none;">
+          <h4 style="margin-bottom:12px;">📂 Owned Collections</h4>
+          <div id="editUserOwnedCollections" style="max-height:200px;overflow-y:auto;margin-bottom:24px;">
+            <p style="color:var(--text-secondary);text-align:center;padding:20px;">Loading...</p>
+          </div>
+          
+          <h4 style="margin-bottom:12px;">🔗 Shared With Them</h4>
+          <div id="editUserSharedCollections" style="max-height:200px;overflow-y:auto;">
+            <p style="color:var(--text-secondary);text-align:center;padding:20px;">Loading...</p>
+          </div>
+        </div>
+        
+        <!-- Profile Tab -->
+        <div id="editUserProfileTab" class="edit-user-tab-content" style="display:none;">
+          <div style="background:var(--bg-card);padding:16px;border-radius:8px;border:1px solid var(--border);">
+            <div style="display:grid;grid-template-columns:150px 1fr;gap:12px;font-size:0.9rem;">
+              <div style="color:var(--text-secondary);">Email:</div>
+              <div id="editUserEmail" style="font-weight:500;">-</div>
+              
+              <div style="color:var(--text-secondary);">Account Created:</div>
+              <div id="editUserCreatedAt">-</div>
+              
+              <div style="color:var(--text-secondary);">Last Login:</div>
+              <div id="editUserLastLogin">-</div>
+              
+              <div style="color:var(--text-secondary);">Account Status:</div>
+              <div id="editUserStatus">-</div>
+              
+              <div style="color:var(--text-secondary);">User ID:</div>
+              <div id="editUserId" style="font-family:monospace;font-size:0.8rem;">-</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="collections-footer" style="border-top:1px solid var(--border);padding-top:16px;margin-top:24px;">
+          <button type="button" onclick="closeEditUserModal()" style="background:var(--bg-secondary);color:var(--text-primary);">Cancel</button>
+          <button type="button" onclick="saveEditedUser()" style="background:var(--accent);color:white;">💾 Save Changes</button>
+        </div>
+        
       </div>
     </div>
   </div>
@@ -11381,6 +11470,7 @@
             guest: '#6b7280'
           };
           const roleColor = roleColors[user.role] || '#6b7280';
+          const userJson = JSON.stringify(user).replace(/'/g, '&apos;');
           
           return `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:6px;margin-bottom:8px;border:1px solid var(--border);">
@@ -11399,6 +11489,11 @@
                 </div>
               </div>
               <div style="display:flex;gap:8px;">
+                <button onclick='openEditUserModal(${userJson})' 
+                        style="background:var(--accent);color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.85rem;"
+                        title="Edit user details">
+                  ✏️ Edit
+                </button>
                 ${user.id !== currentUser?.id ? `
                   <button onclick="toggleUserActive('${user.id}', ${user.is_active})" 
                           style="background:transparent;border:1px solid var(--border);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.85rem;color:var(--text-primary);"
@@ -11421,6 +11516,140 @@
     function settingsSearchUsers() {
       const search = document.getElementById('settingsUserSearchInput').value.trim();
       settingsLoadUsers(search);
+    }
+    
+    // ==================== Edit User Functions ====================
+    
+    let currentEditingUser = null;
+    
+    function openEditUserModal(user) {
+      currentEditingUser = user;
+      document.getElementById('editUserModal').classList.add('show');
+      
+      // Populate account tab
+      document.getElementById('editUserRole').value = user.role;
+      document.getElementById('editUserDisplayName').value = user.display_name || '';
+      
+      // Populate profile tab
+      document.getElementById('editUserEmail').textContent = user.email;
+      document.getElementById('editUserCreatedAt').textContent = new Date(user.created_at).toLocaleString();
+      document.getElementById('editUserLastLogin').textContent = user.last_login_at 
+        ? new Date(user.last_login_at).toLocaleString() 
+        : 'Never';
+      document.getElementById('editUserStatus').innerHTML = user.is_active 
+        ? '<span style="color:#4CAF50;">✓ Active</span>' 
+        : '<span style="color:#ef4444;">✗ Inactive</span>';
+      document.getElementById('editUserId').textContent = user.id;
+      
+      // Load collections
+      loadUserCollections(user.id);
+      
+      // Switch to account tab
+      switchEditUserTab('account');
+    }
+    
+    function closeEditUserModal() {
+      document.getElementById('editUserModal').classList.remove('show');
+      currentEditingUser = null;
+    }
+    
+    function switchEditUserTab(tab) {
+      // Update tab buttons
+      const tabs = ['account', 'collections', 'profile'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`editUserTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (btn) {
+          const isActive = t === tab;
+          btn.style.borderBottom = isActive ? '2px solid var(--accent)' : '2px solid transparent';
+          btn.style.color = isActive ? 'var(--text-primary)' : 'var(--text-secondary)';
+        }
+      });
+      
+      // Show/hide content
+      document.getElementById('editUserAccountTab').style.display = tab === 'account' ? 'block' : 'none';
+      document.getElementById('editUserCollectionsTab').style.display = tab === 'collections' ? 'block' : 'none';
+      document.getElementById('editUserProfileTab').style.display = tab === 'profile' ? 'block' : 'none';
+    }
+    
+    async function loadUserCollections(userId) {
+      try {
+        // Get owned collections
+        const ownedResponse = await authFetch(`/api/collections?owner_id=${userId}`);
+        const ownedData = await ownedResponse.json();
+        
+        const ownedContainer = document.getElementById('editUserOwnedCollections');
+        if (ownedData.owned && ownedData.owned.length > 0) {
+          ownedContainer.innerHTML = ownedData.owned.map(col => `
+            <div style="padding:8px;background:var(--bg-secondary);border-radius:4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <strong>📁 ${col.name}</strong>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">${col.item_count || 0} items</div>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          ownedContainer.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No collections</p>';
+        }
+        
+        // Get shared collections
+        const sharedResponse = await authFetch(`/api/collections/shared-with/${userId}`);
+        const sharedData = await sharedResponse.json();
+        
+        const sharedContainer = document.getElementById('editUserSharedCollections');
+        if (sharedData.shared && sharedData.shared.length > 0) {
+          sharedContainer.innerHTML = sharedData.shared.map(col => `
+            <div style="padding:8px;background:var(--bg-secondary);border-radius:4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <strong>📁 ${col.name}</strong>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">
+                  ${col.permission} access | from ${col.owner_name}
+                </div>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          sharedContainer.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No shared collections</p>';
+        }
+        
+      } catch (error) {
+        console.error('Failed to load user collections:', error);
+        document.getElementById('editUserOwnedCollections').innerHTML = 
+          '<p style="color:#ef4444;text-align:center;padding:20px;">Failed to load</p>';
+        document.getElementById('editUserSharedCollections').innerHTML = 
+          '<p style="color:#ef4444;text-align:center;padding:20px;">Failed to load</p>';
+      }
+    }
+    
+    async function saveEditedUser() {
+      if (!currentEditingUser) return;
+      
+      const role = document.getElementById('editUserRole').value;
+      const displayName = document.getElementById('editUserDisplayName').value.trim();
+      
+      try {
+        const response = await authFetch(`/api/users/${currentEditingUser.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role, display_name: displayName })
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to update user');
+        }
+        
+        showToast('✅ User updated successfully');
+        closeEditUserModal();
+        await settingsLoadUsers();
+        
+        // Also reload external modal if open
+        if (document.getElementById('userManagementModal').classList.contains('show')) {
+          await loadUsersList();
+        }
+        
+      } catch (error) {
+        showToast(error.message || 'Failed to update user', 'error');
+      }
     }
     
     // ==================== Email Configuration Functions ====================
