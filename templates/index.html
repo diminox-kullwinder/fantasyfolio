@@ -7085,14 +7085,15 @@
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + days);
         
-        // Create guest link
+        // Create guest link with email
         const response = await authFetch(`/api/collections/${collectionId}/share`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             guest_link: true,
             permission,
-            expires_at: expiresAt.toISOString()
+            expires_at: expiresAt.toISOString(),
+            recipient_email: email  // Send email to recipient
           })
         });
         
@@ -7102,15 +7103,15 @@
           throw new Error(data.error || 'Failed to create guest link');
         }
         
-        // TODO: Send email with guest link
-        // For now, just show the link to copy
         const guestUrl = `${window.location.origin}/shared/${data.guest_token}`;
         
-        showToast(`✅ Guest link created (expires in ${days} days)\n${guestUrl}`, 'success');
-        document.getElementById('shareExternalEmail').value = '';
+        if (data.email_sent) {
+          showToast(`✅ Guest link sent to ${email} (expires in ${days} days)`);
+        } else {
+          showToast(`✅ Guest link created (expires in ${days} days)\n${guestUrl}`, 'success');
+        }
         
-        // TODO: Implement email sending for guest links
-        console.log('Guest link created:', guestUrl);
+        document.getElementById('shareExternalEmail').value = '';
         
       } catch (error) {
         showToast(error.message || 'Failed to share', 'error');

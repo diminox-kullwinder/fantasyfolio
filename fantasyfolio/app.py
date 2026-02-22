@@ -122,6 +122,7 @@ def register_blueprints(app: Flask):
     from fantasyfolio.api.collections import collections_bp
     from fantasyfolio.api.email_settings import email_settings_bp
     from fantasyfolio.api.shared import shared_bp
+    from fantasyfolio.api.users import users_bp
     
     app.register_blueprint(assets_bp, url_prefix='/api')
     app.register_blueprint(models_bp, url_prefix='/api')
@@ -133,6 +134,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(collections_bp)  # Already has /api/collections prefix
     app.register_blueprint(email_settings_bp, url_prefix='/api')
     app.register_blueprint(shared_bp)  # Public routes: /shared/<token>
+    app.register_blueprint(users_bp)  # User management: /api/users
 
 
 def register_error_handlers(app: Flask):

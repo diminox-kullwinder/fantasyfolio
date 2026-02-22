@@ -14,7 +14,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 
 from fantasyfolio.api.auth import require_auth, get_current_user
-from fantasyfolio.core.database import get_db
+from fantasyfolio.core.database import get_db, get_setting
 from fantasyfolio.services.email import get_email_service
 from fantasyfolio.services.email_templates import collection_share_invite_email
 
@@ -586,6 +586,50 @@ def create_share(collection_id):
             ))
             conn.commit()  # CRITICAL: Must commit transaction!
         
+        # Send email if recipient provided
+        recipient_email = data.get('recipient_email')
+        if recipient_email:
+            try:
+                email_service = get_email_service()
+                if email_service.is_configured():
+                    # Build full guest link URL using configured base URL
+                    base_url = get_setting('app_base_url') or request.host_url.rstrip('/')
+                    guest_url = f"{base_url}/shared/{guest_token}"
+                    
+                    # Format expiry for email
+                    expires_display = None
+                    if data.get('expires_at'):
+                        from datetime import datetime
+                        expires = datetime.fromisoformat(data['expires_at'].replace('Z', '+00:00'))
+                        delta = expires - datetime.utcnow()
+                        if delta.days > 0:
+                            expires_display = f"{delta.days} days"
+                        else:
+                            expires_display = "soon"
+                    
+                    html_body, text_body = collection_share_invite_email(
+                        inviter_name=user.get('display_name') or user['email'],
+                        collection_name=collection['name'],
+                        collection_url=guest_url,
+                        permissions=permission,
+                        expiry_date=expires_display
+                    )
+                    
+                    success = email_service.send(
+                        to_address=recipient_email,
+                        subject=f"{user.get('display_name', 'Someone')} shared a collection with you",
+                        html_body=html_body,
+                        text_body=text_body
+                    )
+                    
+                    if success:
+                        logger.info(f"✅ Guest link email sent to {recipient_email}")
+                    else:
+                        logger.error(f"❌ Failed to send guest link email to {recipient_email}")
+            except Exception as e:
+                logger.error(f"Failed to send guest link email: {e}", exc_info=True)
+                # Don't fail the link creation if email fails
+        
         return jsonify({
             'id': share_id,
             'guest_token': guest_token,  # Only time this is revealed
@@ -593,7 +637,8 @@ def create_share(collection_id):
             'permission': permission,
             'expires_at': data.get('expires_at'),
             'max_downloads': data.get('max_downloads'),
-            'has_password': bool(password_hash)
+            'has_password': bool(password_hash),
+            'email_sent': bool(recipient_email)
         }), 201
     
     # User share creation
@@ -636,9 +681,9 @@ def create_share(collection_id):
             logger.info(f"Email service configured: {email_service.is_configured()}")
             
             if email_service.is_configured():
-                # Build full URL to app (user will see collection in "Shared with Me")
-                base_url = request.host_url.rstrip('/')  # e.g., https://localhost:8008
-                collection_url = f"{base_url}/#shared"  # Link to shared collections view
+                # Build full URL to collection view using configured base URL
+                base_url = get_setting('app_base_url') or request.host_url.rstrip('/')
+                collection_url = f"{base_url}/?view=collection&id={collection_id}"  # Direct link to collection
                 
                 html_body, text_body = collection_share_invite_email(
                     inviter_name=user.get('display_name') or user['email'],
