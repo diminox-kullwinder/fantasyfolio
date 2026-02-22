@@ -665,10 +665,14 @@ def create_share(collection_id):
                 logger.error(f"Failed to send guest link email: {e}", exc_info=True)
                 # Don't fail the link creation if email fails
         
+        # Build full URL using configured base URL
+        base_url = get_setting('app_base_url') or request.host_url.rstrip('/')
+        guest_url = f"{base_url}/shared/{guest_token}"
+        
         return jsonify({
             'id': share_id,
             'guest_token': guest_token,  # Only time this is revealed
-            'url': f"/shared/{guest_token}",
+            'url': guest_url,  # Full URL with configured base
             'permission': permission,
             'expires_at': data.get('expires_at'),
             'max_downloads': data.get('max_downloads'),

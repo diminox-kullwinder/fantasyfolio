@@ -7472,8 +7472,8 @@
             throw new Error(data.error || 'Failed to create public link');
           }
           
-          const publicLink = `${window.location.origin}/shared/${data.guest_token}`;
-          document.getElementById('publicLink').value = publicLink;
+          // Use full URL from backend (respects app_base_url setting)
+          document.getElementById('publicLink').value = data.url;
           document.getElementById('publicLink').dataset.shareId = data.id;
           section.style.display = 'block';
           showToast('✅ Public link created');
@@ -7570,9 +7570,8 @@
           throw new Error(data.error || 'Failed to create guest link');
         }
         
-        // Always show the link in the result box
-        const guestUrl = `${window.location.origin}/shared/${data.guest_token}`;
-        document.getElementById('guestLinkUrl').value = guestUrl;
+        // Always show the link in the result box (use full URL from backend)
+        document.getElementById('guestLinkUrl').value = data.url;
         document.getElementById('guestLinkExpiry').textContent = `(expires in ${days} days)`;
         document.getElementById('guestLinkResult').style.display = 'block';
         
