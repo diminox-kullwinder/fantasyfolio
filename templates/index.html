@@ -4492,10 +4492,10 @@
           <p class="settings-hint">Manage user accounts and permissions.</p>
           
           <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0;">
-            <input type="text" id="settingsUserSearch" placeholder="Search users..." 
+            <input type="text" id="settingsUserSearchInput" placeholder="Search users..." 
                    style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);margin-right:12px;"
                    oninput="settingsSearchUsers()">
-            <button class="btn btn-primary" onclick="settingsOpenAddUser()">
+            <button class="btn btn-primary" onclick="openAddUserModal()">
               ➕ Add User
             </button>
           </div>
@@ -4570,6 +4570,12 @@
           <div class="journal-list" id="journalList"></div>
         </div>
         
+        </div>
+        <!-- End of Deleted Records Sub-tab -->
+        
+        <!-- DB Back-Up Sub-tab -->
+        <div id="advancedBackup" class="advanced-subtab-content" style="display:none;">
+        
         <!-- Snapshots Section -->
         <div class="settings-section">
           <h3>📸 Database Snapshots</h3>
@@ -4595,11 +4601,6 @@
           <div class="snapshot-list" id="resticSnapshotList"></div>
         </div>
         
-        </div>
-        <!-- End of Deleted Records Sub-tab -->
-        
-        <!-- DB Back-Up Sub-tab -->
-        <div id="advancedBackup" class="advanced-subtab-content" style="display:none;">
         <!-- Backup Policies Section -->
         <div class="settings-section">
           <h3>💾 Backup</h3>
@@ -6131,6 +6132,11 @@
         closeAddUserModal();
         await loadUsersList();
         
+        // Also reload settings user list if that tab is open
+        if (document.getElementById('settingsUsers').style.display !== 'none') {
+          await settingsLoadUsers();
+        }
+        
       } catch (error) {
         showToast(error.message || 'Failed to create user', 'error');
       }
@@ -6158,6 +6164,11 @@
         
         showToast(`✅ User ${action}d`);
         await loadUsersList();
+        
+        // Also reload settings user list if that tab is open
+        if (document.getElementById('settingsUsers').style.display !== 'none') {
+          await settingsLoadUsers();
+        }
         
       } catch (error) {
         showToast(error.message || `Failed to ${action} user`, 'error');
@@ -11341,6 +11352,75 @@
       if (subtab === 'email') {
         loadEmailConfig();
       }
+    }
+    
+    // ==================== Settings User Management Functions ====================
+    
+    async function settingsLoadUsers(search = '') {
+      try {
+        const url = search 
+          ? `/api/users?search=${encodeURIComponent(search)}`
+          : '/api/users?limit=100';
+        
+        const response = await authFetch(url);
+        if (!response.ok) throw new Error('Failed to load users');
+        
+        const data = await response.json();
+        const container = document.getElementById('settingsUsersList');
+        
+        if (!data.users || data.users.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:40px;">No users found</p>';
+          return;
+        }
+        
+        container.innerHTML = data.users.map(user => {
+          const roleColors = {
+            admin: '#f59e0b',
+            gm: '#8b5cf6',
+            player: '#3b82f6',
+            guest: '#6b7280'
+          };
+          const roleColor = roleColors[user.role] || '#6b7280';
+          
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:6px;margin-bottom:8px;border:1px solid var(--border);">
+              <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <strong style="font-size:1rem;">${user.display_name || user.email}</strong>
+                  <span style="background:${roleColor};color:white;padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:600;">
+                    ${user.role.toUpperCase()}
+                  </span>
+                  ${!user.is_active ? '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:12px;font-size:0.75rem;">INACTIVE</span>' : ''}
+                </div>
+                <div style="color:var(--text-secondary);font-size:0.85rem;">${user.email}</div>
+                <div style="color:var(--text-secondary);font-size:0.75rem;margin-top:4px;">
+                  Created: ${new Date(user.created_at).toLocaleDateString()}
+                  ${user.last_login_at ? ` | Last login: ${new Date(user.last_login_at).toLocaleDateString()}` : ''}
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                ${user.id !== currentUser?.id ? `
+                  <button onclick="toggleUserActive('${user.id}', ${user.is_active})" 
+                          style="background:transparent;border:1px solid var(--border);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.85rem;color:var(--text-primary);"
+                          title="${user.is_active ? 'Deactivate' : 'Activate'} user">
+                    ${user.is_active ? '🚫' : '✅'}
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Failed to load users:', error);
+        document.getElementById('settingsUsersList').innerHTML = 
+          '<p style="color:#ef4444;text-align:center;padding:40px;">Failed to load users</p>';
+      }
+    }
+    
+    function settingsSearchUsers() {
+      const search = document.getElementById('settingsUserSearchInput').value.trim();
+      settingsLoadUsers(search);
     }
     
     // ==================== Email Configuration Functions ====================
