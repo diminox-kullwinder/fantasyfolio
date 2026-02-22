@@ -7111,8 +7111,8 @@
         
         const modal = document.getElementById('shareModal');
         console.log('Modal element:', modal);
-        console.log('Modal current display:', window.getComputedStyle(modal).display);
-        console.log('Modal current z-index:', window.getComputedStyle(modal).zIndex);
+        console.log('Modal parent:', modal.parentElement);
+        console.log('Modal parent display:', modal.parentElement ? window.getComputedStyle(modal.parentElement).display : 'no parent');
         
         document.getElementById('shareCollectionId').value = collectionId;
         modal.classList.add('show');
@@ -7120,10 +7120,19 @@
         // Force display with inline style as fallback
         modal.style.display = 'flex';
         modal.style.zIndex = '9999';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
         
-        console.log('Added show class, new display:', window.getComputedStyle(modal).display);
-        console.log('Modal classList:', modal.classList.toString());
-        console.log('Modal inline style:', modal.style.display, modal.style.zIndex);
+        // Force on body too to ensure it's not hidden by parent
+        document.body.style.overflow = 'hidden'; // Prevent background scroll
+        
+        console.log('SET inline styles');
+        console.log('modal.style.display:', modal.style.display);
+        console.log('Computed display:', window.getComputedStyle(modal).display);
+        console.log('Computed visibility:', window.getComputedStyle(modal).visibility);
+        console.log('Computed opacity:', window.getComputedStyle(modal).opacity);
+        console.log('Modal offsetWidth:', modal.offsetWidth);
+        console.log('Modal offsetHeight:', modal.offsetHeight);
         
         // Force reflow to ensure CSS is applied
         modal.offsetHeight;
@@ -7274,6 +7283,9 @@
       modal.classList.remove('show');
       modal.style.display = '';
       modal.style.zIndex = '';
+      modal.style.visibility = '';
+      modal.style.opacity = '';
+      document.body.style.overflow = '';
     }
     
     async function renameCollection(collectionId, currentName) {
