@@ -254,7 +254,11 @@ GUEST_TEMPLATE = """
         <div class="card" onclick="viewItem('{{ item.asset_type }}', {{ item.asset_id }}, '{{ token }}')">
           <div class="card-thumb">
             {% if item.has_thumbnail %}
-              <img src="/api/thumbnail/{{ item.asset_db_id }}" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='{% if item.asset_type == 'model' %}🎲{% else %}📄{% endif %}'">
+              {% if item.asset_type == 'model' %}
+                <img src="/api/models/{{ item.asset_id }}/preview" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='🎲'">
+              {% else %}
+                <img src="/api/thumbnail/{{ item.asset_db_id }}" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='📄'">
+              {% endif %}
             {% elif item.asset_type == 'model' %}
               🎲
             {% else %}
@@ -365,15 +369,16 @@ def access_shared_collection(token):
     if not collection:
         return "Collection not found", 404
     
-    # Get collection items with thumbnail info
+    # Get collection items with thumbnail info (both PDFs and 3D models)
     items = db.fetchall("""
-        SELECT ci.*, 
-               a.filename,
-               a.thumbnail_path,
-               a.has_thumbnail,
-               a.id as asset_db_id
+        SELECT ci.asset_type, ci.asset_id, ci.sort_order, ci.added_at,
+               COALESCE(a.filename, m.filename) as filename,
+               COALESCE(a.thumbnail_path, m.preview_image) as thumbnail_path,
+               COALESCE(a.has_thumbnail, m.has_thumbnail, 0) as has_thumbnail,
+               COALESCE(a.id, m.id) as asset_db_id
         FROM collection_items ci
-        JOIN assets a ON ci.asset_id = a.id
+        LEFT JOIN assets a ON ci.asset_type = 'pdf' AND ci.asset_id = a.id
+        LEFT JOIN models m ON ci.asset_type = 'model' AND ci.asset_id = m.id
         WHERE ci.collection_id = ?
         ORDER BY ci.sort_order, ci.added_at
     """, (collection['id'],))
@@ -439,8 +444,14 @@ def download_shared_asset(token, asset_type, asset_id):
         if now > expires:
             return "Link expired", 410
     
-    # Get asset info
-    asset = db.fetchone("SELECT * FROM assets WHERE id = ?", (asset_id,))
+    # Get asset info from the correct table
+    if asset_type == 'pdf':
+        asset = db.fetchone("SELECT * FROM assets WHERE id = ?", (asset_id,))
+    elif asset_type == 'model':
+        asset = db.fetchone("SELECT * FROM models WHERE id = ?", (asset_id,))
+    else:
+        return "Invalid asset type", 400
+    
     if not asset:
         return "Asset not found", 404
     
