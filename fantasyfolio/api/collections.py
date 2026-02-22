@@ -45,17 +45,29 @@ def list_collections():
         ORDER BY name
     """, (user['id'],))
     
-    # Get shared collections
+    # Get shared collections (with custom names if set)
     shared = []
     if include_shared:
-        shared = db.fetchall("""
-            SELECT c.*, cs.permission, u.display_name as owner_name
+        shared_raw = db.fetchall("""
+            SELECT c.*, cs.permission, cs.custom_name, u.display_name as owner_name
             FROM user_collections c
             JOIN collection_shares cs ON c.id = cs.collection_id
             JOIN users u ON c.owner_id = u.id
             WHERE cs.shared_with_user_id = ?
             ORDER BY c.updated_at DESC
         """, (user['id'],))
+        
+        # Use custom_name if set, otherwise use original name
+        shared = []
+        for row in shared_raw:
+            item = dict(row)
+            if item.get('custom_name'):
+                item['display_name'] = item['custom_name']
+            else:
+                item['display_name'] = item['name']
+            item['original_name'] = item['name']
+            item['is_shared'] = True
+            shared.append(item)
     
     return jsonify({
         'owned': owned,
@@ -179,7 +191,7 @@ def update_collection(collection_id):
     """Update collection details.
     
     Body:
-        name: New name
+        name: New name (for owner) or custom_name (for shared users)
         description: New description
         visibility: New visibility
         parent_collection_id: New parent (null to unnest)
@@ -188,11 +200,33 @@ def update_collection(collection_id):
     data = request.get_json(silent=True) or {}
     db = get_db()
     
-    # Check ownership
+    # Check ownership first
     collection = db.fetchone("SELECT * FROM user_collections WHERE id = ? AND owner_id = ?", 
                             (collection_id, user['id']))
+    
+    # If not owner, check if user has share access
     if not collection:
-        return jsonify({'error': 'Collection not found or access denied'}), 404
+        share = db.fetchone("""
+            SELECT * FROM collection_shares 
+            WHERE collection_id = ? AND shared_with_user_id = ?
+        """, (collection_id, user['id']))
+        
+        if not share:
+            return jsonify({'error': 'Collection not found or access denied'}), 404
+        
+        # Shared users can only update their custom name
+        if 'name' in data:
+            custom_name = data['name'].strip()
+            with db.connection() as conn:
+                conn.execute("""
+                    UPDATE collection_shares 
+                    SET custom_name = ?
+                    WHERE collection_id = ? AND shared_with_user_id = ?
+                """, (custom_name, collection_id, user['id']))
+                conn.commit()
+            return jsonify({'success': True, 'custom_name': custom_name})
+        else:
+            return jsonify({'error': 'Shared users can only update collection name'}), 403
     
     # Verify parent if being changed
     if 'parent_collection_id' in data:

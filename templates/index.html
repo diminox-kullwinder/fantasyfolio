@@ -6484,12 +6484,13 @@
         const isActive = activeCollectionId === node.id;
         
         html += '<div class="collection-tree-item">';
+        const displayName = node.display_name || node.name;
         html += `<div class="collection-tree-item-content ${isActive ? 'active' : ''}" 
                       draggable="true"
                       data-collection-id="${node.id}"
-                      data-collection-name="${escapeHtml(node.name).replace(/"/g, '&quot;')}"
+                      data-collection-name="${escapeHtml(displayName).replace(/"/g, '&quot;')}"
                       onclick="viewCollectionInMainArea('${node.id}')"
-                      oncontextmenu="showCollectionContextMenu(event, '${node.id}', '${escapeHtml(node.name).replace(/'/g, "\\'")}')"
+                      oncontextmenu="showCollectionContextMenu(event, '${node.id}', '${escapeHtml(displayName).replace(/'/g, "\\'")}')"
                       ondragstart="handleCollectionDragStart(event)"
                       ondragover="handleCollectionDragOver(event)"
                       ondragenter="handleCollectionDragEnter(event)"
@@ -6505,7 +6506,7 @@
         }
         
         html += `<span class="collection-tree-item-icon">📁</span>`;
-        html += `<span class="collection-tree-item-name">${escapeHtml(node.name)}</span>`;
+        html += `<span class="collection-tree-item-name">${escapeHtml(node.display_name || node.name)}</span>`;
         html += `<span class="collection-tree-item-count">${node.item_count || 0}</span>`;
         html += '</div>';
         
@@ -7007,12 +7008,13 @@
       if (path.length === 0) return '<span>Collection</span>';
       
       return path.map((col, idx) => {
+        const displayName = col.display_name || col.name;
         if (idx === path.length - 1) {
           // Current collection (not clickable)
-          return `<span class="breadcrumb-current">📁 ${escapeHtml(col.name)}</span>`;
+          return `<span class="breadcrumb-current">📁 ${escapeHtml(displayName)}</span>`;
         } else {
           // Parent (clickable)
-          return `<span class="breadcrumb-link" onclick="viewCollectionInMainArea('${col.id}')">📁 ${escapeHtml(col.name)}</span>`;
+          return `<span class="breadcrumb-link" onclick="viewCollectionInMainArea('${col.id}')">📁 ${escapeHtml(displayName)}</span>`;
         }
       }).join(' <span class="breadcrumb-separator">›</span> ');
     }
