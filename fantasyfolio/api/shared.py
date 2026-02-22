@@ -6,7 +6,7 @@ Public routes for accessing collections via guest tokens (no authentication requ
 
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, render_template_string
 
 from fantasyfolio.core.database import get_db
@@ -314,8 +314,9 @@ def access_shared_collection(token):
     
     # Check expiry
     if share['expires_at']:
-        expires = datetime.fromisoformat(share['expires_at'])
-        if datetime.utcnow() > expires:
+        expires = datetime.fromisoformat(share['expires_at'].replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        if now > expires:
             return "This link has expired", 410
     
     # Check download limit
@@ -384,8 +385,9 @@ def access_shared_collection(token):
     # Format expiry for display
     expires_display = None
     if share['expires_at']:
-        expires = datetime.fromisoformat(share['expires_at'])
-        delta = expires - datetime.utcnow()
+        expires = datetime.fromisoformat(share['expires_at'].replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        delta = expires - now
         if delta.days > 0:
             expires_display = f"in {delta.days} days"
         elif delta.seconds > 3600:

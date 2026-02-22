@@ -5319,7 +5319,6 @@
           <p class="share-description">Share with other users on this FantasyFolio instance</p>
           
           <select id="shareUserSelect" 
-                  size="6"
                   style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;background:var(--bg-secondary);color:var(--text-primary);">
             <option value="">Loading users...</option>
           </select>
@@ -7089,8 +7088,16 @@
     async function shareCollectionModal(collectionId) {
       document.getElementById('shareCollectionId').value = collectionId;
       document.getElementById('shareModal').classList.add('show');
+      
+      // Load data asynchronously without blocking modal display
       loadSharedUsersList(collectionId);
-      await loadAvailableUsersForShare();
+      loadAvailableUsersForShare().catch(err => {
+        console.error('Failed to load users for share:', err);
+        const select = document.getElementById('shareUserSelect');
+        if (select) {
+          select.innerHTML = '<option value="">Failed to load users</option><option value="__invite__">📧 Invite via Email...</option>';
+        }
+      });
     }
     
     async function loadAvailableUsersForShare() {
