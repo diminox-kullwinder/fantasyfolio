@@ -5351,7 +5351,7 @@
           <p class="share-description">Generate a time-limited link for people without accounts</p>
           <input type="email" 
                  id="shareExternalEmail" 
-                 placeholder="Recipient email" 
+                 placeholder="Recipient email (optional)" 
                  style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
           <select id="shareExternalDays" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
             <option value="1">Expires in 1 day</option>
@@ -5362,7 +5362,25 @@
             <option value="view">View Only</option>
             <option value="download">View & Download</option>
           </select>
-          <button onclick="shareExternal()">📧 Send Link</button>
+          <button onclick="shareExternal()">🔗 Generate Link</button>
+          
+          <!-- Guest link result (shown after generation) -->
+          <div id="guestLinkResult" style="display:none;margin-top:16px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-weight:600;">✅ Link Created</span>
+              <span id="guestLinkExpiry" style="font-size:0.85rem;color:var(--text-secondary);"></span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" 
+                     id="guestLinkUrl" 
+                     readonly 
+                     style="flex:1;padding:8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;font-family:monospace;font-size:0.85rem;">
+              <button onclick="copyGuestLink()" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;">
+                📋 Copy
+              </button>
+            </div>
+            <div id="guestLinkEmailStatus" style="margin-top:8px;font-size:0.9rem;color:var(--text-secondary);"></div>
+          </div>
         </div>
         
       </div>
@@ -7143,6 +7161,10 @@
         // Force reflow to ensure CSS is applied
         modal.offsetHeight;
         
+        // Reset guest link result box
+        document.getElementById('guestLinkResult').style.display = 'none';
+        document.getElementById('shareExternalEmail').value = '';
+        
         // Load data asynchronously without blocking modal display
         loadSharedUsersList(collectionId);
         loadAvailableUsersForShare().catch(err => {
@@ -7520,26 +7542,26 @@
       const days = parseInt(document.getElementById('shareExternalDays').value);
       const permission = document.getElementById('shareExternalPermission').value;
       
-      if (!email) {
-        showToast('Please enter a recipient email', 'error');
-        return;
-      }
-      
       try {
         // Calculate expiry timestamp
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + days);
         
-        // Create guest link with email
+        // Create guest link (with optional email)
+        const body = { 
+          guest_link: true,
+          permission,
+          expires_at: expiresAt.toISOString()
+        };
+        
+        if (email) {
+          body.recipient_email = email;  // Only send email if provided
+        }
+        
         const response = await authFetch(`/api/collections/${collectionId}/share`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            guest_link: true,
-            permission,
-            expires_at: expiresAt.toISOString(),
-            recipient_email: email  // Send email to recipient
-          })
+          body: JSON.stringify(body)
         });
         
         const data = await response.json();
@@ -7548,19 +7570,43 @@
           throw new Error(data.error || 'Failed to create guest link');
         }
         
+        // Always show the link in the result box
         const guestUrl = `${window.location.origin}/shared/${data.guest_token}`;
+        document.getElementById('guestLinkUrl').value = guestUrl;
+        document.getElementById('guestLinkExpiry').textContent = `(expires in ${days} days)`;
+        document.getElementById('guestLinkResult').style.display = 'block';
         
-        if (data.email_sent) {
-          showToast(`✅ Guest link sent to ${email} (expires in ${days} days)`);
+        // Update email status
+        const emailStatus = document.getElementById('guestLinkEmailStatus');
+        if (email && data.email_sent) {
+          emailStatus.textContent = `📧 Email sent to ${email}`;
+          emailStatus.style.color = 'var(--accent)';
+        } else if (email && !data.email_sent) {
+          emailStatus.textContent = `⚠️ Link created but email failed to send`;
+          emailStatus.style.color = '#f59e0b';
         } else {
-          showToast(`✅ Guest link created (expires in ${days} days)\n${guestUrl}`, 'success');
+          emailStatus.textContent = '';
         }
         
-        document.getElementById('shareExternalEmail').value = '';
+        showToast('✅ Guest link created!');
         
       } catch (error) {
         showToast(error.message || 'Failed to share', 'error');
       }
+    }
+    
+    function copyGuestLink() {
+      const urlInput = document.getElementById('guestLinkUrl');
+      urlInput.select();
+      urlInput.setSelectionRange(0, 99999); // For mobile
+      
+      navigator.clipboard.writeText(urlInput.value).then(() => {
+        showToast('📋 Link copied to clipboard!');
+      }).catch(err => {
+        // Fallback for older browsers
+        document.execCommand('copy');
+        showToast('📋 Link copied to clipboard!');
+      });
     }
     
     function contextMenuAddToCollection() {
