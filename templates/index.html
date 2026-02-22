@@ -4433,11 +4433,11 @@
         <button class="settings-tab active" onclick="switchSettingsTab('general')" id="settingsTabGeneral">
           ⚙️ General
         </button>
+        <button class="settings-tab" onclick="switchSettingsTab('users')" id="settingsTabUsers">
+          👥 User Management
+        </button>
         <button class="settings-tab" onclick="switchSettingsTab('advanced')" id="settingsTabAdvanced">
           🔧 Advanced
-        </button>
-        <button class="settings-tab" onclick="switchSettingsTab('email')" id="settingsTabEmail">
-          📧 Email
         </button>
       </div>
       
@@ -4485,9 +4485,45 @@
         
       </div>
       
+      <!-- User Management Tab -->
+      <div class="settings-body settings-tab-content" id="settingsUsers" style="display:none;">
+        <div class="settings-section">
+          <h3>👥 User Management</h3>
+          <p class="settings-hint">Manage user accounts and permissions.</p>
+          
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0;">
+            <input type="text" id="settingsUserSearch" placeholder="Search users..." 
+                   style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);margin-right:12px;"
+                   oninput="settingsSearchUsers()">
+            <button class="btn btn-primary" onclick="settingsOpenAddUser()">
+              ➕ Add User
+            </button>
+          </div>
+          
+          <div id="settingsUsersList" style="max-height:400px;overflow-y:auto;">
+            <p style="color:var(--text-secondary);text-align:center;padding:40px;">Loading users...</p>
+          </div>
+        </div>
+      </div>
+      
       <!-- Advanced Tab -->
       <div class="settings-body settings-tab-content" id="settingsAdvanced" style="display:none;">
         
+        <!-- Advanced Sub-tabs -->
+        <div class="settings-subtabs" style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+          <button class="settings-subtab active" onclick="switchAdvancedSubtab('deleted')" id="advancedSubtabDeleted" style="padding:8px 16px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;">
+            🗑️ Deleted Records
+          </button>
+          <button class="settings-subtab" onclick="switchAdvancedSubtab('email')" id="advancedSubtabEmail" style="padding:8px 16px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;">
+            📧 Email Settings
+          </button>
+          <button class="settings-subtab" onclick="switchAdvancedSubtab('backup')" id="advancedSubtabBackup" style="padding:8px 16px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;">
+            💾 DB Back-Up
+          </button>
+        </div>
+        
+        <!-- Deleted Records Sub-tab -->
+        <div id="advancedDeleted" class="advanced-subtab-content">
         <!-- Trash Section -->
         <div class="settings-section">
           <h3>🗑️ Trash</h3>
@@ -11097,16 +11133,24 @@
     function switchSettingsTab(tab) {
       // Update tab buttons
       document.getElementById('settingsTabGeneral').classList.toggle('active', tab === 'general');
+      document.getElementById('settingsTabUsers')?.classList.toggle('active', tab === 'users');
       document.getElementById('settingsTabAdvanced').classList.toggle('active', tab === 'advanced');
-      document.getElementById('settingsTabEmail').classList.toggle('active', tab === 'email');
+      document.getElementById('settingsTabEmail')?.classList.toggle('active', tab === 'email');
       
       // Show/hide content
       document.getElementById('settingsGeneral').style.display = tab === 'general' ? 'block' : 'none';
+      document.getElementById('settingsUsers').style.display = tab === 'users' ? 'block' : 'none';
       document.getElementById('settingsAdvanced').style.display = tab === 'advanced' ? 'block' : 'none';
-      document.getElementById('settingsEmail').style.display = tab === 'email' ? 'block' : 'none';
+      if (document.getElementById('settingsEmail')) {
+        document.getElementById('settingsEmail').style.display = tab === 'email' ? 'block' : 'none';
+      }
       
-      // Load data for advanced tab
+      // Load data for tabs
+      if (tab === 'users') {
+        settingsLoadUsers();
+      }
       if (tab === 'advanced') {
+        switchAdvancedSubtab('deleted');
         loadTrashContents();
         loadJournalStatus();
         loadSnapshotStatus();
