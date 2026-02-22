@@ -5,6 +5,63 @@ All notable changes to FantasyFolio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-22
+
+### Added - Collection Sharing & User Management
+
+**Complete collection sharing system with guest links and comprehensive user management**
+
+#### Collection Sharing
+- Share collections with registered users via email invitations
+- Guest links with secure tokens, expiry, and password protection
+- Permission levels: View / Download / Edit
+- Inline permission editing with color-coded dropdowns
+- Personal collection aliases (shared users can rename without affecting owner)
+- Copy link button for easy sharing via text/Slack/Discord
+- Guest link access page with thumbnails and downloads
+- Bulk download (ZIP all items in shared collection)
+- SendGrid email integration for invitations
+
+#### User Management Overhaul
+- Removed Users button from header
+- Full user management in Settings → User Management tab
+- Edit User modal with 3 tabs:
+  - Account: Change role, display name
+  - Collections: View owned and shared collections
+  - Profile: Read-only details (email, dates, status, ID)
+- Search, add, edit, activate/deactivate users
+- Color-coded role badges (Admin/GM/Player/Guest)
+- Admin-only access for viewing other users' data
+
+#### Settings Reorganization
+- General (Asset Locations, Reindex, 3D Maintenance)
+- User Management (Full interface)
+- Advanced with subtabs:
+  - Deleted Records (Trash, Journal, Snapshots)
+  - Email Settings (SMTP/SendGrid/AWS SES)
+  - DB Back-Up (Snapshots + Backup Policies)
+
+### Fixed
+- Share modal not opening (missing `</div>` tag)
+- 3D models not showing in guest links (query JOIN issue)
+- 3D model downloads failing (archive extraction)
+- Guest link URLs showing localhost instead of IP
+- Database commits not saving (missing `conn.commit()`)
+- Datetime timezone mixing (3 locations)
+- User Management 401 error (added login check)
+- Archive member extraction for downloads
+- Info panel for 3D models in collections
+
+### Security
+- Removed `.env.local` and `start-server.sh` from git
+- Added `start-server.sh.example` template
+- Admin-only endpoints for user data access
+
+### Changed
+- Database Snapshots moved to DB Back-Up subtab
+- Settings User Management synced with external modal
+- Guest link generation now returns full URL
+
 ## [0.4.15] - 2026-02-18
 
 ### Added - Volume-Based Navigation
