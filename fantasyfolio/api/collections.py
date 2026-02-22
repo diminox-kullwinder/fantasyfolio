@@ -15,6 +15,8 @@ from flask import Blueprint, request, jsonify
 
 from fantasyfolio.api.auth import require_auth, get_current_user
 from fantasyfolio.core.database import get_db
+from fantasyfolio.services.email import get_email_service
+from fantasyfolio.services.email_templates import collection_share_invite_email
 
 logger = logging.getLogger(__name__)
 
@@ -474,3 +476,287 @@ def collections_for_asset():
     """, (asset_type, asset_id, user['id']))
     
     return jsonify({'collections': collections})
+
+
+# ==================== Collection Sharing ====================
+
+@collections_bp.route('/<collection_id>/shares', methods=['GET'])
+@require_auth
+def list_shares(collection_id):
+    """List all shares for a collection (owner only).
+    
+    Returns:
+        - User shares (shared with specific users)
+        - Guest links (public links with optional password/expiry)
+    """
+    user = request.current_user
+    db = get_db()
+    
+    # Verify ownership
+    collection = db.fetchone(
+        "SELECT * FROM user_collections WHERE id = ? AND owner_id = ?",
+        (collection_id, user['id'])
+    )
+    if not collection:
+        return jsonify({'error': 'Collection not found or access denied'}), 404
+    
+    # Get user shares
+    user_shares = db.fetchall("""
+        SELECT cs.*, u.email, u.display_name
+        FROM collection_shares cs
+        JOIN users u ON cs.shared_with_user_id = u.id
+        WHERE cs.collection_id = ? AND cs.shared_with_user_id IS NOT NULL
+        ORDER BY cs.created_at DESC
+    """, (collection_id,))
+    
+    # Get guest links
+    guest_links = db.fetchall("""
+        SELECT * FROM collection_shares
+        WHERE collection_id = ? AND guest_token_hash IS NOT NULL
+        ORDER BY created_at DESC
+    """, (collection_id,))
+    
+    return jsonify({
+        'user_shares': user_shares,
+        'guest_links': guest_links
+    })
+
+
+@collections_bp.route('/<collection_id>/share', methods=['POST'])
+@require_auth
+def create_share(collection_id):
+    """Share a collection with a user or create a guest link.
+    
+    Body:
+        email: Email address to share with (for user share)
+        permission: 'view', 'download', or 'edit' (default: 'view')
+        send_email: Send invitation email (default: true)
+        
+        OR for guest link:
+        guest_link: true
+        expires_at: Optional expiry timestamp
+        password: Optional password
+        max_downloads: Optional download limit
+    """
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    db = get_db()
+    
+    # Verify ownership
+    collection = db.fetchone(
+        "SELECT * FROM user_collections WHERE id = ? AND owner_id = ?",
+        (collection_id, user['id'])
+    )
+    if not collection:
+        return jsonify({'error': 'Collection not found or access denied'}), 404
+    
+    permission = data.get('permission', 'view')
+    if permission not in ('view', 'download', 'edit'):
+        return jsonify({'error': 'Invalid permission level'}), 400
+    
+    share_id = str(uuid4())
+    now = datetime.utcnow().isoformat()
+    
+    # Guest link creation
+    if data.get('guest_link'):
+        import secrets
+        guest_token = secrets.token_urlsafe(32)
+        
+        # Hash the token for storage
+        import hashlib
+        token_hash = hashlib.sha256(guest_token.encode()).hexdigest()
+        
+        # Optional password
+        password_hash = None
+        if data.get('password'):
+            from argon2 import PasswordHasher
+            ph = PasswordHasher()
+            password_hash = ph.hash(data['password'])
+        
+        with db.connection() as conn:
+            conn.execute("""
+                INSERT INTO collection_shares 
+                (id, collection_id, guest_token_hash, permission, expires_at, 
+                 max_downloads, password_hash, created_at, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                share_id, collection_id, token_hash, permission,
+                data.get('expires_at'), data.get('max_downloads'),
+                password_hash, now, user['id']
+            ))
+        
+        return jsonify({
+            'id': share_id,
+            'guest_token': guest_token,  # Only time this is revealed
+            'url': f"/shared/{guest_token}",
+            'permission': permission,
+            'expires_at': data.get('expires_at'),
+            'max_downloads': data.get('max_downloads'),
+            'has_password': bool(password_hash)
+        }), 201
+    
+    # User share creation
+    email = data.get('email', '').strip().lower()
+    if not email:
+        return jsonify({'error': 'Email address required'}), 400
+    
+    # Find or invite user
+    target_user = db.fetchone("SELECT * FROM users WHERE email = ?", (email,))
+    
+    if not target_user:
+        # TODO: Create pending invitation for non-users
+        return jsonify({'error': 'User not found. Invitations coming soon.'}), 404
+    
+    # Check if already shared
+    existing = db.fetchone("""
+        SELECT * FROM collection_shares 
+        WHERE collection_id = ? AND shared_with_user_id = ?
+    """, (collection_id, target_user['id']))
+    
+    if existing:
+        return jsonify({'error': 'Collection already shared with this user'}), 409
+    
+    # Create share
+    with db.connection() as conn:
+        conn.execute("""
+            INSERT INTO collection_shares 
+            (id, collection_id, shared_with_user_id, permission, created_at, created_by)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (share_id, collection_id, target_user['id'], permission, now, user['id']))
+    
+    # Send email notification
+    send_email = data.get('send_email', True)
+    if send_email:
+        try:
+            email_service = get_email_service()
+            if email_service.is_configured():
+                # Build collection URL (TODO: use configured base URL)
+                collection_url = f"/collections/{collection_id}"
+                
+                html_body, text_body = collection_share_invite_email(
+                    inviter_name=user.get('display_name') or user['email'],
+                    collection_name=collection['name'],
+                    collection_url=collection_url,
+                    permissions=permission
+                )
+                
+                email_service.send(
+                    to_address=email,
+                    subject=f"{user.get('display_name', 'Someone')} shared a collection with you",
+                    html_body=html_body,
+                    text_body=text_body
+                )
+                logger.info(f"Share invite sent to {email} for collection {collection_id}")
+        except Exception as e:
+            logger.error(f"Failed to send share invite email: {e}")
+            # Don't fail the share creation if email fails
+    
+    return jsonify({
+        'id': share_id,
+        'collection_id': collection_id,
+        'shared_with': {
+            'user_id': target_user['id'],
+            'email': target_user['email'],
+            'display_name': target_user.get('display_name')
+        },
+        'permission': permission,
+        'created_at': now
+    }), 201
+
+
+@collections_bp.route('/<collection_id>/shares/<share_id>', methods=['DELETE'])
+@require_auth
+def revoke_share(collection_id, share_id):
+    """Revoke a collection share (owner only)."""
+    user = request.current_user
+    db = get_db()
+    
+    # Verify ownership
+    collection = db.fetchone(
+        "SELECT * FROM user_collections WHERE id = ? AND owner_id = ?",
+        (collection_id, user['id'])
+    )
+    if not collection:
+        return jsonify({'error': 'Collection not found or access denied'}), 404
+    
+    # Delete share
+    with db.connection() as conn:
+        cursor = conn.execute("""
+            DELETE FROM collection_shares 
+            WHERE id = ? AND collection_id = ?
+        """, (share_id, collection_id))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'Share not found'}), 404
+    
+    logger.info(f"Share {share_id} revoked for collection {collection_id}")
+    return jsonify({'success': True})
+
+
+@collections_bp.route('/<collection_id>/shares/<share_id>', methods=['PATCH'])
+@require_auth
+def update_share(collection_id, share_id):
+    """Update share permissions or settings (owner only).
+    
+    Body:
+        permission: 'view', 'download', or 'edit'
+        expires_at: Update expiry (guest links only)
+        max_downloads: Update download limit (guest links only)
+    """
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    db = get_db()
+    
+    # Verify ownership
+    collection = db.fetchone(
+        "SELECT * FROM user_collections WHERE id = ? AND owner_id = ?",
+        (collection_id, user['id'])
+    )
+    if not collection:
+        return jsonify({'error': 'Collection not found or access denied'}), 404
+    
+    # Get existing share
+    share = db.fetchone(
+        "SELECT * FROM collection_shares WHERE id = ? AND collection_id = ?",
+        (share_id, collection_id)
+    )
+    if not share:
+        return jsonify({'error': 'Share not found'}), 404
+    
+    # Build update
+    updates = []
+    params = []
+    
+    if 'permission' in data:
+        if data['permission'] not in ('view', 'download', 'edit'):
+            return jsonify({'error': 'Invalid permission level'}), 400
+        updates.append("permission = ?")
+        params.append(data['permission'])
+    
+    if 'expires_at' in data and share['guest_token_hash']:
+        updates.append("expires_at = ?")
+        params.append(data['expires_at'])
+    
+    if 'max_downloads' in data and share['guest_token_hash']:
+        updates.append("max_downloads = ?")
+        params.append(data['max_downloads'])
+    
+    if not updates:
+        return jsonify({'error': 'No valid updates provided'}), 400
+    
+    params.extend([share_id, collection_id])
+    
+    with db.connection() as conn:
+        conn.execute(f"""
+            UPDATE collection_shares 
+            SET {', '.join(updates)}
+            WHERE id = ? AND collection_id = ?
+        """, params)
+    
+    # Get updated share
+    updated_share = db.fetchone(
+        "SELECT * FROM collection_shares WHERE id = ?", (share_id,)
+    )
+    
+    logger.info(f"Share {share_id} updated for collection {collection_id}")
+    return jsonify(updated_share)
