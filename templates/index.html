@@ -6899,7 +6899,7 @@
                data-id="${item.asset_id}" 
                data-type="${item.asset_type}" 
                data-collection-item-id="${item.id}"
-               oncontextmenu="showCollectionItemContextMenu(event, '${collectionId}', '${item.id}')"
+               oncontextmenu="showCollectionItemContextMenu(event, '${collectionId}', '${item.id}', '${item.asset_type}', ${item.asset_id})"
                onclick="openCollectionItemDetail('${item.asset_type}', ${item.asset_id})">
             <button class="collection-item-remove-btn" 
                     onclick="event.stopPropagation();removeItemFromCollection('${collectionId}', '${item.id}')" 
@@ -6933,7 +6933,7 @@
           <div class="asset-row" 
                data-id="${item.asset_id}" 
                data-type="${item.asset_type}"
-               oncontextmenu="showCollectionItemContextMenu(event, '${collectionId}', '${item.id}')"
+               oncontextmenu="showCollectionItemContextMenu(event, '${collectionId}', '${item.id}', '${item.asset_type}', ${item.asset_id})"
                onclick="openCollectionItemDetail('${item.asset_type}', ${item.asset_id})">
             <img src="${thumbUrl}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
             <div class="thumbnail-placeholder" style="display:none;width:60px;height:80px;align-items:center;justify-content:center;background:var(--bg-secondary);">
@@ -6977,7 +6977,7 @@
     function openCollectionItemDetail(assetType, assetId) {
       // Open detail view (info panel)
       if (assetType === 'model') {
-        show3dModelInfo(assetId);
+        show3dDetail(assetId);
       } else {
         showDetail(assetId);
       }
@@ -7019,7 +7019,7 @@
       }).join(' <span class="breadcrumb-separator">›</span> ');
     }
     
-    function showCollectionItemContextMenu(event, collectionId, itemId) {
+    function showCollectionItemContextMenu(event, collectionId, itemId, assetType, assetId) {
       event.preventDefault();
       
       // Remove existing menu
@@ -7032,6 +7032,9 @@
       menu.style.left = event.pageX + 'px';
       menu.style.top = event.pageY + 'px';
       menu.innerHTML = `
+        <div class="context-menu-item" onclick="openCollectionItemDetail('${assetType}', ${assetId})">
+          <span>ℹ️</span> View Info
+        </div>
         <div class="context-menu-item" onclick="removeItemFromCollection('${collectionId}', '${itemId}')">
           <span>✕</span> Remove from Collection
         </div>

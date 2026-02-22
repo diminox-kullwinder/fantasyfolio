@@ -5,9 +5,12 @@ Public routes for accessing collections via guest tokens (no authentication requ
 """
 
 import hashlib
+import io
 import logging
+import zipfile
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify, render_template_string
+from flask import Blueprint, request, jsonify, render_template_string, send_file
+from pathlib import Path
 
 from fantasyfolio.core.database import get_db
 
@@ -448,7 +451,10 @@ def download_shared_asset(token, asset_type, asset_id):
     if asset_type == 'pdf':
         asset = db.fetchone("SELECT * FROM assets WHERE id = ?", (asset_id,))
     elif asset_type == 'model':
-        asset = db.fetchone("SELECT * FROM models WHERE id = ?", (asset_id,))
+        asset = db.fetchone("""
+            SELECT id, filename, file_path, archive_path, archive_member 
+            FROM models WHERE id = ?
+        """, (asset_id,))
     else:
         return "Invalid asset type", 400
     
@@ -464,14 +470,32 @@ def download_shared_asset(token, asset_type, asset_id):
         """, (share['id'],))
         conn.commit()
     
-    # Serve the file
-    from flask import send_file
-    from pathlib import Path
-    
+    # Serve the file (handle both regular files and archive members)
     try:
+        # For 3D models in archives (zipped files)
+        if asset_type == 'model' and asset.get('archive_path') and asset.get('archive_member'):
+            archive_path = Path(asset['archive_path'])
+            if not archive_path.exists():
+                return f"Archive file not found: {asset['archive_path']}", 404
+            
+            try:
+                with zipfile.ZipFile(archive_path, 'r') as zf:
+                    data = zf.read(asset['archive_member'])
+                return send_file(
+                    io.BytesIO(data),
+                    as_attachment=True,
+                    download_name=asset['filename'],
+                    mimetype='application/octet-stream'
+                )
+            except KeyError:
+                return f"File '{asset['archive_member']}' not found in archive", 404
+            except zipfile.BadZipFile:
+                return f"Archive file is corrupted: {asset['archive_path']}", 500
+        
+        # Regular file (not in archive)
         file_path = Path(asset['file_path'])
         if not file_path.exists():
-            return "File not found on disk", 404
+            return f"File not found: {asset['file_path']}", 404
         
         return send_file(
             file_path,
@@ -479,5 +503,5 @@ def download_shared_asset(token, asset_type, asset_id):
             download_name=asset['filename']
         )
     except Exception as e:
-        logger.error(f"Failed to serve file: {e}")
-        return "Failed to download file", 500
+        logger.error(f"Failed to serve file {asset_type}/{asset_id}: {e}")
+        return f"Failed to download file: {str(e)}", 500
