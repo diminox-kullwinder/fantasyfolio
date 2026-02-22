@@ -6822,6 +6822,55 @@
     function shareCollectionModal(collectionId) {
       document.getElementById('shareCollectionId').value = collectionId;
       document.getElementById('shareModal').classList.add('show');
+      loadSharedUsersList(collectionId);
+    }
+    
+    async function loadSharedUsersList(collectionId) {
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}/shares`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const container = document.getElementById('sharedUsersList');
+        
+        if (!data.user_shares || data.user_shares.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-secondary);font-size:0.9rem;">No users yet</p>';
+          return;
+        }
+        
+        container.innerHTML = data.user_shares.map(share => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg-card);border-radius:4px;margin-bottom:6px;">
+            <div>
+              <strong>${share.display_name || share.email}</strong>
+              <br><small style="color:var(--text-secondary);">${share.permission}</small>
+            </div>
+            <button onclick="revokeShare('${collectionId}', '${share.id}')" 
+                    style="background:transparent;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.2rem;"
+                    title="Remove access">
+              🗑️
+            </button>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load shares:', error);
+      }
+    }
+    
+    async function revokeShare(collectionId, shareId) {
+      if (!confirm('Remove this user\'s access?')) return;
+      
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}/shares/${shareId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) throw new Error('Failed to revoke access');
+        
+        showToast('Access removed');
+        loadSharedUsersList(collectionId);
+      } catch (error) {
+        showToast(error.message || 'Failed to revoke access', 'error');
+      }
     }
     
     function closeShareModal() {
@@ -6933,17 +6982,51 @@
     
     // ==================== Share Collection Functions ====================
     
-    function togglePublicShare() {
+    async function togglePublicShare() {
       const checkbox = document.getElementById('sharePublic');
       const section = document.getElementById('publicLinkSection');
+      const collectionId = document.getElementById('shareCollectionId').value;
       
       if (checkbox.checked) {
-        const collectionId = document.getElementById('shareCollectionId').value;
-        const publicLink = `${window.location.origin}/collection/${collectionId}`;
-        document.getElementById('publicLink').value = publicLink;
-        section.style.display = 'block';
-        showToast('Note: Public sharing will be implemented in future release', 'info');
+        try {
+          // Create permanent guest link (no expiry)
+          const response = await authFetch(`/api/collections/${collectionId}/share`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              guest_link: true,
+              permission: 'view'
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to create public link');
+          }
+          
+          const publicLink = `${window.location.origin}/shared/${data.guest_token}`;
+          document.getElementById('publicLink').value = publicLink;
+          document.getElementById('publicLink').dataset.shareId = data.id;
+          section.style.display = 'block';
+          showToast('✅ Public link created');
+        } catch (error) {
+          checkbox.checked = false;
+          showToast(error.message || 'Failed to create public link', 'error');
+        }
       } else {
+        // Revoke public link
+        const shareId = document.getElementById('publicLink').dataset.shareId;
+        if (shareId) {
+          try {
+            await authFetch(`/api/collections/${collectionId}/shares/${shareId}`, {
+              method: 'DELETE'
+            });
+            showToast('Public link removed');
+          } catch (error) {
+            console.error('Failed to remove public link:', error);
+          }
+        }
         section.style.display = 'none';
       }
     }
@@ -6965,28 +7048,31 @@
         return;
       }
       
-      showToast('User sharing will be implemented in future release', 'info');
-      
-      // TODO: Implement actual sharing
-      // try {
-      //   const response = await authFetch(`/api/collections/${collectionId}/share`, {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({ email, permission })
-      //   });
-      //   
-      //   if (!response.ok) throw new Error('Failed to share');
-      //   showToast(`Shared with ${email}`);
-      //   document.getElementById('shareUserEmail').value = '';
-      // } catch (error) {
-      //   showToast(error.message || 'Failed to share', 'error');
-      // }
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}/share`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, permission, send_email: true })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to share');
+        }
+        
+        showToast(`✅ Shared with ${email} — invitation sent`);
+        document.getElementById('shareUserEmail').value = '';
+        loadSharedUsersList(collectionId);
+      } catch (error) {
+        showToast(error.message || 'Failed to share', 'error');
+      }
     }
     
     async function shareExternal() {
       const collectionId = document.getElementById('shareCollectionId').value;
       const email = document.getElementById('shareExternalEmail').value.trim();
-      const days = document.getElementById('shareExternalDays').value;
+      const days = parseInt(document.getElementById('shareExternalDays').value);
       const permission = document.getElementById('shareExternalPermission').value;
       
       if (!email) {
@@ -6994,22 +7080,41 @@
         return;
       }
       
-      showToast('External sharing will be implemented in future release', 'info');
-      
-      // TODO: Implement actual external sharing
-      // try {
-      //   const response = await authFetch(`/api/collections/${collectionId}/share/guest`, {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({ email, expiresInDays: days, permission })
-      //   });
-      //   
-      //   if (!response.ok) throw new Error('Failed to share');
-      //   showToast(`Link sent to ${email}`);
-      //   document.getElementById('shareExternalEmail').value = '';
-      // } catch (error) {
-      //   showToast(error.message || 'Failed to share', 'error');
-      // }
+      try {
+        // Calculate expiry timestamp
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + days);
+        
+        // Create guest link
+        const response = await authFetch(`/api/collections/${collectionId}/share`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            guest_link: true,
+            permission,
+            expires_at: expiresAt.toISOString()
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create guest link');
+        }
+        
+        // TODO: Send email with guest link
+        // For now, just show the link to copy
+        const guestUrl = `${window.location.origin}/shared/${data.guest_token}`;
+        
+        showToast(`✅ Guest link created (expires in ${days} days)\n${guestUrl}`, 'success');
+        document.getElementById('shareExternalEmail').value = '';
+        
+        // TODO: Implement email sending for guest links
+        console.log('Guest link created:', guestUrl);
+        
+      } catch (error) {
+        showToast(error.message || 'Failed to share', 'error');
+      }
     }
     
     function contextMenuAddToCollection() {
