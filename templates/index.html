@@ -7244,21 +7244,49 @@
           return;
         }
         
-        container.innerHTML = data.user_shares.map(share => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg-card);border-radius:4px;margin-bottom:6px;">
-            <div>
-              <strong>${share.display_name || share.email}</strong>
-              <br><small style="color:var(--text-secondary);">${share.permission}</small>
+        container.innerHTML = data.user_shares.map(share => {
+          const permBadgeColor = share.permission === 'download' ? '#4CAF50' : 
+                                 share.permission === 'edit' ? '#2196F3' : '#9E9E9E';
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg-card);border-radius:4px;margin-bottom:6px;">
+              <div style="flex:1;">
+                <strong>${share.display_name || share.email}</strong>
+              </div>
+              <select onchange="updateSharePermission('${collectionId}', '${share.id}', this.value)" 
+                      style="padding:4px 8px;margin-right:8px;background:${permBadgeColor};color:white;border:none;border-radius:4px;cursor:pointer;font-weight:500;">
+                <option value="view" ${share.permission === 'view' ? 'selected' : ''}>👁️ View</option>
+                <option value="download" ${share.permission === 'download' ? 'selected' : ''}>⬇️ Download</option>
+                <option value="edit" ${share.permission === 'edit' ? 'selected' : ''}>✏️ Edit</option>
+              </select>
+              <button onclick="revokeShare('${collectionId}', '${share.id}')" 
+                      style="background:transparent;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.2rem;"
+                      title="Remove access">
+                🗑️
+              </button>
             </div>
-            <button onclick="revokeShare('${collectionId}', '${share.id}')" 
-                    style="background:transparent;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.2rem;"
-                    title="Remove access">
-              🗑️
-            </button>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       } catch (error) {
         console.error('Failed to load shares:', error);
+      }
+    }
+    
+    async function updateSharePermission(collectionId, shareId, newPermission) {
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}/shares/${shareId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ permission: newPermission })
+        });
+        
+        if (!response.ok) throw new Error('Failed to update permission');
+        
+        showToast(`Permission updated to ${newPermission}`);
+        // Reload to refresh the badge color
+        loadSharedUsersList(collectionId);
+      } catch (error) {
+        showToast(error.message || 'Failed to update permission', 'error');
+        loadSharedUsersList(collectionId); // Reload to reset dropdown
       }
     }
     
