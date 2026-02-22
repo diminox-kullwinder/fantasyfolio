@@ -599,8 +599,10 @@ def create_share(collection_id):
                     # Format expiry for email
                     expires_display = None
                     if data.get('expires_at'):
+                        from datetime import timezone
                         expires = datetime.fromisoformat(data['expires_at'].replace('Z', '+00:00'))
-                        delta = expires - datetime.utcnow()
+                        now = datetime.now(timezone.utc)
+                        delta = expires - now
                         if delta.days > 0:
                             expires_display = f"{delta.days} days"
                         else:

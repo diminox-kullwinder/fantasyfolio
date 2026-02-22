@@ -5281,15 +5281,29 @@
         <div class="share-section">
           <h3>👥 Share with Users</h3>
           <p class="share-description">Share with other users on this FantasyFolio instance</p>
-          <input type="email" 
-                 id="shareUserEmail" 
-                 placeholder="Enter user email" 
-                 style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
-          <select id="shareUserPermission" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
-            <option value="view">View Only</option>
-            <option value="download">View & Download</option>
+          
+          <select id="shareUserSelect" 
+                  size="6"
+                  style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;background:var(--bg-secondary);color:var(--text-primary);">
+            <option value="">Loading users...</option>
           </select>
-          <button onclick="shareWithUser()">➕ Add User</button>
+          
+          <div id="inviteEmailField" style="display:none;margin-bottom:8px;">
+            <input type="email" 
+                   id="shareUserEmail" 
+                   placeholder="Enter email address to invite" 
+                   style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-secondary);color:var(--text-primary);">
+          </div>
+          
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <select id="shareUserPermission" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-secondary);color:var(--text-primary);">
+              <option value="view">View Only</option>
+              <option value="download">View & Download</option>
+            </select>
+            <button onclick="shareWithSelectedUser()" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;">
+              ➕ Share
+            </button>
+          </div>
           
           <div id="sharedUsersList" style="margin-top:12px;">
             <!-- Shared users will appear here -->
@@ -7036,10 +7050,89 @@
       }, 0);
     }
     
-    function shareCollectionModal(collectionId) {
+    async function shareCollectionModal(collectionId) {
       document.getElementById('shareCollectionId').value = collectionId;
       document.getElementById('shareModal').classList.add('show');
       loadSharedUsersList(collectionId);
+      await loadAvailableUsersForShare();
+    }
+    
+    async function loadAvailableUsersForShare() {
+      try {
+        const response = await authFetch('/api/users?limit=100');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const select = document.getElementById('shareUserSelect');
+        
+        // Clear and rebuild options
+        select.innerHTML = data.users.map(user => 
+          `<option value="${user.email}">${user.display_name || user.email} (${user.email})</option>`
+        ).join('');
+        
+        // Add "Invite via Email" option at the end
+        select.innerHTML += '<option value="__invite__" style="border-top:1px solid var(--border);margin-top:4px;">📧 Invite via Email...</option>';
+        
+        // Handle selection change to show/hide email field
+        select.onchange = function() {
+          const inviteField = document.getElementById('inviteEmailField');
+          if (this.value === '__invite__') {
+            inviteField.style.display = 'block';
+            document.getElementById('shareUserEmail').focus();
+          } else {
+            inviteField.style.display = 'none';
+          }
+        };
+        
+      } catch (error) {
+        console.error('Failed to load users:', error);
+      }
+    }
+    
+    async function shareWithSelectedUser() {
+      const select = document.getElementById('shareUserSelect');
+      const permission = document.getElementById('shareUserPermission').value;
+      const collectionId = document.getElementById('shareCollectionId').value;
+      
+      let email;
+      
+      if (select.value === '__invite__') {
+        // Get email from input field
+        email = document.getElementById('shareUserEmail').value.trim();
+        if (!email) {
+          showToast('Please enter an email address', 'error');
+          return;
+        }
+      } else {
+        // Get selected user's email
+        email = select.value;
+        if (!email) {
+          showToast('Please select a user', 'error');
+          return;
+        }
+      }
+      
+      try {
+        const response = await authFetch(`/api/collections/${collectionId}/share`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, permission, send_email: true })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to share');
+        }
+        
+        showToast(`✅ Shared with ${email} — invitation sent`);
+        document.getElementById('shareUserEmail').value = '';
+        document.getElementById('inviteEmailField').style.display = 'none';
+        select.selectedIndex = 0;
+        loadSharedUsersList(collectionId);
+      } catch (error) {
+        showToast(error.message || 'Failed to share', 'error');
+      }
     }
     
     async function loadSharedUsersList(collectionId) {
