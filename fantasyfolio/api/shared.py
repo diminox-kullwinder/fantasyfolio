@@ -246,7 +246,7 @@ GUEST_TEMPLATE = """
           </div>
           {% endif %}
           {% if can_download %}
-            <button class="download-btn" onclick="alert('Bulk download coming soon')">⬇️ Download All</button>
+            <button class="download-btn" onclick="downloadAll('{{ token }}')">⬇️ Download All</button>
           {% endif %}
         </div>
       </div>
@@ -291,6 +291,11 @@ GUEST_TEMPLATE = """
       } else {
         alert('View-only access - downloads not permitted with this link');
       }
+    }
+    
+    function downloadAll(token) {
+      const url = `/shared/${token}/download-all`;
+      window.location.href = url;
     }
   </script>
 </body>
@@ -505,3 +510,110 @@ def download_shared_asset(token, asset_type, asset_id):
     except Exception as e:
         logger.error(f"Failed to serve file {asset_type}/{asset_id}: {e}")
         return f"Failed to download file: {str(e)}", 500
+
+
+@shared_bp.route('/<token>/download-all')
+def download_all_shared_assets(token):
+    """Download all assets in a shared collection as a ZIP file."""
+    db = get_db()
+    
+    # Validate token and permission
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    
+    share = db.fetchone("""
+        SELECT * FROM collection_shares 
+        WHERE guest_token_hash = ?
+    """, (token_hash,))
+    
+    if not share:
+        return "Invalid link", 404
+    
+    if share['permission'] not in ('download', 'edit'):
+        return "Download not allowed with this link", 403
+    
+    # Check expiry
+    if share['expires_at']:
+        expires = datetime.fromisoformat(share['expires_at'].replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        if now > expires:
+            return "Link expired", 410
+    
+    # Get collection
+    collection = db.fetchone("""
+        SELECT * FROM user_collections 
+        WHERE id = ?
+    """, (share['collection_id'],))
+    
+    if not collection:
+        return "Collection not found", 404
+    
+    # Get all collection items
+    items = db.fetchall("""
+        SELECT ci.asset_type, ci.asset_id,
+               COALESCE(a.filename, m.filename) as filename,
+               COALESCE(a.file_path, m.file_path) as file_path,
+               m.archive_path, m.archive_member
+        FROM collection_items ci
+        LEFT JOIN assets a ON ci.asset_type = 'pdf' AND ci.asset_id = a.id
+        LEFT JOIN models m ON ci.asset_type = 'model' AND ci.asset_id = m.id
+        WHERE ci.collection_id = ?
+        ORDER BY ci.sort_order, ci.added_at
+    """, (collection['id'],))
+    
+    if not items:
+        return "No items in collection", 404
+    
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+    
+    try:
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for item in items:
+                try:
+                    # Handle archive members (3D models in ZIP files)
+                    if item.get('archive_path') and item.get('archive_member'):
+                        archive_path = Path(item['archive_path'])
+                        if archive_path.exists():
+                            with zipfile.ZipFile(archive_path, 'r') as source_zf:
+                                data = source_zf.read(item['archive_member'])
+                                zf.writestr(item['filename'], data)
+                        else:
+                            logger.warning(f"Archive not found: {archive_path}")
+                    
+                    # Handle regular files
+                    elif item.get('file_path'):
+                        file_path = Path(item['file_path'])
+                        if file_path.exists():
+                            zf.write(file_path, arcname=item['filename'])
+                        else:
+                            logger.warning(f"File not found: {file_path}")
+                except Exception as e:
+                    logger.error(f"Failed to add {item['filename']} to ZIP: {e}")
+                    # Continue with other files
+        
+        # Increment download count
+        with db.connection() as conn:
+            conn.execute("""
+                UPDATE collection_shares 
+                SET download_count = download_count + ?
+                WHERE id = ?
+            """, (len(items), share['id']))
+            conn.commit()
+        
+        # Prepare ZIP for sending
+        zip_buffer.seek(0)
+        
+        # Sanitize collection name for filename
+        safe_name = "".join(c for c in collection['name'] if c.isalnum() or c in (' ', '-', '_')).strip()
+        zip_filename = f"{safe_name}.zip"
+        
+        return send_file(
+            zip_buffer,
+            as_attachment=True,
+            download_name=zip_filename,
+            mimetype='application/zip'
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to create ZIP for collection {collection['id']}: {e}")
+        return f"Failed to create ZIP file: {str(e)}", 500
