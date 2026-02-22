@@ -7117,8 +7117,13 @@
         document.getElementById('shareCollectionId').value = collectionId;
         modal.classList.add('show');
         
+        // Force display with inline style as fallback
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999';
+        
         console.log('Added show class, new display:', window.getComputedStyle(modal).display);
         console.log('Modal classList:', modal.classList.toString());
+        console.log('Modal inline style:', modal.style.display, modal.style.zIndex);
         
         // Force reflow to ensure CSS is applied
         modal.offsetHeight;
@@ -7265,7 +7270,10 @@
     }
     
     function closeShareModal() {
-      document.getElementById('shareModal').classList.remove('show');
+      const modal = document.getElementById('shareModal');
+      modal.classList.remove('show');
+      modal.style.display = '';
+      modal.style.zIndex = '';
     }
     
     async function renameCollection(collectionId, currentName) {
@@ -7589,9 +7597,12 @@
       
       // Close context menus on click outside
       document.addEventListener('click', () => {
-        document.getElementById('folderContextMenu').style.display = 'none';
-        document.getElementById('assetContextMenu').style.display = 'none';
-        document.getElementById('breadcrumbContextMenu').style.display = 'none';
+        const folderMenu = document.getElementById('folderContextMenu');
+        const assetMenu = document.getElementById('assetContextMenu');
+        const breadcrumbMenu = document.getElementById('breadcrumbContextMenu');
+        if (folderMenu) folderMenu.style.display = 'none';
+        if (assetMenu) assetMenu.style.display = 'none';
+        if (breadcrumbMenu) breadcrumbMenu.style.display = 'none';
       });
       
       // Add right-click handler for folder tree (PDFs)
