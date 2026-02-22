@@ -253,12 +253,10 @@ GUEST_TEMPLATE = """
         {% for item in items %}
         <div class="card" onclick="viewItem('{{ item.asset_type }}', {{ item.asset_id }}, '{{ token }}')">
           <div class="card-thumb">
-            {% if item.asset_type == 'model' and item.thumb_path %}
-              <img src="/api/models/{{ item.asset_id }}/preview" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='🎲'">
+            {% if item.has_thumbnail %}
+              <img src="/api/thumbnail/{{ item.asset_db_id }}" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='{% if item.asset_type == 'model' %}🎲{% else %}📄{% endif %}'">
             {% elif item.asset_type == 'model' %}
               🎲
-            {% elif item.asset_type == 'pdf' and item.pdf_id %}
-              <img src="/api/thumbnail/{{ item.pdf_id }}" alt="{{ item.filename }}" onerror="this.parentElement.innerHTML='📄'">
             {% else %}
               📄
             {% endif %}
@@ -370,19 +368,12 @@ def access_shared_collection(token):
     # Get collection items with thumbnail info
     items = db.fetchall("""
         SELECT ci.*, 
-               CASE 
-                   WHEN ci.asset_type = 'model' THEN (SELECT filename FROM assets WHERE id = ci.asset_id)
-                   WHEN ci.asset_type = 'pdf' THEN (SELECT filename FROM assets WHERE id = ci.asset_id)
-               END as filename,
-               CASE 
-                   WHEN ci.asset_type = 'model' THEN (SELECT thumb_path FROM assets WHERE id = ci.asset_id)
-                   WHEN ci.asset_type = 'pdf' THEN NULL
-               END as thumb_path,
-               CASE 
-                   WHEN ci.asset_type = 'pdf' THEN (SELECT id FROM assets WHERE id = ci.asset_id)
-                   ELSE NULL
-               END as pdf_id
+               a.filename,
+               a.thumbnail_path,
+               a.has_thumbnail,
+               a.id as asset_db_id
         FROM collection_items ci
+        JOIN assets a ON ci.asset_id = a.id
         WHERE ci.collection_id = ?
         ORDER BY ci.sort_order, ci.added_at
     """, (collection['id'],))

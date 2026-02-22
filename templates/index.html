@@ -7059,7 +7059,7 @@
       menu.style.left = event.pageX + 'px';
       menu.style.top = event.pageY + 'px';
       menu.innerHTML = `
-        <div class="context-menu-item" onclick="shareCollectionModal('${collectionId}')">
+        <div class="context-menu-item" onclick="handleShareClick('${collectionId}', event)">
           <span>📤</span> Share Collection
         </div>
         <div class="context-menu-item" onclick="renameCollection('${collectionId}', '${collectionName.replace(/'/g, "\\'")}')">
@@ -7083,6 +7083,20 @@
           document.removeEventListener('click', closeMenu);
         });
       }, 0);
+    }
+    
+    function handleShareClick(collectionId, event) {
+      console.log('handleShareClick called with:', collectionId);
+      event.stopPropagation();
+      
+      // Close all context menus
+      document.querySelectorAll('.context-menu').forEach(menu => menu.remove());
+      
+      // Short delay to ensure menu is closed before opening modal
+      setTimeout(() => {
+        console.log('Opening share modal for:', collectionId);
+        shareCollectionModal(collectionId);
+      }, 50);
     }
     
     function shareCollectionModal(collectionId) {
