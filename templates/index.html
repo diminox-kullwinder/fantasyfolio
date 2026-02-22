@@ -4187,6 +4187,7 @@
       </div>
       <div class="stats" id="stats">Loading...</div>
       <button class="settings-btn" onclick="openUpload()" title="Upload files" id="uploadBtn">⬆️</button>
+      <button class="settings-btn" onclick="openUserManagement()" title="User Management" id="usersBtn">👥</button>
       <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️<span class="trash-badge" id="trashBadge" style="display:none">0</span></button>
       
       <!-- User Menu (shown when logged in) -->
@@ -5372,6 +5373,77 @@
     </div>
   </div>
 
+  <!-- User Management Modal -->
+  <div class="collections-modal" id="userManagementModal" onclick="if(event.target===this)closeUserManagement()">
+    <div class="collections-box" style="max-width: 800px;">
+      <div class="collections-header">
+        <h2>👥 User Management</h2>
+        <button class="collections-close" onclick="closeUserManagement()">✕</button>
+      </div>
+      
+      <div class="collections-content" style="padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <input type="text" id="userSearchInput" placeholder="Search users..." 
+                 style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);margin-right:12px;"
+                 oninput="searchUsers()">
+          <button onclick="openAddUserModal()" style="background:var(--accent);color:white;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;">
+            ➕ Add User
+          </button>
+        </div>
+        
+        <div id="usersList" style="max-height:400px;overflow-y:auto;">
+          <p style="color:var(--text-secondary);text-align:center;padding:40px;">Loading users...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div class="collections-modal" id="addUserModal" onclick="if(event.target===this)closeAddUserModal()">
+    <div class="collections-box" style="max-width: 500px;">
+      <div class="collections-header">
+        <h2>➕ Add New User</h2>
+        <button class="collections-close" onclick="closeAddUserModal()">✕</button>
+      </div>
+      
+      <div class="collections-content" style="padding:20px;">
+        <form id="addUserForm" onsubmit="return createUser(event)">
+          
+          <div class="settings-field">
+            <label for="newUserEmail">Email *</label>
+            <input type="email" id="newUserEmail" required placeholder="user@example.com">
+          </div>
+          
+          <div class="settings-field">
+            <label for="newUserDisplayName">Display Name *</label>
+            <input type="text" id="newUserDisplayName" required placeholder="John Doe">
+          </div>
+          
+          <div class="settings-field">
+            <label for="newUserPassword">Password *</label>
+            <input type="password" id="newUserPassword" required minlength="8" placeholder="Min 8 characters">
+          </div>
+          
+          <div class="settings-field">
+            <label for="newUserRole">Role</label>
+            <select id="newUserRole" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);">
+              <option value="player">Player</option>
+              <option value="gm">GM</option>
+              <option value="admin">Admin</option>
+              <option value="guest">Guest</option>
+            </select>
+          </div>
+          
+          <div class="collections-footer" style="border-top:1px solid var(--border);padding-top:16px;margin-top:24px;">
+            <button type="button" onclick="closeAddUserModal()" style="background:var(--bg-secondary);color:var(--text-primary);">Cancel</button>
+            <button type="submit" style="background:var(--accent);color:white;">Create User</button>
+          </div>
+          
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Context Menu for Breadcrumbs (in info panels) -->
   <div id="breadcrumbContextMenu" class="context-menu" style="display: none;">
     <div class="context-menu-item" onclick="breadcrumbContextNavigate()">
@@ -5868,6 +5940,151 @@
         });
       }
     });
+    
+    // ==================== User Management ====================
+    
+    async function openUserManagement() {
+      document.getElementById('userManagementModal').classList.add('show');
+      await loadUsersList();
+    }
+    
+    function closeUserManagement() {
+      document.getElementById('userManagementModal').classList.remove('show');
+    }
+    
+    async function loadUsersList(search = '') {
+      try {
+        const url = search 
+          ? `/api/users?search=${encodeURIComponent(search)}`
+          : '/api/users?limit=100';
+        
+        const response = await authFetch(url);
+        if (!response.ok) throw new Error('Failed to load users');
+        
+        const data = await response.json();
+        const container = document.getElementById('usersList');
+        
+        if (!data.users || data.users.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:40px;">No users found</p>';
+          return;
+        }
+        
+        container.innerHTML = data.users.map(user => {
+          const roleColors = {
+            admin: '#f59e0b',
+            gm: '#8b5cf6',
+            player: '#3b82f6',
+            guest: '#6b7280'
+          };
+          const roleColor = roleColors[user.role] || '#6b7280';
+          
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:6px;margin-bottom:8px;border:1px solid var(--border);">
+              <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <strong style="font-size:1rem;">${user.display_name || user.email}</strong>
+                  <span style="background:${roleColor};color:white;padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:600;">
+                    ${user.role.toUpperCase()}
+                  </span>
+                  ${!user.is_active ? '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:12px;font-size:0.75rem;">INACTIVE</span>' : ''}
+                </div>
+                <div style="color:var(--text-secondary);font-size:0.85rem;">${user.email}</div>
+                <div style="color:var(--text-secondary);font-size:0.75rem;margin-top:4px;">
+                  Created: ${new Date(user.created_at).toLocaleDateString()}
+                  ${user.last_login_at ? ` | Last login: ${new Date(user.last_login_at).toLocaleDateString()}` : ''}
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                ${user.id !== currentUser?.id ? `
+                  <button onclick="toggleUserActive('${user.id}', ${user.is_active})" 
+                          style="background:transparent;border:1px solid var(--border);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.85rem;color:var(--text-primary);"
+                          title="${user.is_active ? 'Deactivate' : 'Activate'} user">
+                    ${user.is_active ? '🚫' : '✅'}
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Failed to load users:', error);
+        document.getElementById('usersList').innerHTML = 
+          '<p style="color:#ef4444;text-align:center;padding:40px;">Failed to load users</p>';
+      }
+    }
+    
+    function searchUsers() {
+      const search = document.getElementById('userSearchInput').value.trim();
+      loadUsersList(search);
+    }
+    
+    function openAddUserModal() {
+      document.getElementById('addUserModal').classList.add('show');
+      document.getElementById('addUserForm').reset();
+    }
+    
+    function closeAddUserModal() {
+      document.getElementById('addUserModal').classList.remove('show');
+    }
+    
+    async function createUser(event) {
+      event.preventDefault();
+      
+      const email = document.getElementById('newUserEmail').value.trim();
+      const displayName = document.getElementById('newUserDisplayName').value.trim();
+      const password = document.getElementById('newUserPassword').value;
+      const role = document.getElementById('newUserRole').value;
+      
+      try {
+        const response = await authFetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, display_name: displayName, password, role })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create user');
+        }
+        
+        showToast(`✅ User created: ${email}`);
+        closeAddUserModal();
+        await loadUsersList();
+        
+      } catch (error) {
+        showToast(error.message || 'Failed to create user', 'error');
+      }
+      
+      return false;
+    }
+    
+    async function toggleUserActive(userId, currentlyActive) {
+      const action = currentlyActive ? 'deactivate' : 'activate';
+      
+      if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+      
+      try {
+        const endpoint = currentlyActive ? `/api/users/${userId}` : `/api/users/${userId}`;
+        const method = currentlyActive ? 'DELETE' : 'PATCH';
+        const body = currentlyActive ? undefined : JSON.stringify({ is_active: true });
+        
+        const response = await authFetch(endpoint, {
+          method,
+          headers: body ? { 'Content-Type': 'application/json' } : undefined,
+          body
+        });
+        
+        if (!response.ok) throw new Error(`Failed to ${action} user`);
+        
+        showToast(`✅ User ${action}d`);
+        await loadUsersList();
+        
+      } catch (error) {
+        showToast(error.message || `Failed to ${action} user`, 'error');
+      }
+    }
     
     // Helper: Add auth header to fetch requests
     function authFetch(url, options = {}) {
