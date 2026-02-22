@@ -6121,16 +6121,28 @@
     }
     
     async function loadUsersList(search = '') {
+      const container = document.getElementById('usersList');
+      
+      // Check if user is logged in
+      if (!currentUser) {
+        container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:40px;">Please log in to manage users</p>';
+        return;
+      }
+      
       try {
         const url = search 
           ? `/api/users?search=${encodeURIComponent(search)}`
           : '/api/users?limit=100';
         
         const response = await authFetch(url);
-        if (!response.ok) throw new Error('Failed to load users');
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Session expired. Please log in again.');
+          }
+          throw new Error('Failed to load users');
+        }
         
         const data = await response.json();
-        const container = document.getElementById('usersList');
         
         if (!data.users || data.users.length === 0) {
           container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:40px;">No users found</p>';
@@ -11446,16 +11458,28 @@
     // ==================== Settings User Management Functions ====================
     
     async function settingsLoadUsers(search = '') {
+      const container = document.getElementById('settingsUsersList');
+      
+      // Check if user is logged in
+      if (!currentUser) {
+        container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:40px;">Please log in to manage users</p>';
+        return;
+      }
+      
       try {
         const url = search 
           ? `/api/users?search=${encodeURIComponent(search)}`
           : '/api/users?limit=100';
         
         const response = await authFetch(url);
-        if (!response.ok) throw new Error('Failed to load users');
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Session expired. Please log in again.');
+          }
+          throw new Error('Failed to load users');
+        }
         
         const data = await response.json();
-        const container = document.getElementById('settingsUsersList');
         
         if (!data.users || data.users.length === 0) {
           container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:40px;">No users found</p>';
